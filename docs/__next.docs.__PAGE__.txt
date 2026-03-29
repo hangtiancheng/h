@@ -1,0 +1,100 @@
+1:"$Sreact.fragment"
+2:I[55169,["/h/_next/static/chunks/12qyg8ql_m77z.js","/h/_next/static/chunks/0xxddco3sqq4m.js","/h/_next/static/chunks/00pgp~gasy1fo.js","/h/_next/static/chunks/06272k69k3mfb.js","/h/_next/static/chunks/0wa8yutieh12y.js"],"TOCProvider"]
+3:I[769,["/h/_next/static/chunks/12qyg8ql_m77z.js","/h/_next/static/chunks/0xxddco3sqq4m.js","/h/_next/static/chunks/00pgp~gasy1fo.js","/h/_next/static/chunks/06272k69k3mfb.js","/h/_next/static/chunks/0wa8yutieh12y.js"],"Sidebar"]
+4:I[47486,["/h/_next/static/chunks/12qyg8ql_m77z.js","/h/_next/static/chunks/0xxddco3sqq4m.js","/h/_next/static/chunks/00pgp~gasy1fo.js","/h/_next/static/chunks/06272k69k3mfb.js","/h/_next/static/chunks/0wa8yutieh12y.js"],"ClientWrapper"]
+f:I[97367,["/h/_next/static/chunks/12qyg8ql_m77z.js","/h/_next/static/chunks/0xxddco3sqq4m.js","/h/_next/static/chunks/00pgp~gasy1fo.js","/h/_next/static/chunks/06272k69k3mfb.js","/h/_next/static/chunks/0wa8yutieh12y.js"],"OutletBoundary"]
+10:"$Sreact.suspense"
+5:Te4d,import { Cards, Tabs } from "nextra/components";
+
+<div className="hero bg-base-100/50 min-h-[70vh] w-full">
+  <div className="hero-content w-full max-w-5xl text-center">
+    <div className="w-full">
+      <div className="border-base-content/10 h-[60vh] w-full overflow-hidden rounded-xl border shadow-2xl">
+        <iframe
+          src="https://161043261.github.io/resume/"
+          className="h-full w-full border-none"
+          title="resume"
+        />
+      </div>
+    </div>
+  </div>
+</div>
+
+<div className="divider text-primary/50 my-8">TECH STACK</div>
+
+<div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto px-4 pb-20">
+  <div className="card bg-base-100 shadow-xl border border-primary/20 hover:border-primary/50 transition-colors">
+    <div className="card-body">
+      <h2 className="card-title text-2xl text-primary font-bold mb-2">
+        Base
+      </h2>
+      <div className="flex flex-wrap gap-2">
+        <span className="badge badge-primary font-medium text-primary-content">JS/TS</span>
+        <span className="badge badge-primary font-medium text-primary-content">HTML/CSS</span>
+        <span className="badge badge-primary font-medium text-primary-content">SQL</span>
+        <span className="badge badge-primary font-medium text-primary-content">C++</span>
+        <span className="badge badge-primary font-medium text-primary-content">Linux</span>
+        <span className="badge badge-primary font-medium text-primary-content">Network</span>
+        <span className="badge badge-primary font-medium text-primary-content">Git</span>
+      </div>
+    </div>
+  </div>
+
+<div className="card bg-base-100 border-secondary/20 hover:border-secondary/50 border shadow-xl transition-colors">
+  <div className="card-body">
+    <h2 className="card-title text-secondary mb-2 text-2xl font-bold">
+      Frontend
+    </h2>
+    <div className="flex flex-wrap gap-2">
+      <span className="badge badge-secondary text-secondary-content font-medium">
+        npm/yarn/pnpm
+      </span>
+      <span className="badge badge-secondary text-secondary-content font-medium">
+        Vue
+      </span>
+      <span className="badge badge-secondary text-secondary-content font-medium">
+        Pinia
+      </span>
+      <span className="badge badge-secondary text-secondary-content font-medium">
+        React
+      </span>
+      <span className="badge badge-secondary text-secondary-content font-medium">
+        Zustand
+      </span>
+      <span className="badge badge-secondary text-secondary-content font-medium">
+        Webpack
+      </span>
+      <span className="badge badge-secondary text-secondary-content font-medium">
+        Vite
+      </span>
+    </div>
+  </div>
+</div>
+
+  <div className="card bg-base-100 shadow-xl border border-accent/20 hover:border-accent/50 transition-colors">
+    <div className="card-body">
+      <h2 className="card-title text-2xl text-accent font-bold mb-2">
+        Backend
+      </h2>
+      <div className="flex flex-wrap gap-2">
+        <span className="badge badge-accent font-medium text-accent-content">Express</span>
+        <span className="badge badge-accent font-medium text-accent-content">Koa</span>
+        <span className="badge badge-accent font-medium text-accent-content">Redis</span>
+        <span className="badge badge-accent font-medium text-accent-content">MongoDB</span>
+        <span className="badge badge-accent font-medium text-accent-content">MySQL</span>
+        <span className="badge badge-accent font-medium text-accent-content">RPC</span>
+        <span className="badge badge-accent font-medium text-accent-content">Kafka</span>
+      </div>
+    </div>
+  </div>
+</div>0:{"rsc":["$","$1","c",{"children":[["$","div",null,{"className":"x:mx-auto x:flex x:max-w-(--nextra-content-width)","children":["$","$L2",null,{"value":[],"children":[["$","$L3",null,{}],["$","$L4",null,{"metadata":{"title":"Page","filePath":"app/docs/page.mdx","timestamp":1774761494000},"sourceCode":"$5","children":["$L6","$L7"]}]]}]}],null,"$L8"]}],"isPartial":false,"staleTime":300,"varyParams":null,"buildId":"j9eus7vOY-p2Mrd_nuFC2"}
+6:["$","div",null,{"id":"nextra-skip-nav"}]
+7:["$","main",null,{"data-pagefind-body":true,"children":[["$","div",null,{"className":"hero bg-base-100/50 min-h-[70vh] w-full","children":["$","div",null,{"className":"hero-content w-full max-w-5xl text-center","children":["$","div",null,{"className":"w-full","children":["$","div",null,{"className":"border-base-content/10 h-[60vh] w-full overflow-hidden rounded-xl border shadow-2xl","children":["$","iframe",null,{"src":"https://161043261.github.io/resume/","className":"h-full w-full border-none","title":"resume"}]}]}]}]}],"\n",["$","div",null,{"className":"divider text-primary/50 my-8","children":"TECH STACK"}],"\n",["$","div",null,{"className":"grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto px-4 pb-20","children":[["$","div",null,{"className":"card bg-base-100 shadow-xl border border-primary/20 hover:border-primary/50 transition-colors","children":["$","div",null,{"className":"card-body","children":[["$","h2",null,{"className":"card-title text-2xl text-primary font-bold mb-2","children":["$","p",null,{"className":"x:not-first:mt-[1.25em] x:leading-7","children":"Base"}]}],["$","div",null,{"className":"flex flex-wrap gap-2","children":[["$","span",null,{"className":"badge badge-primary font-medium text-primary-content","children":"JS/TS"}],["$","span",null,{"className":"badge badge-primary font-medium text-primary-content","children":"HTML/CSS"}],["$","span",null,{"className":"badge badge-primary font-medium text-primary-content","children":"SQL"}],["$","span",null,{"className":"badge badge-primary font-medium text-primary-content","children":"C++"}],["$","span",null,{"className":"badge badge-primary font-medium text-primary-content","children":"Linux"}],["$","span",null,{"className":"badge badge-primary font-medium text-primary-content","children":"Network"}],["$","span",null,{"className":"badge badge-primary font-medium text-primary-content","children":"Git"}]]}]]}]}],["$","div",null,{"className":"card bg-base-100 border-secondary/20 hover:border-secondary/50 border shadow-xl transition-colors","children":["$","div",null,{"className":"card-body","children":[["$","h2",null,{"className":"card-title text-secondary mb-2 text-2xl font-bold","children":["$","p",null,{"className":"x:not-first:mt-[1.25em] x:leading-7","children":"Frontend"}]}],["$","div",null,{"className":"flex flex-wrap gap-2","children":[["$","span",null,{"className":"badge badge-secondary text-secondary-content font-medium","children":["$","p",null,{"className":"x:not-first:mt-[1.25em] x:leading-7","children":"npm/yarn/pnpm"}]}],["$","span",null,{"className":"badge badge-secondary text-secondary-content font-medium","children":["$","p",null,{"className":"x:not-first:mt-[1.25em] x:leading-7","children":"Vue"}]}],["$","span",null,{"className":"badge badge-secondary text-secondary-content font-medium","children":["$","p",null,{"className":"x:not-first:mt-[1.25em] x:leading-7","children":"Pinia"}]}],["$","span",null,{"className":"badge badge-secondary text-secondary-content font-medium","children":["$","p",null,{"className":"x:not-first:mt-[1.25em] x:leading-7","children":"React"}]}],["$","span",null,{"className":"badge badge-secondary text-secondary-content font-medium","children":["$","p",null,{"className":"x:not-first:mt-[1.25em] x:leading-7","children":"Zustand"}]}],["$","span",null,{"className":"badge badge-secondary text-secondary-content font-medium","children":["$","p",null,{"className":"x:not-first:mt-[1.25em] x:leading-7","children":"Webpack"}]}],["$","span",null,{"className":"badge badge-secondary text-secondary-content font-medium","children":["$","p",null,{"className":"x:not-first:mt-[1.25em] x:leading-7","children":"Vite"}]}]]}]]}]}],["$","div",null,{"className":"card bg-base-100 shadow-xl border border-accent/20 hover:border-accent/50 transition-colors","children":["$","div",null,{"className":"card-body","children":[["$","h2",null,{"className":"card-title text-2xl text-accent font-bold mb-2","children":["$","p",null,{"className":"x:not-first:mt-[1.25em] x:leading-7","children":"Backend"}]}],["$","div",null,{"className":"flex flex-wrap gap-2","children":[["$","span",null,{"className":"badge badge-accent font-medium text-accent-content","children":"Express"}],"$L9","$La","$Lb","$Lc","$Ld","$Le"]}]]}]}]]}]]}]
+8:["$","$Lf",null,{"children":["$","$10",null,{"name":"Next.MetadataOutlet","children":"$@11"}]}]
+9:["$","span",null,{"className":"badge badge-accent font-medium text-accent-content","children":"Koa"}]
+a:["$","span",null,{"className":"badge badge-accent font-medium text-accent-content","children":"Redis"}]
+b:["$","span",null,{"className":"badge badge-accent font-medium text-accent-content","children":"MongoDB"}]
+c:["$","span",null,{"className":"badge badge-accent font-medium text-accent-content","children":"MySQL"}]
+d:["$","span",null,{"className":"badge badge-accent font-medium text-accent-content","children":"RPC"}]
+e:["$","span",null,{"className":"badge badge-accent font-medium text-accent-content","children":"Kafka"}]
+11:null
