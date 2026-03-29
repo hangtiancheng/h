@@ -1,7 +1,0 @@
-# 协商缓存
-/*
-  Cache-Control: public, max-age=0, must-revalidate
-
-# 强缓存
-/_next/static/*
-  Cache-Control: public, max-age=31536000, immutable
