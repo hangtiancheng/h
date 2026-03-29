@@ -1,0 +1,1 @@
+(globalThis.TURBOPACK||(globalThis.TURBOPACK=[])).push(["object"==typeof document?document.currentScript:void 0,38332,e=>{"use strict";var t=e.i(5948);e.i(11017),e.s([],18474),e.i(18474),e.s(["decodePngMetadata",()=>t.ph,"encodePngMetadata",()=>t.oh],38332)}]);
