@@ -537,6 +537,7 @@
 <li>行共享邻键锁 record S,next-key</li>
 <li>行排他邻键锁 record X,next-key</li>
 </ul>
+<p>共享锁、排他锁满足: 读读共享、读写互斥、写写互斥</p>
 <div class="sl-heading-wrapper level-h3"><h3 id="按锁的范围分类">按锁的范围分类</h3><a class="sl-anchor-link" href="#按锁的范围分类"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24"><path fill="currentcolor" d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 0 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 1 0-1.42-1.42Zm8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 0 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 1 0 1.42 1.42l3.88-3.89a4.49 4.49 0 0 0 0-6.33ZM8.83 15.17a1 1 0 0 0 1.1.22 1 1 0 0 0 .32-.22l4.92-4.92a1 1 0 0 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42Z"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “按锁的范围分类”</span></a></div>
 <ul>
 <li>全局锁: 用于数据库逻辑备份</li>
@@ -581,7 +582,6 @@
 <li><code dir="auto">select ... lock in share mode</code> 时, 加意向共享锁</li>
 <li><code dir="auto">select ... for update</code> 时, 加意向排他锁</li>
 </ul>
-<p>表锁和行锁满足读读共享、读写互斥、写写互斥</p>
 <blockquote>
 <p>为什么需要意向锁</p>
 <p>如果没有意向锁, 则加「表排他锁 table X」时, 需要遍历表中的所有记录, 检查是否有记录加了「行排他锁 record X」这样效率很低
@@ -593,6 +593,39 @@
 <li>auto-inc 锁不是事务提交后才释放, 而是插入数据完成后立刻释放</li>
 </ul>
 <div class="sl-heading-wrapper level-h3"><h3 id="行级锁-行锁-间隙锁-邻键锁">行级锁: 行锁, 间隙锁, 邻键锁</h3><a class="sl-anchor-link" href="#行级锁-行锁-间隙锁-邻键锁"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24"><path fill="currentcolor" d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 0 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 1 0-1.42-1.42Zm8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 0 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 1 0 1.42 1.42l3.88-3.89a4.49 4.49 0 0 0 0-6.33ZM8.83 15.17a1 1 0 0 0 1.1.22 1 1 0 0 0 .32-.22l4.92-4.92a1 1 0 0 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42Z"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “行级锁: 行锁, 间隙锁, 邻键锁”</span></a></div>
+<p>行级锁: InnoDB 支持, 锁的粒度最小, 锁冲突的概率最低, 并发最高</p>
+<p>行级锁分为</p>
+<ul>
+<li>记录锁 (record lock): 一个记录锁可以锁定一条记录</li>
+<li>间隙锁 (gap lock): 一个间隙锁可以锁定一个记录间的间隙</li>
+<li>邻键锁 (next-key lock) 邻键锁 = 记录锁 + 间隙锁, InnoDB 使用邻键锁防止幻读</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>sql</th><th>加行锁类型</th></tr></thead><tbody><tr><td><code dir="auto">insert, delete, update</code></td><td>加行排他锁 record X, 不允许其他线程读写该行</td></tr><tr><td><code dir="auto">select</code></td><td>不加行锁</td></tr><tr><td><code dir="auto">select ... lock in share mode</code></td><td>锁定读, 加行共享锁 record S, 允许其他线程读该行, 不允许其他线程写该行</td></tr><tr><td><code dir="auto">select ... for update</code></td><td>锁定读, 加行排他锁 record X, 不允许其他线程读写该行</td></tr></tbody></table>
 <div class="sl-heading-wrapper level-h2"><h2 id="创建表-修改表">创建表, 修改表</h2><a class="sl-anchor-link" href="#创建表-修改表"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24"><path fill="currentcolor" d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 0 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 1 0-1.42-1.42Zm8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 0 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 1 0 1.42 1.42l3.88-3.89a4.49 4.49 0 0 0 0-6.33ZM8.83 15.17a1 1 0 0 0 1.1.22 1 1 0 0 0 .32-.22l4.92-4.92a1 1 0 0 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42Z"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “创建表, 修改表”</span></a></div>
 <div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="sql"><code><div class="ec-line"><div class="code"><span style="--0:#919F9F;--1:#5F636F">-- 查询所有数据库</span></div></div><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">show databases;</span></div></div><div class="ec-line"><div class="code">
 </div></div><div class="ec-line"><div class="code"><span style="--0:#919F9F;--1:#5F636F">-- 创建数据库</span></div></div><div class="ec-line"><div class="code"><span style="--0:#C792EA;--1:#8844AE">create</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">database</span><span style="--0:#D6DEEB;--1:#403F53"> [if not exists] </span><span style="--0:#C792EA;--1:#8844AE">&#x3C;database_name></span><span style="--0:#D6DEEB;--1:#403F53"> [default charset &#x3C;charsetName>] [collate &#x3C;collateName>];</span></div></div><div class="ec-line"><div class="code"><span style="--0:#919F9F;--1:#5F636F">-- e.g.</span></div></div><div class="ec-line"><div class="code"><span style="--0:#C792EA;--1:#8844AE">create</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">database</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">if</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">not</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">exists</span><span style="--0:#D6DEEB;--1:#403F53"> db0 </span><span style="--0:#C792EA;--1:#8844AE">default</span><span style="--0:#D6DEEB;--1:#403F53"> charset utf8mb4 </span><span style="--0:#C792EA;--1:#8844AE">collate</span><span style="--0:#D6DEEB;--1:#403F53"> utf8mb4_general_ci;</span></div></div><div class="ec-line"><div class="code">
@@ -1248,7 +1281,6 @@
 <li><code dir="auto">select ... lock in share mode</code> 时, 加意向共享锁</li>
 <li><code dir="auto">select ... for update</code> 时, 加意向排他锁</li>
 </ul>
-<p>表锁和行锁满足读读共享、读写互斥、写写互斥</p>
 <blockquote>
 <p>为什么需要意向锁</p>
 <p>如果没有意向锁, 则加「表排他锁 table X」时, 需要遍历表中的所有记录, 检查是否有记录加了「行排他锁 record X」这样效率很低
@@ -1257,50 +1289,19 @@
 <div class="sl-heading-wrapper level-h3"><h3 id="查看意向锁-行锁的加锁情况">查看意向锁, 行锁的加锁情况</h3><a class="sl-anchor-link" href="#查看意向锁-行锁的加锁情况"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24"><path fill="currentcolor" d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 0 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 1 0-1.42-1.42Zm8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 0 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 1 0 1.42 1.42l3.88-3.89a4.49 4.49 0 0 0 0-6.33ZM8.83 15.17a1 1 0 0 0 1.1.22 1 1 0 0 0 .32-.22l4.92-4.92a1 1 0 0 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42Z"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “查看意向锁, 行锁的加锁情况”</span></a></div>
 <div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="sql"><code><div class="ec-line"><div class="code"><span style="--0:#919F9F;--1:#5F636F">-- 查看意向锁, 行锁的加锁情况</span></div></div><div class="ec-line"><div class="code"><span style="--0:#919F9F;--1:#5F636F">-- object_schema 数据库名</span></div></div><div class="ec-line"><div class="code"><span style="--0:#919F9F;--1:#5F636F">-- object_name 表名</span></div></div><div class="ec-line"><div class="code"><span style="--0:#919F9F;--1:#5F636F">-- index_name 索引名</span></div></div><div class="ec-line"><div class="code"><span style="--0:#919F9F;--1:#5F636F">-- lock_type 锁的级别: 表级锁 table, 行级锁 record</span></div></div><div class="ec-line"><div class="code"><span style="--0:#919F9F;--1:#5F636F">-- lock_mode 锁的类型</span></div></div><div class="ec-line"><div class="code"><span style="--0:#919F9F;--1:#5F636F">-- * 意向共享锁 table IS</span></div></div><div class="ec-line"><div class="code"><span style="--0:#919F9F;--1:#5F636F">-- * 意向排他锁 table IX</span></div></div><div class="ec-line"><div class="code"><span style="--0:#919F9F;--1:#5F636F">-- * 共享行锁 record S,rec_not_gap</span></div></div><div class="ec-line"><div class="code"><span style="--0:#919F9F;--1:#5F636F">-- * 排他行锁 record X,rec_not_gap</span></div></div><div class="ec-line"><div class="code"><span style="--0:#919F9F;--1:#5F636F">-- * 共享间隙锁 record S,gap</span></div></div><div class="ec-line"><div class="code"><span style="--0:#919F9F;--1:#5F636F">-- * 排他间隙锁 record X,gap</span></div></div><div class="ec-line"><div class="code"><span style="--0:#919F9F;--1:#5F636F">-- * 共享邻键锁 record S</span></div></div><div class="ec-line"><div class="code"><span style="--0:#919F9F;--1:#5F636F">-- * 排他邻键锁 record X</span></div></div><div class="ec-line"><div class="code"><span style="--0:#C792EA;--1:#8844AE">select</span><span style="--0:#D6DEEB;--1:#403F53"> object_schema, object_name, index_name, lock_type, lock_mode, lock_data </span><span style="--0:#C792EA;--1:#8844AE">from</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">performance_schema</span><span style="--0:#D6DEEB;--1:#403F53">.</span><span style="--0:#82AAFF;--1:#3B61B0">data_locks</span><span style="--0:#D6DEEB;--1:#403F53">;</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="-- 查看意向锁, 行锁的加锁情况-- object_schema 数据库名-- object_name 表名-- index_name 索引名-- lock_type 锁的级别: 表级锁 table, 行级锁 record-- lock_mode 锁的类型-- * 意向共享锁 table IS-- * 意向排他锁 table IX-- * 共享行锁 record S,rec_not_gap-- * 排他行锁 record X,rec_not_gap-- * 共享间隙锁 record S,gap-- * 排他间隙锁 record X,gap-- * 共享邻键锁 record S-- * 排他邻键锁 record Xselect object_schema, object_name, index_name, lock_type, lock_mode, lock_data from performance_schema.data_locks;"><div></div></button></div></figure></div>
 <div class="sl-heading-wrapper level-h3"><h3 id="行级锁-行锁-间隙锁-邻键锁-1">行级锁: 行锁, 间隙锁, 邻键锁</h3><a class="sl-anchor-link" href="#行级锁-行锁-间隙锁-邻键锁-1"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24"><path fill="currentcolor" d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 0 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 1 0-1.42-1.42Zm8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 0 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 1 0 1.42 1.42l3.88-3.89a4.49 4.49 0 0 0 0-6.33ZM8.83 15.17a1 1 0 0 0 1.1.22 1 1 0 0 0 .32-.22l4.92-4.92a1 1 0 0 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42Z"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “行级锁: 行锁, 间隙锁, 邻键锁”</span></a></div>
-<p>行级锁: InnoDB 支持, 锁的粒度最小, 发生锁冲突的概率最低, 并发度最高</p>
-<p>行级锁分为:</p>
-<ol>
-<li>行锁 Record Lock: 锁定某条记录, 防止其他事务对该记录进行 delete 和 update; 在 Read Committed 读已提交和 Repeatable Read 可重复读的事务隔离级别下都支持</li>
-<li>间隙锁 Gap Lock: 锁定记录间的间隙, 防止其他事务对该间隙进行 insert, 导致幻读; 在 Repeatable Read 可重复读的事务隔离级别下支持</li>
-<li>邻键锁 Next-Key Lock: 锁定某条记录, 和该记录前面的间隙; 在 Repeatable Read 可重复读的事务隔离级别下支持</li>
-</ol>
-<div class="sl-heading-wrapper level-h4"><h4 id="行锁">行锁</h4><a class="sl-anchor-link" href="#行锁"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24"><path fill="currentcolor" d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 0 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 1 0-1.42-1.42Zm8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 0 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 1 0 1.42 1.42l3.88-3.89a4.49 4.49 0 0 0 0-6.33ZM8.83 15.17a1 1 0 0 0 1.1.22 1 1 0 0 0 .32-.22l4.92-4.92a1 1 0 0 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42Z"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “行锁”</span></a></div>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<table><thead><tr><th>sql</th><th>行锁类型</th></tr></thead><tbody><tr><td><code dir="auto">insert, delete, update</code></td><td>行排他锁 record X, 不允许其他线程读写该行</td></tr><tr><td><code dir="auto">select</code></td><td>不加行锁</td></tr><tr><td><code dir="auto">select ... lock in share mode</code></td><td>行共享锁 record S, 允许其他线程读该行, 不允许其他线程写该行</td></tr><tr><td><code dir="auto">select ... for update</code></td><td>行排他锁 record X</td></tr></tbody></table>
-<p>InnoDB 的行锁是基于索引加的锁</p>
+<p>行级锁: InnoDB 支持, 锁的粒度最小, 锁冲突的概率最低, 并发最高</p>
+<p>行级锁分为</p>
 <ul>
-<li>对于唯一约束的字段, mysql 自动建立唯一索引</li>
-<li>mysql 的默认事务隔离级别是 Repeatable Read 可重复读</li>
-<li>InnoDB 使用邻键锁 Next-Key Lock 防止幻读</li>
-<li>对于使用索引的精确匹配, 如果该记录存在, 则 mysql 为该行加「行锁」</li>
-<li>对于使用索引的精确匹配, 如果该记录不存在, 则 mysql 为该间隙加「间隙锁」</li>
-<li>对于使用索引的范围匹配, mysql 为匹配的所有行和间隙加「行锁」, 「间隙锁」,可以合并为「邻键锁」</li>
-<li>如果未使用索引, 则 mysql 会为扫描到的<strong>每一行</strong>加「行锁」</li>
+<li>记录锁 (record lock): 一个记录锁可以锁定一条记录</li>
+<li>间隙锁 (gap lock): 一个间隙锁可以锁定一个记录间的间隙</li>
+<li>邻键锁 (next-key lock) 邻键锁 = 记录锁 + 间隙锁, InnoDB 使用邻键锁防止幻读</li>
 </ul>
+<p>| sql                             | 加行锁类型                                                            |
+| ------------------------------- | --------------------------------------------------------------------- | ------- | ------------------------------------------- |
+| <code dir="auto">insert                         | delete                                                                | update</code> | 加行排他锁 record X, 不允许其他线程读写该行 |
+| <code dir="auto">select</code>                        | 不加行锁                                                              |
+| <code dir="auto">select ... lock in share mode</code> | 锁定读, 加行共享锁 record S, 允许其他线程读该行, 不允许其他线程写该行 |
+| <code dir="auto">select ... for update</code>         | 锁定读, 加行排他锁 record X, 不允许其他线程读写该行                   |</p>
 <div class="sl-heading-wrapper level-h2"><h2 id="innodb">InnoDB</h2><a class="sl-anchor-link" href="#innodb"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24"><path fill="currentcolor" d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 0 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 1 0-1.42-1.42Zm8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 0 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 1 0 1.42 1.42l3.88-3.89a4.49 4.49 0 0 0 0-6.33ZM8.83 15.17a1 1 0 0 0 1.1.22 1 1 0 0 0 .32-.22l4.92-4.92a1 1 0 0 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42Z"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “InnoDB”</span></a></div>
 <div class="sl-heading-wrapper level-h3"><h3 id="事务的-4-个特性-acid-1">事务的 4 个特性: ACID</h3><a class="sl-anchor-link" href="#事务的-4-个特性-acid-1"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24"><path fill="currentcolor" d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 0 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 1 0-1.42-1.42Zm8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 0 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 1 0 1.42 1.42l3.88-3.89a4.49 4.49 0 0 0 0-6.33ZM8.83 15.17a1 1 0 0 0 1.1.22 1 1 0 0 0 .32-.22l4.92-4.92a1 1 0 0 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42Z"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “事务的 4 个特性: ACID”</span></a></div>
 <ul>
