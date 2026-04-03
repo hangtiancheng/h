@@ -108,7 +108,7 @@
 <li>服务器应用层解析出请求头和请求体
 <ul>
 <li>如果不需要重定向, 服务器根据请求头中的 <code dir="auto">If-None-Match</code>/<code dir="auto">If-Modified-Since</code> 判断资源是否更新 (协商缓存), 如果没有更新, 则返回 304 状态码, 不返回响应体 (请求资源); 如果有更新, 则同时返回 200 状态码和最新请求资源</li>
-<li>如果希望使用强缓存, 则设置响应头字段 <code dir="auto">Cache-Control: max-age=2000</code>, 例如 Nginx 配置文件 <code dir="auto">add_header Cache-Control "public, immutable";</code> 对应的响应头字段 <code dir="auto">Cache-Control: public, immutable</code></li>
+<li>如果想使用强缓存, 则设置响应头字段 <code dir="auto">Cache-Control: max-age=2000</code>, 例如 Nginx 配置文件 <code dir="auto">add_header Cache-Control "public, immutable";</code> 对应的响应头字段 <code dir="auto">Cache-Control: public, immutable</code></li>
 <li>如果需要重定向, 则服务器直接返回 301 或 302 状态码, 在响应头的 <code dir="auto">Location</code> 字段中指定重定向地址, 浏览器根据状态码和 <code dir="auto">Location</code> 字段进行重定向操作</li>
 </ul>
 </li>
