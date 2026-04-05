@@ -171,13 +171,14 @@
 <div class="sl-heading-wrapper level-h2"><h2 id="fiber-架构">Fiber 架构</h2><a class="sl-anchor-link" href="#fiber-架构"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24"><path fill="currentcolor" d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 0 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 1 0-1.42-1.42Zm8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 0 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 1 0 1.42 1.42l3.88-3.89a4.49 4.49 0 0 0 0-6.33ZM8.83 15.17a1 1 0 0 0 1.1.22 1 1 0 0 0 .32-.22l4.92-4.92a1 1 0 0 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42Z"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “Fiber 架构”</span></a></div>
 <p>Fiber 架构: 解决大组件更新时的卡顿问题</p>
 <ul>
+<li>时间分片、任务切片</li>
 <li>可中断的渲染</li>
 <li>优先级调度</li>
-<li>双缓存树</li>
-<li>时间分片, 任务切片</li>
+<li>双缓存树、原子提交</li>
 </ul>
 <div class="sl-heading-wrapper level-h3"><h3 id="fiber-架构的-4-个目标">Fiber 架构的 4 个目标</h3><a class="sl-anchor-link" href="#fiber-架构的-4-个目标"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24"><path fill="currentcolor" d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 0 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 1 0-1.42-1.42Zm8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 0 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 1 0 1.42 1.42l3.88-3.89a4.49 4.49 0 0 0 0-6.33ZM8.83 15.17a1 1 0 0 0 1.1.22 1 1 0 0 0 .32-.22l4.92-4.92a1 1 0 0 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42Z"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “Fiber 架构的 4 个目标”</span></a></div>
 <ol>
+<li>时间分片、任务切片: React 通过时间分片, 将大渲染任务切片为多个工作单元 (unitOfWork), 低优先级的工作单元可以在浏览器空闲时执行 (类似 requestIdleCallback), 避免一次性完成大渲染任务 (即构建 workInProgressFiberTree), 导致主渲染线程阻塞</li>
 <li>可中断的渲染: Fiber 架构下, React 可以将大渲染任务切片为多个工作单元 (unitOfWork), Fiber 树的一个节点代表一个工作单元, 使得 React 可以在浏览器空闲时 (类似 requestIdleCallback) 执行低优先级的工作单元; 浏览器需要执行高优先级的任务时, 例如用户输入时, 可以先暂停渲染, 执行高优先级任务, 再恢复渲染</li>
 <li>优先级调度: Fiber 架构下, React 可以根据任务优先级决定调度顺序, React 优先执行动画, 用户交互等高优先级任务, 例如用户输入; 延迟执行低优先级任务, 例如数据加载后的页面渲染, 同时任务有 timeout 过期时间, 过期时间越短, 优先级越高
 <ul>
@@ -188,8 +189,7 @@
 <li>Idle: 空闲时执行</li>
 </ul>
 </li>
-<li>双缓存树 (Fiber Tree): 确保更新的原子性, 避免页面卡顿 (参考双缓存树)</li>
-<li>任务切片: React 通过时间分片, 将大渲染任务切片为多个工作单元 (unitOfWork), 低优先级的工作单元可以在浏览器空闲时执行 (类似 requestIdleCallback), 避免一次性完成大渲染任务 (即构建 workInProgressFiberTree), 导致主渲染线程阻塞</li>
+<li>双缓存树 (Fiber Tree)、原子提交: 确保更新的原子性, 避免页面卡顿 (参考双缓存树)</li>
 </ol>
 <div class="sl-heading-wrapper level-h3"><h3 id="双缓存树">双缓存树</h3><a class="sl-anchor-link" href="#双缓存树"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24"><path fill="currentcolor" d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 0 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 1 0-1.42-1.42Zm8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 0 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 1 0 1.42 1.42l3.88-3.89a4.49 4.49 0 0 0 0-6.33ZM8.83 15.17a1 1 0 0 0 1.1.22 1 1 0 0 0 .32-.22l4.92-4.92a1 1 0 0 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42Z"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “双缓存树”</span></a></div>
 <p>React 中有两颗 Fiber 树</p>
