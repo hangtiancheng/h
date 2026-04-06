@@ -781,10 +781,10 @@
 <li>否则从磁盘中读该数据页, 并将数据页缓存到 buffer pool 中, 再返回数据 (即使查询 1 行, 也会缓存 1 页)</li>
 </ul>
 </li>
-<li>修改数据时:
+<li>更新数据时:
 <ul>
-<li>如果 buffer pool 中有该数据的缓存页, 则直接写 buffer pool 中的数据, 并将该缓存页标记为脏页, 同时向 redo log 中写入本次修改; 为了减少磁盘 I/O 次数, 不会立刻将脏页刷新到磁盘, 而是由后台线程每隔 1s 将脏页刷新到磁盘 (刷盘)</li>
-<li>否则从磁盘中读该数据页, 并将数据页缓存到 buffer pool 中, 再修改数据 (即使修改 1 行, 也会缓存 1 页)</li>
+<li>如果 buffer pool 中有该数据的缓存页, 则直接写 buffer pool 中的数据, 并将该缓存页标记为脏页, 同时向 redo log 中写入本次更新; 为了减少磁盘 I/O 次数, 不会立刻将脏页刷新到磁盘, 而是由后台线程每隔 1s 将脏页刷新到磁盘 (刷盘)</li>
+<li>否则从磁盘中读该数据页, 并将数据页缓存到 buffer pool 中, 再更新数据 (即使更新 1 行, 也会缓存 1 页)</li>
 </ul>
 </li>
 </ul>
@@ -809,9 +809,9 @@
 <li>redo log buffer 使用量大于 1/2 时</li>
 </ul>
 <div class="sl-heading-wrapper level-h4"><h4 id="redo-log-写满了怎么办">redo log 写满了怎么办</h4><a class="sl-anchor-link" href="#redo-log-写满了怎么办"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24"><path fill="currentcolor" d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 0 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 1 0-1.42-1.42Zm8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 0 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 1 0 1.42 1.42l3.88-3.89a4.49 4.49 0 0 0 0-6.33ZM8.83 15.17a1 1 0 0 0 1.1.22 1 1 0 0 0 .32-.22l4.92-4.92a1 1 0 0 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42Z"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “redo log 写满了怎么办”</span></a></div>
-<p>redo log 写满时, mysql 更新操作会被「阻塞」先将 buffer pool 中的脏页刷新到磁盘, 删除不必要的 redo log, 再继续执行更新操作</p>
+<p>redo log 写满时, mysql 更新操作会被「阻塞」先将 buffer pool 中的脏页刷新到磁盘, 擦除不必要的 redo log, 再继续执行更新操作</p>
 <div class="sl-heading-wrapper level-h3"><h3 id="为什么需要-binlog">为什么需要 binlog</h3><a class="sl-anchor-link" href="#为什么需要-binlog"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24"><path fill="currentcolor" d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 0 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 1 0-1.42-1.42Zm8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 0 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 1 0 1.42 1.42l3.88-3.89a4.49 4.49 0 0 0 0-6.33ZM8.83 15.17a1 1 0 0 0 1.1.22 1 1 0 0 0 .32-.22l4.92-4.92a1 1 0 0 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42Z"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “为什么需要 binlog”</span></a></div>
-<p>binlog</p>
+<p>binlog 记录「所有的」表结构修改和表数据更新, 不记录查询操作</p>
 
 
 
@@ -830,6 +830,11 @@
 
 
 <table><thead><tr><th>redo log</th><th>binlog</th></tr></thead><tbody><tr><td>InnoDB 存储引擎层</td><td>server 层</td></tr><tr><td>redo log 存储空间大小固定</td><td>全量日志</td></tr></tbody></table>
+<div class="sl-heading-wrapper level-h4"><h4 id="被删库只能使用-binlog-恢复数据">被删库只能使用 binlog 恢复数据</h4><a class="sl-anchor-link" href="#被删库只能使用-binlog-恢复数据"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24"><path fill="currentcolor" d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 0 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 1 0-1.42-1.42Zm8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 0 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 1 0 1.42 1.42l3.88-3.89a4.49 4.49 0 0 0 0-6.33ZM8.83 15.17a1 1 0 0 0 1.1.22 1 1 0 0 0 .32-.22l4.92-4.92a1 1 0 0 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42Z"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “被删库只能使用 binlog 恢复数据”</span></a></div>
+<ul>
+<li>redo log 边写边擦除, 只记录未被刷入磁盘的数据, 不记录已刷入磁盘的数据</li>
+<li>binlog 是全量日志, 记录「所有的」表结构修改和表数据更新</li>
+</ul>
 <div class="sl-heading-wrapper level-h3"><h3 id="为什么需要两阶段提交">为什么需要两阶段提交</h3><a class="sl-anchor-link" href="#为什么需要两阶段提交"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24"><path fill="currentcolor" d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 0 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 1 0-1.42-1.42Zm8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 0 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 1 0 1.42 1.42l3.88-3.89a4.49 4.49 0 0 0 0-6.33ZM8.83 15.17a1 1 0 0 0 1.1.22 1 1 0 0 0 .32-.22l4.92-4.92a1 1 0 0 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42Z"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “为什么需要两阶段提交”</span></a></div>
 <div class="sl-heading-wrapper level-h2"><h2 id="syntax">syntax</h2><a class="sl-anchor-link" href="#syntax"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24"><path fill="currentcolor" d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 0 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 1 0-1.42-1.42Zm8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 0 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 1 0 1.42 1.42l3.88-3.89a4.49 4.49 0 0 0 0-6.33ZM8.83 15.17a1 1 0 0 0 1.1.22 1 1 0 0 0 .32-.22l4.92-4.92a1 1 0 0 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42Z"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “syntax”</span></a></div>
 <div class="sl-heading-wrapper level-h3"><h3 id="创建表-修改表">创建表, 修改表</h3><a class="sl-anchor-link" href="#创建表-修改表"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24"><path fill="currentcolor" d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 0 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 1 0-1.42-1.42Zm8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 0 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 1 0 1.42 1.42l3.88-3.89a4.49 4.49 0 0 0 0-6.33ZM8.83 15.17a1 1 0 0 0 1.1.22 1 1 0 0 0 .32-.22l4.92-4.92a1 1 0 0 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42Z"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “创建表, 修改表”</span></a></div>
