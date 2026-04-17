@@ -1,0 +1,83 @@
+:root {
+  --sl-sidebar-width: 15rem;
+  --sl-content-width: 55rem;
+
+  --sl-text-lg: 1.1rem;
+  --sl-text-xl: 1.2rem;
+  --sl-text-2xl: 1.3rem;
+  --sl-text-3xl: 1.4rem;
+  --sl-text-4xl: 1.5rem;
+  --sl-text-5xl: 1.6rem;
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-weight: 500;
+    color: var(--sl-color-accent);
+  }
+
+  --sl-line-height: 1.4;
+
+  --sl-font:
+    Iosevka, Maple Mono, Menlo, Cascadia Code, PingFang SC, Microsoft YaHei,
+    sans-serif;
+
+  --sl-font-mono:
+    Iosevka, Maple Mono, Menlo, Cascadia Code, PingFang SC, Microsoft YaHei,
+    monospace;
+
+  --sl-hue-accent: 160;
+  --sl-saturation-accent: 100%;
+
+  --sl-color-accent-high: hsl(
+    var(--sl-hue-accent),
+    var(--sl-saturation-accent),
+    80%
+  );
+
+  --sl-color-accent: hsl(
+    var(--sl-hue-accent),
+    var(--sl-saturation-accent),
+    37%
+  );
+
+  --sl-color-accent-low: hsl(
+    var(--sl-hue-accent),
+    var(--sl-saturation-accent),
+    20%
+  );
+}
+
+:root[data-theme="light"] {
+  --sl-color-accent-high: hsl(
+    var(--sl-hue-accent),
+    var(--sl-saturation-accent),
+    20%
+  );
+
+  --sl-color-accent: hsl(
+    var(--sl-hue-accent),
+    var(--sl-saturation-accent),
+    37%
+  );
+
+  --sl-color-accent-low: hsl(
+    var(--sl-hue-accent),
+    var(--sl-saturation-accent),
+    80%
+  );
+
+  th,
+  tr,
+  td {
+    border-collapse: collapse;
+    border: rgba(0, 0, 0, 0.1) 0.5px solid;
+  }
+
+  code {
+    background: #fff;
+  }
+}

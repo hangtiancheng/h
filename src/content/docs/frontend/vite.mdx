@@ -1,0 +1,478 @@
+---
+title: "Vite"
+---
+
+import { Tabs, TabItem } from "@astrojs/starlight/components";
+
+## Webpack
+
+### 基本概念
+
+- entry: 入口 JS 模块, 作为构建依赖图的开始, 默认是 `./src/index.js`, entry 可以有多个
+- output: 指定创建的 bundle 的输出目录, 输出文件路径; 默认输出目录是 `./dist`, 默认主要输出文件路径是 `./dist/main.js`, output 只能有一个
+- loader: webpack 原生支持加载 JS 和 JSON 文件, loader 使得 webpack 可以加载其他类型的文件
+- plugin: 扩展 webpack 功能; webpack 插件是一个具有 apply 方法的 JS 对象, apply 方法会被 webpack compiler 调用, 并且在整个编译生命周期都可以访问 compiler 对象
+- mode: 模式, 可以是 development, production 或 none, 设置 mode 参数以开启 webpack 对应模式下的内置优化
+
+```js
+/** @type {import('webpack').Configuration & import('webpack-dev-server').Configuration} */
+const devConfig = {};
+
+/** @type {import('webpack').Configuration} */
+const prodConfig = {};
+```
+
+### 打包原理
+
+```js
+// index.js
+const lodash = require("lodash");
+import Vue from "vue";
+
+// webpack 打包后
+(function (modules) {
+  function webpack_require() {
+    /** implements... */
+  }
+  modules[entry](webpack_require);
+})({
+  "index.js": (webpack_require) => {
+    const lodash = webpack_require("lodash");
+    const Vue = webpack_require("vue");
+  },
+});
+```
+
+## 为什么是 Vite
+
+### 缓慢的服务器启动
+
+冷启动 webpack 开发服务器时, 基于开发时打包的方式, 需要先打包所有文件构建整个 app, 才能提供服务; vite 将 app 中的模块分为依赖和源码
+
+- 依赖: 依赖的代码通常是开发时不会改变的纯 JS, 也可能有多种模块化格式 (esm, cjs, umd), vite 会预构建依赖
+- 源码通常包含非 JS 文件: .css, .ts, .tsx, .vue 等, 通常会有修改, 不是所有的源码都需要同时加载, 例如路由组件
+
+vite 以原生 esm 方式提供源码 `<script type="module" src="/src/main.js" />`, 可以理解为浏览器承担了部分打包工作; 浏览器请求源码时, vite 转换 (转换为 JS, 转换导入路径等), 并按需提供转换后的源码, 按需提供: 只有当前页面使用时, 才提供转换后的源码
+
+### 缓慢的更新
+
+对于 webpack, 基于开发时打包的方式, 文件修改后需要重新构建整个 app; 即使使用 hmr 模块热替换, 允许一个模块热替换自身, 而不会影响页面的其他部分, 热更新速度也会随着 app 的体积增大而显著下降
+
+对于 vite, 文件修改后, vite 精确的使更新的模块与其最近的 hmr 边界间的链失活 (通常是模块自身), 使得无论 app 体积多大, 都可以确保快速热更新
+
+### 生产环境为什么需要打包
+
+不打包会导致额外的网络请求, 生产环境推荐对代码进行 tree-shaking 摇树优化, 懒加载和 chunk 分割
+
+## 依赖预构建
+
+1. 依赖项可能是 esm, 也可能是 cjs 或 umd; 开发环境中, vite 开发服务器将所有代码 (依赖 + 源码) 视为 esm, vite 将 cjs, umd 的依赖项转换为 esm
+2. 如果依赖项中有多个内部模块 (例如 lodash-es 有超过 600 个内部模块), 则浏览器需要发送多个 http 请求, 导致网络拥塞; vite 将有多个内部模块的 esm 依赖项转换为单个模块, 浏览器只需要发送一个 HTTP 请求
+3. 依赖预构建的产物缓存到 `node_modules/.vite/deps` 目录, 方便 vite 转换导入路径
+
+<Tabs>
+  <TabItem label="vite.config.ts">
+
+```ts filename="vite.config.ts"
+import { defineConfig } from "vite";
+import vue from "@vitejs/plugin-vue";
+
+// https://vite.dev/config/
+export default defineConfig({
+  plugins: [vue()],
+  optimizeDeps: {
+    exclude: ["lodash-es"], // 指定不进行预构建的依赖项列表
+    include: [], // 指定进行预构建的依赖项列表
+  },
+});
+```
+
+  </TabItem>
+  <TabItem label="App.vue">
+
+```vue filename="App.vue"
+<script setup lang="ts">
+import * as lodash from "lodash-es";
+// import * as lodash from "/node_modules/.vite/deps/lodash-es.js?"; // 依赖预构建
+console.log(Object.keys(lodash));
+</script>
+
+<template>Lodash</template>
+```
+
+  </TabItem>
+</Tabs>
+
+### 自动依赖发现
+
+- vite 开发服务器启动前, 如果没有 `node_modules/.vite/deps` 依赖预构建的缓存, vite 会扫描源码, 自动寻找 import 导入的依赖项, 并将这些依赖项作为依赖预构建的入口点
+- vite 开发服务器启动后, 如果遇到不在 `node_modules/.vite/deps` 依赖预构建的缓存中的新依赖项, vite 会重新运行依赖预构建, 并在需要时重新加载页面
+
+### Monorepo
+
+一个 monorepo 项目中, 一个子包可能是另一个子包的依赖项, vite 自动检测没有从 node_modules 中解析到的依赖项 (例如 `@my-app/common`), 将 `@my-app/common` 视为源码, 分析 `@my-app/core` 的依赖列表, 不会打包 `@my-app/common`
+
+## 预构建缓存
+
+### 文件系统缓存
+
+vite 将预构建的 esm 依赖项缓存到 `node_modules/.vite`, 满足以下条件之一时, 才会重新运行依赖预构建
+
+1. 更新包管理器的锁文件: package-lock.json, pnpm-lock.yaml, ...
+2. 更新 vite.config.js 中的某些配置项
+3. 更新 process.env.NODE_ENV 的值
+4. 启动开发服务器时指定 --force 命令行选项, 或手动删除 `node_modules/.vite` 缓存目录
+
+### 浏览器缓存
+
+预构建的依赖使用 HTTP 头 `max-age=31536000, immutable` 在浏览器端进行强制缓存, 强制缓存后, 浏览器不会再请求 vite 开发服务器, 减少网络请求次数
+
+## vite 配置
+
+### 基于策略模式的 `vite.config.js`
+
+```js
+import { defineConfig } from "vite";
+import { config } from "vite.config";
+import { devConfig } from "vite.dev";
+import { prodConfig } from "vite.prod";
+
+// 策略模式
+const cmd2config = {
+  // vite, vite dev, vite serve
+  serve: { ...config, ...devConfig },
+  // vite build
+  build: { ...config, ...prodConfig },
+};
+
+export default defineConfig(({ command /** "build" | "serve" */ }) => {
+  return cmd2config[command];
+});
+```
+
+## 静态资源处理
+
+- 支持 esm 的 import, CSS 的 url()
+- 导入 json 时, 实际导入一个 JS 对象, 可以解构
+- 导入静态资源时, 实际导入静态资源的 url (例如 /assets/bg.png) 或 base64 字符串
+- 静态资源体积小于 vite.config 中 assetsInlineLimit 配置项的值, 会被内联为 base64 字符串
+- 导入脚本作为 web worker
+
+```js
+// 导入脚本作为 web worker
+const webWorker = new Worker(new URL("./web-worker.ts", import.meta.url), {
+  type: "module",
+});
+```
+
+## 环境变量和模式
+
+```ts
+// Required Conditional Guard
+if (import.meta.env.DEV) {
+  console.log("Will be tree-shaken in production");
+}
+```
+
+vite 在 `import.meta.env` 对象上暴露环境变量, 内置环境变量有
+
+- `import.meta.env.MODE` app 的模式: development, production
+- `import.meta.env.BASE_URL` 开发/生产环境 app 的基础 url 路径
+  - 绝对 url 路径 `/resume/`
+  - 完整 url 路径 `https://hangtiancheng.github.io/resume/`
+  - 空字符串或 `./`
+- `import.meta.env.PROD` 是否为生产环境
+- `import.meta.env.DEV` 是否为开发环境
+- `import.meta.env.SSR` 是否为服务器端渲染
+
+### .env 文件
+
+- .env 所有情况下都会被加载
+- .env.local 所有情况下都会被加载, 但会被 git 忽略
+- .env.[mode] 指定模式下会被加载, 优先级更高, 例如 .env.development, .env.production
+- .env.[mode].local 指定模式下会被加载, 优先级更高, 但会被 git 忽略
+
+### `process.env.NODE_ENV` 和 mode 模式
+
+- `process.env.NODE_ENV` 和 mode 模式是两个不同的概念
+- `process.env.NODE_ENV` 决定 `import.meta.env.DEV`, `import.meta.env.PROD` 的 true/false
+- mode 模式决定 `import.meta.env.MODE` 的值
+
+```ts
+import.meta.env.PROD = process.env.NODE_ENV === "production";
+import.meta.env.DEV = process.env.NODE_ENV !== "production";
+
+// --mode development
+import.meta.env.MODE = "development";
+// --mode production
+import.meta.env.MODE = "production";
+```
+
+| command                                              | process.env.NODE_ENV | command | mode 模式   |
+| ---------------------------------------------------- | -------------------- | ------- | ----------- |
+| `vite`, `vite dev`, `vite serve`                     | development          | serve   | development |
+| `vite build`                                         | production           | build   | production  |
+| `vite build --mode development`                      | production           | build   | development |
+| `NODE_ENV=development vite build`                    | development          | build   | production  |
+| `NODE_ENV=development vite build --mode development` | development          | build   | development |
+
+```ts
+export default defineConfig(({ command, mode }) => {
+  console.log("command:", command);
+  console.log("mode:", mode);
+  return { plugins: [vue()] };
+});
+```
+
+## dev-server 开发服务器
+
+```ts
+// App.vue
+import { createApp } from "vue";
+import App from "./App.vue";
+import "./index.css";
+createApp(App).mount("#app");
+```
+
+vite 先将 App.vue 代码编译为 JS 代码, 浏览器请求 App.vue 时, vite 开发服务器返回编译的 JS 代码, 并设置 http 响应头 Content-Type: text/javascript, 以告诉浏览器, 即使文件拓展名是 .vue, 也请使用 JS 的方式解析
+
+## CSS 处理
+
+1. vite 构建 AST 抽象语法树, 解析 index.tsx 或 App.vue, 发现 index.tsx 导入 index.css, 或 App.vue 有 `<style>` vue 标签
+2. vite 读取 index.css 文件内容或 `<style>` vue 标签内容
+3. vite 创建一个 `<style>` html 标签, 将 index.css 文件内容或 `<style>` vue 标签内容插入到 `<style>` html 标签中; 如果是 .module.css 或 `<style scoped>`, 则插入前会修改选择器名, 以实现样式隔离
+4. vite 将创建的 `<style>` html 标签插入到 index.html 的 `<head>` 标签中;
+5. 将 index.css 文件内容或 `<style>` vue 标签内容转换为 JS 代码, 浏览器请求 index.css 或 App.vue 时, vite 开发服务器返回转换的 JS 代码, 并设置 http 响应头 Content-Type: text/javascript, 以告诉浏览器, 即使文件拓展名是 .css 或 .vue, 也请使用 JS 的方式解析; 目的是实现样式隔离 .module.css 或 `<style scoped>` 和模块热替换 (hmr);
+
+`App.vue?vue&type=style&index=0&scoped=<hash>&lang.css`
+
+### 样式隔离
+
+- 对于 .css, `<style>` vue 标签, 会保留选择器名, 如果导入了多个 .css 文件, 则可能样式冲突
+- 对于 .module.css, 会修改选择器名: `.name` => `._[name]_[hash:base64:5]_[line]`, 实现样式隔离
+- 对于 `<style scoped>` vue 标签, 会修改为属性选择器: `.name` => `.name[data-v-[hash:base64:8]]`, 实现样式隔离
+
+<Tabs>
+  <TabItem label="index.css">
+
+```css filename="index.css"
+.wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+```
+
+  </TabItem>
+  <TabItem label="index.module.css">
+
+```css filename="index.module.css"
+.wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+```
+
+  </TabItem>
+  <TabItem label="postcss index.module.css">
+
+```css filename="postcss index.module.css"
+._wrapper_[hash:base64:5]_[line] {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+```
+
+  </TabItem>
+  <TabItem label="App.vue">
+
+```vue filename="App.vue"
+<style scoped>
+.wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+</style>
+```
+
+  </TabItem>
+  <TabItem label="postcss App.vue">
+
+```css filename="postcss App.vue"
+.wrapper[data-v-<hash:base64:8>] {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+```
+
+  </TabItem>
+</Tabs>
+
+## resolve.alias
+
+<Tabs>
+  <TabItem label="tsconfig.app.json">
+
+```json filename="tsconfig.app.json"
+{
+  "compilerOptions": {
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  }
+}
+```
+
+  </TabItem>
+  <TabItem label="vite.config.ts">
+
+```ts filename="vite.config.ts"
+import { fileURLToPath, URL } from "node:url";
+import { defineConfig } from "vite";
+
+// https://vite.dev/config/
+export default defineConfig({
+  resolve: {
+    alias: {
+      "@": fileURLToPath(new URL("./src", import.meta.url)),
+    },
+  },
+});
+```
+
+  </TabItem>
+</Tabs>
+
+## 跨域
+
+同源策略: 如果两个 URL 的协议, 域名 (IP) 和端口都相同, 则两个 URL 同源
+
+### 开发模式处理跨域
+
+```js
+import { defineConfig } from "vite";
+
+export default defineConfig({
+  server: {
+    proxy: {
+      // 原理: vite 开发服务器 (Node.js) 没有跨域限制
+      // 例如 fetch('/api/448719894') 时
+      // 请求 http://127.0.0.1:5173/api/448719894, 即浏览器请求 vite 开发服务器
+      // vite 开发服务器发现 url 匹配 /api 代理规则, 转发请求 https://space.bilibili.com/448719894
+      "/api": {
+        target: "https://space.bilibili.com/",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, ""),
+      },
+    },
+  },
+});
+```
+
+### 生产模式处理跨域
+
+1. nginx 代理
+2. 后端设置响应头
+   - `Access-Control-Allow-Origin: "*"` 指定允许 (跨域) 资源共享的源站
+   - `Access-Control-Allow-Headers: "Content-Type,Authorization"` 用于响应预检请求, 指定实际请求允许使用的请求头字段
+   - `Access-Control-Allow-Credentials: true` 服务器是否允许跨域请求携带凭据
+   - `Access-Control-Allow-Methods: "GET,POST,PUT,DELETE,OPTIONS"` 用于响应预检请求, 指定实际请求允许使用的请求方法
+   - 不能同时使用 `Access-Control-Allow-Origin: "*"` 和 `Access-Control-Allow-Credentials: true`
+
+## hmr 模块热替换
+
+<Tabs>
+  <TabItem label="vite plugin">
+
+```ts filename="vite plugin"
+function hotUpdate(): Plugin {
+  return {
+    name: "vite-plugin-hot-update",
+    handleHotUpdate({ file: absoluteFilePath, server }) {
+      server.ws.send({
+        type: "custom",
+        event: "custom-hot-update",
+        data: { absoluteFilePath },
+      });
+    },
+  };
+}
+```
+
+  </TabItem>
+  <TabItem label="client">
+
+```ts filename="client"
+// Required Conditional Guard
+if (import.meta.hot) {
+  // Will be tree-shaken in production
+  import.meta.hot.on("custom-hot-update", (data: unknown) => {
+    console.log("[custom-hot-update]", data);
+  });
+}
+```
+
+  </TabItem>
+</Tabs>
+
+### hmr 原理
+
+1. vite 开发服务器启动时, 创建模块依赖图
+   - 创建模块依赖图 (ModuleGraph 类)
+   - 创建模块节点 (ModuleNode 类)
+   - 绑定模块节点间的依赖关系
+2. vite 向 index.html 中注入 `<script type="module" src="/@vite/client"></script>`, 使得浏览器通过 client.js 和 vite 开发服务器建立 WebSocket 连接
+3. vite 创建文件监听器, 监听文件的创建, 删除和更新
+   - 如果是配置文件或环境变量文件, 则重启 vite 开发服务器
+   - 如果是 vite 注入到浏览器的文件, 则 vite 通过 WebSocket 连接向浏览器发送 full-reload 信号, 通知浏览器刷新页面
+   - 如果是普通文件, 则 vite 根据模块依赖图找到直接或间接依赖该文件的模块, 对这些模块查找 hmr 边界 (hmr boundary), vite 通过 WebSocket 连接, 推送热更新信息给浏览器, 浏览器向 vite 开发服务器请求新模块, 执行热更新
+
+## 性能优化
+
+- chunk 分包
+- gzip 压缩: 设置 http 响应头 `Content-Encoding: gzip`
+- CDN 内容分发网络
+
+```js
+// 例: 将 node_modules 的第三方依赖打包到 vendor.[hash:base64:8].js 单个文件
+export default defineConfig({
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: (id: string) => {
+          if (id.includes('node_modules')) {
+            return 'vendor'
+          }
+        },
+      },
+    },
+  },
+})
+```
+
+## 分析打包产物
+
+```ts
+// pnpm add rollup-plugin-visualizer -D
+import { defineConfig } from "vite";
+import vue from "@vitejs/plugin-vue";
+import { visualizer } from "rollup-plugin-visualizer";
+
+// https://vite.dev/config/
+export default defineConfig({
+  plugins: [vue(), visualizer({ open: true })],
+  build: {
+    // 代码块 (chunk) 大小 > 2000KB 时警告
+    chunkSizeWarningLimit: 2000,
+    cssCodeSplit: true, // 开启 CSS 拆分
+    sourcemap: false, // 不生成源代码映射文件 source-map
+    minify: "esbuild", // JS 最小化混淆
+    cssMinify: "esbuild", // CSS 最小化混淆
+    assetsInlineLimit: 5000, // 静态资源大小 < 5000B 时, 内联为 base64
+  },
+});
+```

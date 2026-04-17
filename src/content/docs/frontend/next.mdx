@@ -1,0 +1,1776 @@
+---
+title: "Next.js"
+---
+
+import { Tabs, TabItem } from "@astrojs/starlight/components";
+
+- AI, 提供 AI SDK
+- SSR, Server-Side Rendering 服务器端渲染
+- SSG, Static Site Generation 静态站点生成
+- SEO, Search Engine Optimization 搜索引擎优化
+
+## Turbopack
+
+- 统一的依赖图: Next 支持多个输出环境 (例如客户端和服务器), turbopack 使用统一的依赖图覆盖所有的环境
+- 开发时打包 vs 原生 esm: vite 开发时跳过打包, 只适用于小型应用, 对于大型应用, 网络请求过多, 可能降低大型应用的速度; Next 开发时使用 turbopack 打包, 可以提高大型应用的速度
+- 增量计算: turbopack 使用多核 CPU 并行化计算, 缓存计算结果到函数级
+- 懒打包: turbopack 开发时只打包实际请求的模块, 懒打包可以减少编译时间和内存占用
+
+```shell
+pnpm create next-app@latest
+
+pnpm dlx create-next-app@latest
+```
+
+## React Compiler
+
+React Compiler 自动优化性能
+
+```ts
+// pnpm add babel-plugin-react-compiler -D
+// next.config.ts
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
+  reactCompiler: true,
+};
+
+export default nextConfig;
+```
+
+<Tabs>
+  <TabItem label="memo">
+
+```tsx filename="memo, useMemo, useCallback"
+// 如果没有 React Compiler, 则需要手动 memo 缓存组件, useMemo 缓存值, useCallback 缓存函数以优化重新渲染
+import { useMemo, useCallback, memo } from "react";
+
+const ExpensiveComponent = memo(function ExpensiveComponent({ data, onClick }) {
+  const processedData = useMemo(() => {
+    return expensiveProcessing(data);
+  }, [data]);
+
+  const handleClick = useCallback(
+    (item) => {
+      onClick(item.id);
+    },
+    [onClick],
+  );
+
+  return (
+    <div>
+      {processedData.map((item) => (
+      {/* 每次组件更新时, 都会创建新的 () => handleClick(item) 箭头函数, 破坏记忆化! */}
+        <Item key={item.id} onClick={() => handleClick(item)} />
+      ))}
+    </div>
+  );
+});
+```
+
+  </TabItem>
+  <TabItem label="useMemo">
+
+```tsx filename="React Compiler"
+function ExpensiveComponent({ data, onClick }) {
+  const processedData = expensiveProcessing(data);
+
+  const handleClick = (item) => {
+    onClick(item.id);
+  };
+
+  return (
+    <div>
+      {processedData.map((item) => (
+        {/* React Compiler 可以在使用或不使用箭头函数的情况下, 正确优化性能
+        确保 Item 仅在 props.onClick 更新时重新渲染 */}
+        <Item key={item.id} onClick={() => handleClick(item)} />
+      ))}
+    </div>
+  );
+}
+```
+
+  </TabItem>
+</Tabs>
+
+## App Router
+
+### Pages Router
+
+```shell
+app/pages
+├── index.tsx     # -> /
+├── about
+│   ├── index.tsx # -> /about
+│   └── him.tsx   # -> /about/him
+└── posts
+    └── [id].tsx  # -> /posts/[id]
+```
+
+### App Router
+
+文件系统路由: app 目录下的每个子目录, 都代表一个路由段
+
+- page.tsx 页面组件
+- layout.tsx 布局组件
+  - app/layout.tsx 根布局组件 (必须)
+- template.tsx 模板组件
+- loading.tsx 加载组件: 基于异步组件 `<Suspense />`
+- error.tsx 错误组件: 基于错误边界 Error Boundary
+- app/not-found.tsx 全局 404 组件
+
+```tsx
+<Layout>
+  <Template>
+    <Page />
+  </Template>
+</Layout>
+```
+
+- Next.js 会缓存 `<Layout />` 布局组件, 只会挂载 1 次 (类似 vue `<KeepAlive />`)
+- Next.js 不会缓存 `<Template />` 模板组件
+
+```shell
+app/about
+├── error.tsx
+├── him
+│   └── page.tsx
+├── layout.tsx
+├── loading.tsx
+├── page.tsx
+├── her
+│   └── page.tsx
+└── template.tsx
+```
+
+<Tabs>
+  <TabItem label="layout.tsx">
+
+```tsx filename="layout.tsx"
+"use client";
+
+import Link from "next/link";
+import { Component, Suspense } from "react";
+
+interface IState {
+  cnt: number;
+}
+
+class AboutLayout extends Component<LayoutProps<"/about">, IState> {
+  state = { cnt: 0 };
+
+  handleClick = () => {
+    const { cnt } = this.state;
+    this.setState({ cnt: cnt + 1 }, () => console.log(this.state));
+  };
+
+  render() {
+    const { cnt } = this.state;
+    // children: template.tsx
+    const { children } = this.props;
+    return (
+      <>
+        <div>AboutLayer cnt {cnt}</div>
+        <button onClick={this.handleClick}>addCnt</button>
+        <header>AboutLayout header</header>
+        <Suspense fallback={<>loading...</>}>{children}</Suspense>
+        <Link href="/about/him">/about/him</Link>
+        <Link href="/about/her">/about/her</Link>
+        <footer>AboutLayout footer</footer>
+      </>
+    );
+  }
+}
+
+export default AboutLayout;
+```
+
+  </TabItem>
+  <TabItem label="template.tsx">
+
+```tsx filename="template.tsx"
+"use client";
+
+import { ReactNode, useState } from "react";
+
+interface IProps {
+  children: ReactNode;
+}
+
+const AboutTemplate = function (props: IProps) {
+  const [cnt, setCnt] = useState(0);
+  const handleClick = () => setCnt(cnt + 1);
+  // children: page.tsx
+  const { children } = props;
+
+  return (
+    <>
+      <div>cnt: {cnt}</div>
+      <button onClick={handleClick}>addCnt</button>
+      <header>AboutTemplate header</header>
+      {children}
+      <footer>AboutTemplate footer</footer>
+    </>
+  );
+};
+
+export default AboutTemplate;
+```
+
+  </TabItem>
+  <TabItem label="{him">
+
+```tsx filename="{him,her}/page.tsx"
+// about/page.tsx
+"use server";
+
+const getData = async (): Promise<{ timestamp: string }> => {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve({ timestamp: new Date().toISOString() });
+    }, 5000);
+  });
+};
+
+async function AboutPage() {
+  const data = await getData();
+  return <>About me {data.timestamp}</>;
+}
+
+export default AboutPage;
+
+// about/him/page.tsx
+export default function AboutHimPage() {
+  return <>About Him</>;
+}
+
+// about/her/page.tsx
+export default function AboutHerPage() {
+  return <>About Her</>;
+}
+```
+
+  </TabItem>
+  <TabItem label="her}/page.tsx">
+
+```tsx filename="loading.tsx"
+function LoadingComponent() {
+  return <>loading...</>;
+}
+
+export default LoadingComponent;
+```
+
+  </TabItem>
+  <TabItem label="loading.tsx">
+
+```tsx filename="error.tsx"
+"use client"; // Error 组件必须是客户端组件
+
+function ErrorComponent(props: unknown) {
+  return <>error: {JSON.stringify(props)}</>;
+}
+
+export default ErrorComponent;
+```
+
+  </TabItem>
+</Tabs>
+
+## 路由导航
+
+路由导航的 4 种方式
+
+1. `<Link />` 组件
+2. useRouter: hook, 仅在客户端组件中可以使用
+3. redirect, permanentRedirect: 客户端组件, 服务器组件中都可以使用
+4. history API
+
+### `<Link />` 组件
+
+增强的 `<a />` 标签
+
+```tsx
+<Link href={{ pathname: "/about/him", query: { name: "lark", age: 24 } }}>
+  /about/him?name=lark&age=24
+</Link>
+
+<Link
+  href="/about/him"
+  // prefetch 预获取目的页面, 默认 true
+  prefetch
+  // 禁止默认滚动行为: 滚动到顶部, 即保留滚动位置
+  scroll={false}
+  // history.replaceState()
+  replace
+>/about/him</Link>
+```
+
+### useRouter hook
+
+```tsx
+"use client";
+
+import { useRouter } from "next/navigation";
+
+export default function HimPage() {
+  const router = useRouter();
+  return (
+    <>
+      <button onClick={() => router.push("/about")}>history.pushState()</button>
+      <button onClick={() => router.replace("/about")}>
+        history.replaceState()
+      </button>
+      <button onClick={() => router.back()}>history.back()</button>
+      <button onClick={() => router.forward()}>history.forward()</button>
+      <button onClick={() => router.refresh()}>refresh /about/him</button>
+      <button onClick={() => router.prefetch("/about/her")}>
+        prefetch /about/her
+      </button>
+    </>
+  );
+}
+```
+
+### redirect, permanentRedirect
+
+对比 redirect, permanentRedirect: 状态码不同
+
+- redirect: 307 Temporary Redirect
+- permanentRedirect: 308 Permanent Redirect
+
+```ts
+import { redirect, RedirectType } from "next/navigation";
+
+redirect("/login");
+redirect("/login", RedirectType.push);
+redirect("/login", RedirectType.replace);
+```
+
+## 动态路由, 平行路由, 路由组
+
+### 动态路由 (url 路径参数)
+
+- `about/[id]` 捕获一个参数
+- `about/[...idList]` 捕获多个参数
+- `about-id/[[...optionalList]]` 捕获多个参数 (可选)
+
+<Tabs>
+  <TabItem label="about/[id]">
+
+```tsx filename="about/[id]"
+"use client";
+
+import { useParams } from "next/navigation";
+
+export default function AboutIdPage() {
+  const params = useParams();
+  const { id } = params;
+  return <>AboutIdPage {id}</>;
+}
+```
+
+  </TabItem>
+  <TabItem label="about/[...idList]">
+
+```tsx filename="about/[...idList]"
+"use client";
+
+import { useParams } from "next/navigation";
+
+export default function AboutIdListPage() {
+  const params = useParams();
+  const { idList } = params;
+  return (
+    <>
+      {Array.isArray(idList) &&
+        idList.map((item) => <div key={item}>{item}</div>)}
+    </>
+  );
+}
+```
+
+  </TabItem>
+  <TabItem label="about-id/[[...optionalList]]">
+
+```tsx filename="about-id/[[...optionalList]]"
+"use client";
+
+import { useParams } from "next/navigation";
+
+export default function AboutIdOptionalListPage() {
+  const params = useParams();
+  const { optionalList } = params;
+  return (
+    <>
+      {Array.isArray(optionalList) &&
+        optionalList.map((item) => <div key={item}>{item}</div>)}
+    </>
+  );
+}
+```
+
+  </TabItem>
+</Tabs>
+
+### 平行路由
+
+```shell
+app
+├── @footer
+│   ├── default.tsx  # FooterDefault
+│   └── page.tsx     # FooterPage
+├── @header
+│   ├── default.tsx  # HeaderDefault
+│   ├── page.tsx     # HeaderPage
+│   ├── error.tsx    # HeaderErrorComponent
+│   ├── loading.tsx  # HeaderLoadingComponent
+│   └── parallel
+│       └── page.tsx # HeaderParallel
+├── default.tsx      # PageDefault
+├── layout.tsx       # RootLayout
+└── page.tsx         # RootPage
+```
+
+```tsx
+import type { Metadata } from "next";
+import { ReactNode } from "react";
+import Link from "next/link";
+
+export const metadata: Metadata = {
+  title: "Next.js Demo",
+  description: "Next.js Demo",
+};
+
+export default function RootLayout({
+  children,
+  header,
+  footer,
+}: Readonly<{
+  children: ReactNode;
+  header: ReactNode; // @header
+  footer: ReactNode; // @footer
+}>) {
+  return (
+    <html lang="en">
+      <body>
+        {header}
+        {children}
+        {footer}
+        <Link href="/">Header Page</Link>
+        <Link href="/parallel">Header Parallel</Link>
+      </body>
+    </html>
+  );
+}
+```
+
+### 路由组
+
+```shell
+app
+├── (ieg)
+│   └── honor-of-kings
+│       └── page.tsx # http://localhost:3000/honor-of-kings
+├── (wxg)
+│   └── wechat
+│       └── page.tsx # http://localhost:3000/wechat
+├── layout.tsx
+└── page.tsx
+```
+
+```shell
+app
+├── (ieg)
+│   ├── honor-of-kings
+│   │   └── page.tsx # HonorOfKingsPage
+│   └── layout.tsx   # HonorOfKingsRootLayout
+├── (wxg)
+│   ├── wechat
+│   │   └── page.tsx # WeChatPage
+│   └── layout.tsx   # WeChatRootLayout
+└── page.tsx
+```
+
+## 后端路由
+
+- 使用 route.ts 定义后端路由
+- page.tsx 和 route.ts 不能放在同一个目录下
+- api 函数名限制为 HEAD, GET, POST, PUT, DELETE, PATCH, OPTIONS, ...
+
+### 查询参数, 请求体参数
+
+api/user/route.ts
+
+```ts
+// route.ts
+import { NextRequest, NextResponse } from "next/server";
+
+// Export the uppercase 'GET' method name
+export async function GET(request: NextRequest) {
+  const queryParams = request.nextUrl.searchParams;
+  const name = queryParams.get("name");
+  const age = queryParams.get("age");
+  return NextResponse.json({
+    message: `GET user OK: name=${name}, age=${age}`,
+  });
+}
+
+interface IBody {
+  name: string;
+  age: number;
+}
+
+export async function POST(request: NextRequest) {
+  // request.json()
+  // request.formData()
+  // request.text()
+  // request.blob()
+  // request.arrayBuffer()
+  const body = (await request.json()) as IBody;
+  const { name, age } = body;
+  return NextResponse.json(
+    {
+      message: `user: name=${name}, age=${age}`,
+    },
+    { status: 201 }, // HTTP response status code: 201 Created
+  );
+}
+```
+
+### url 路径参数
+
+```ts
+import { NextRequest, NextResponse } from "next/server";
+
+interface IParams {
+  id: string;
+}
+
+// Export the uppercase 'GET' method name
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<IParams> },
+) {
+  const { id } = await params;
+  return NextResponse.json({
+    message: `user: id=${id}`,
+  });
+}
+```
+
+## Cookie
+
+api/login/route.ts
+
+```ts
+import { cookies } from "next/headers";
+import { NextRequest, NextResponse } from "next/server";
+
+export async function GET() {
+  const tokenStore = await cookies();
+  const token = tokenStore.get("token")?.value ?? null;
+  if (token && token === "hangtiancheng") {
+    return NextResponse.json({ code: 1, message: "Logged in" });
+  }
+  return NextResponse.json({ code: 0, message: "Not logged in" });
+}
+
+interface IBody {
+  username: string;
+  password: string;
+}
+
+export async function POST(request: NextRequest) {
+  const { username, password } = (await request.json()) as IBody;
+  if (username === "admin" && password === "pass") {
+    const cookieStore = await cookies();
+    cookieStore.set("token", "hangtiancheng", {
+      maxAge: 60 * 60 * 24 * 7,
+      httpOnly: true, // 只允许服务器访问
+    });
+    return NextResponse.json({ message: "Login successful", code: 1 });
+  }
+  return NextResponse.json({ message: "Login failed", code: 0 });
+}
+```
+
+## AI SDK
+
+```shell
+pnpm add ai @ai-sdk/deepseek @ai-sdk/react
+```
+
+<Tabs>
+  <TabItem label="api/chat/route.ts">
+
+```tsx filename="api/chat/route.ts"
+import { createDeepSeek } from "@ai-sdk/deepseek";
+import { NextRequest } from "next/server";
+import { streamText, convertToModelMessages } from "ai";
+
+const deepSeek = createDeepSeek({ apiKey: "" });
+
+export async function POST(request: NextRequest) {
+  const { messages } = await request.json();
+  const result = streamText({
+    model: deepSeek("deepseek-chat"),
+    messages: convertToModelMessages(messages),
+    // messages: [
+    //   {
+    //     role: "user",
+    //     content: "Hello!",
+    //   },
+    //   {
+    //     role: "assistant",
+    //     content: "Hello! I'm a frontend engineer",
+    //   },
+    // ],
+    system: "Hello! You're a frontend engineer",
+  });
+  return result.toUIMessageStreamResponse();
+}
+```
+
+  </TabItem>
+  <TabItem label="ai/chat.tsx">
+
+```tsx filename="ai/chat.tsx"
+"use client";
+
+import { useChat } from "@ai-sdk/react";
+import { Ref, useEffect, useImperativeHandle, useRef } from "react";
+
+export interface IExpose {
+  sendMessage: (message: { text: string }) => void;
+}
+
+interface IProps {
+  ref: Ref<IExpose>;
+}
+
+export default function Chat({ ref }: IProps) {
+  const { messages, sendMessage } = useChat();
+
+  // sendMessage({ text });
+  useImperativeHandle(ref, () => ({ sendMessage }), [sendMessage]);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  // 自动滚动到底部
+  useEffect(() => {
+    containerRef.current?.scrollIntoView({
+      behavior: "smooth",
+    });
+  }, [messages]);
+
+  return (
+    <>
+      {messages.map((message) => (
+        <div key={message.id}>
+          {message.parts.map((part, partIdx) => (
+            <div key={partIdx}>{part.type === "text" ? part.text : ""}</div>
+          ))}
+        </div>
+      ))}
+      <div ref={containerRef} />
+    </>
+  );
+}
+```
+
+  </TabItem>
+  <TabItem label="ai/page.tsx">
+
+```tsx filename="ai/page.tsx"
+"use client";
+
+import { ChangeEvent, Component, createRef, ReactNode } from "react";
+import Chat, { IExpose as IChatExpose } from "./components/chat";
+
+interface IState {
+  inputVal: string;
+}
+
+class ChatPage extends Component<{}, IState> {
+  state = {
+    inputVal: "",
+  };
+  handleInput = (e: ChangeEvent<HTMLInputElement>) => {
+    this.setState({
+      inputVal: e.target.value,
+    });
+  };
+
+  chatRef = createRef<IChatExpose>();
+
+  handleSendMessage = () => {
+    if (!this.chatRef.current) {
+      return;
+    }
+    const { inputVal } = this.state;
+    const { sendMessage } = this.chatRef.current;
+    sendMessage({ text: inputVal });
+    this.setState({ inputVal: "" });
+  };
+
+  render(): ReactNode {
+    const { inputVal } = this.state;
+    return (
+      <>
+        <Chat ref={this.chatRef} />
+        <input value={inputVal} onChange={this.handleInput} />
+        <button onClick={this.handleSendMessage}>Send message</button>
+      </>
+    );
+  }
+}
+
+export default ChatPage;
+```
+
+  </TabItem>
+</Tabs>
+
+## Proxy (Middleware)
+
+- 处理跨域请求
+- 转发请求
+- 限流
+- 鉴权, 判断是否登录
+
+proxy.ts
+
+```ts
+import { NextRequest, NextResponse, ProxyConfig } from "next/server";
+
+export async function proxy(request: NextRequest) {
+  console.log("[proxy] url:", request.url);
+  const { pathname } = request.nextUrl;
+  console.log("[proxy] pathname:", pathname);
+  if (pathname.startsWith("/home")) {
+    return NextResponse.next();
+  }
+  if (pathname.startsWith("/api")) {
+    const cookie = request.cookies.get("token");
+    if (pathname === "/api/login" || cookie) {
+      return NextResponse.next();
+    }
+    return NextResponse.redirect(new URL("/", request.url));
+  }
+  return NextResponse.next();
+}
+
+export const config: ProxyConfig = {
+  // matcher: '/home/:path*'
+  // matcher: ["/home/:path*", "/api/:path*"],
+
+  matcher: [
+    "/home/:path*",
+    {
+      source: "/api/login",
+      // 必须携带 header 请求头, 键为 Content-Type, 值为 application/json
+      has: [{ type: "header", key: "Content-Type", value: "application/json" }],
+    },
+    {
+      source: "/api/user",
+      has: [
+        // 必须携带 cookie, 键为 token, 值为 hangtiancheng
+        { type: "cookie", key: "token", value: "hangtiancheng" },
+        // 必须携带 query 查询参数, 键为 username, 值为 lark
+        { type: "query", key: "username", value: "lark" },
+      ],
+      // 必须不携带查询参数, 键为 username, 值为 root
+      missing: [{ type: "query", key: "username", value: "root" }],
+    },
+  ],
+};
+```
+
+### 允许跨域
+
+proxy.ts
+
+```ts
+import { NextRequest, NextResponse, ProxyConfig } from "next/server";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type,Authorization",
+};
+
+export async function proxy(request: NextRequest) {
+  const response = NextResponse.next();
+  Object.entries(corsHeaders).forEach(([k, v]) => {
+    response.headers.set(k, v);
+  });
+  return response;
+}
+
+export const config: ProxyConfig = {
+  matcher: "/api/:path*",
+};
+```
+
+## CSR, SSR, SSG, Hydration, RSC, RCC
+
+- SEO, Search Engine Optimization 搜索引擎优化
+- CSR, Client Side Rendering 客户端渲染: 例如 Vue, React, 首屏加载慢, SEO 差
+- SSR, Server Side Rendering 服务端渲染: 例如 Nuxt.js, Next.js, 首屏加载快, SEO 优
+- SSG, Static Site Generation 静态站点生成: 例如 Vitepress, Astro, 首屏加载最快, SEO 最优
+- Hydration 客户端水合
+- RSC, React Server Components 服务器组件
+  - 使用 "use server" 指令
+  - 服务器组件必须是 async 异步函数
+  - 服务器组件在服务器渲染, 客户端局部水合, 避免全量水合导致的性能损耗
+  - 服务器组件不会被打包, 减小打包产物体积
+  - 服务器组件可以访问 Node.js API, 数据库
+  - 服务器组件支持流式传输 `Transfer-Encoding: chunked`, 减少 FCP 首次内容绘制时间
+  - `import "server-only"; // pnpm add server-only`
+- RCC, React Client Components 客户端组件
+  - 使用 "use client" 指令
+  - 客户端组件在服务器预渲染, 客户端局部水合, 避免全量水合导致的性能损耗
+  - 服务器组件中可以嵌入客户端组件, 客户端组件中不能嵌入服务器组件
+
+## 未开启缓存组件
+
+```js
+// next.config.js
+
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  reactCompiler: true,
+  cacheComponents: false, // 默认
+};
+
+export default nextConfig;
+```
+
+- ○ (Static) prerendered as static content 预渲染的静态内容
+- ◐ (Partial Prerender) prerendered as static HTML with dynamic server-streamed content 部分预渲染: 静态的 HTML 和服务器流式传输的动态内容
+- ƒ (Dynamic) server-rendered on demand 服务器按需渲染的动态内容
+
+### 缓存策略
+
+- 方式 1: 导出 revalidate
+- 方式 2: 导出 dynamic
+- 方式 3: 使用动态内容 API `Math.random()`, `fetch(url, { cache: "no-store" })`, `cookies()`, `headers()`, `connection()`, `searchParams`
+
+```tsx
+// 方式 1: 导出 revalidate
+export const revalidate = 0; // 不使用缓存
+// 5s 后, 客户端缓存失效, 服务器收到请求, 返回服务器缓存给客户端, 异步生成新内容, 更新服务器缓存
+// 默认 1y 后, 服务器缓存失效, 服务器收到请求, 同步生成新内容, 更新服务器缓存, 返回新内容给客户端
+export const revalidate = 5;
+
+// 方式 2: 导出 dynamic
+export const dynamic = "force-dynamic"; // 不使用缓存
+
+export default async function Home() {
+  const res = await fetch("http://127.0.0.1:3001/api/image", {
+    cache: "no-store", // 方式 3: 使用动态内容 API
+  });
+  const arr = await res.arrayBuffer();
+  const base64str = Buffer.from(arr).toString("base64");
+  return (
+    <img
+      src={`data:image/png;base64,${base64str}`}
+      alt="base64str"
+      width={256}
+    />
+  );
+}
+```
+
+## 开启缓存组件
+
+```js
+// next.config.js
+
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  reactCompiler: true,
+  cacheComponents: true, // 开启缓存组件
+};
+
+export default nextConfig;
+```
+
+动态内容需要配合 `<Suspense />` 使用
+
+```tsx
+import { Suspense } from "react";
+
+interface IData {
+  list: { name: string; age: number }[];
+}
+
+const DynamicComponent = async () => {
+  "use cache"; // 缓存组件
+  cacheLife();
+  const res = await fetch("http://127.0.0.1:3001/api/data");
+  const data: IData = await res.json();
+
+  return (
+    <>
+      <div>Dynamic Content</div>
+      {data.list.map((item, idx) => (
+        <div key={idx}>
+          {item.name}, {item.age}
+        </div>
+      ))}
+    </>
+  );
+};
+
+export default async function Home() {
+  return (
+    <Suspense fallback={<div>Loading Dynamic Content...</div>}>
+      <DynamicComponent />
+    </Suspense>
+  );
+}
+```
+
+### "use cache" 指令
+
+- 在模块的顶部使用, 缓存模块的所有导出
+- 在函数或组件的顶部使用, 缓存返回值
+
+```tsx
+import { cacheLife } from "next/cache";
+import { Suspense } from "react";
+
+interface IData {
+  list: { name: string; age: number }[];
+}
+
+const DynamicComponent = async () => {
+  "use cache"; // 缓存组件
+  // cacheLife("days") // 预设
+  cacheLife({
+    stale: 5, // 5s 内, 客户端直接使用客户端缓存, 不请求服务器
+    revalidate: 5, // 5s 后, 客户端缓存失效, 服务器收到请求, 返回服务器缓存给客户端, 异步生成新内容, 更新服务器缓存
+    expire: 30, // 30s 后, 服务器收到请求, 服务器缓存失效, 同步生成新内容, 更新服务器缓存, 返回新内容给客户端
+  });
+  const res = await fetch("http://127.0.0.1:3001/api/data");
+  const data: IData = await res.json();
+
+  return (
+    <>
+      <div>Dynamic Content</div>
+      {data.list.map((item, idx) => (
+        <div key={idx}>
+          {item.name}, {item.age}
+        </div>
+      ))}
+    </>
+  );
+};
+
+export default async function Home() {
+  return (
+    <Suspense fallback={<div>Loading Dynamic Content...</div>}>
+      <DynamicComponent />
+    </Suspense>
+  );
+}
+```
+
+## font 字体
+
+```tsx
+import { Geist_Mono } from "next/font/google";
+// import FontLocal from "next/font/local";
+
+const geistMono = Geist_Mono({
+  weight: "400",
+  style: ["normal"],
+  // swap 不会阻塞页面渲染, 先使用默认字体, 自定义字体加载完成后, 再替换为自定义字体
+  display: "swap",
+});
+
+// const ubuntuMono = FontLocal({
+//   src: '/path/to/ubuntu-mono.woff2',
+//   display: 'swap'
+// })
+
+export default async function Home() {
+  return <h1 className={geistMono.className}>Geist Mono</h1>;
+}
+```
+
+## `<Image />` 组件
+
+- 尺寸优化
+- CLS 累积布局偏移优化
+- 懒加载
+
+最佳实践
+
+- 图片放在 /public 目录
+- 使用图片路径 (以 / 开头) 时, 必须指定宽高或使用 fill 撑满父元素
+- 使用 import 导入图片时, 不需要指定宽高
+- 立即加载 `loading="eager"`, 预加载 `preload`, 更推荐使用立即加载
+
+<Tabs>
+  <TabItem label="tsconfig.json">
+
+```json filename="tsconfig.json"
+{
+  "compilerOptions": {
+    "paths": {
+      "@/*": ["./src/*"],
+      "@/public/*": ["./public/*"]
+    }
+  }
+}
+```
+
+  </TabItem>
+  <TabItem label="home/page.tsx">
+
+```tsx filename="home/page.tsx"
+import Image from "next/image";
+import nextImg from "@/public/next.svg";
+
+export default async function Home() {
+  const nextImg2 = await import("@/public/next.svg");
+
+  return (
+    <>
+      {/* 默认 loading="lazy" 懒加载
+      使用图片路径 (以 / 开头) 时, 必须指定宽高或使用 fill 撑满父元素 */}
+      <Image
+        preload
+        src="/next.svg"
+        loading="eager"
+        alt="next"
+        width={394}
+        height={80}
+      />
+      {/* 使用 import 导入图片时, 不需要指定宽高 */}
+      <Image preload src={nextImg} loading="lazy" alt="next" />
+      <Image preload src={nextImg2.default} loading="lazy" alt="next" />
+    </>
+  );
+}
+```
+
+  </TabItem>
+</Tabs>
+
+## `<Script /> ` 组件
+
+- 使用 `<Script />` 组件加载本地或远程脚本, 将 `<Script />` 组件转换为 `<script>` 标签, 并插入到 `<head>` 标签中
+- 全局引入: 在根布局组件 layout.tsx 中引入, 加载脚本 (只加载一次) 并缓存
+- 局部引入: 例如在 Home 组件 home/page.tsx 中引入, 跳转到 /home 路由时, 加载脚本 (只加载一次) 并缓存
+
+### 加载策略
+
+- beforeInteractive: 代码和页面水合前加载脚本, 会阻塞页面渲染
+- afterInteractive: 默认, 页面渲染, 并部分水合后加载脚本
+- lazyOnload: 浏览器空闲时加载脚本
+- worker: 使用 web worker 加载脚本
+
+```tsx
+import Script from "next/script";
+
+export default async function Home() {
+  // Next.js 使用 preload 预加载远程脚本 (200 from memory cache)
+  return (
+    <Script
+      id="scoped-script"
+      strategy="afterInteractive"
+      src="https://unpkg.com/vue@3/dist/vue.global.js"
+    />
+  );
+}
+```
+
+### 内联脚本
+
+<Tabs>
+  <TabItem label="方式 1">
+
+```tsx filename="方式 1"
+import Script from "next/script";
+
+export default async function Home() {
+  return (
+    <>
+      <div id="scoped-app"></div>
+      <Script id="inline_script">
+        {`
+          const { createApp, ref } = Vue;
+          createApp({
+            template: \`
+              <div>
+                <div>{{ count }}</div>
+                <button @click="addCount">Add count</button>
+              </div>
+            \`,
+            setup() {
+              const count = ref(0);
+              const addCount = () => count.value++;
+              return { count, addCount };
+            }
+          }).mount('#scoped-app')
+        `}
+      </Script>
+    </>
+  );
+}
+```
+
+  </TabItem>
+  <TabItem label="方式 2">
+
+```tsx filename="方式 2"
+import Script from "next/script";
+
+export default async function HomeV3() {
+  return (
+    <>
+      <div id="scoped-app"></div>
+      <Script
+        id="inline_script"
+        dangerouslySetInnerHTML={{
+          __html: `
+            const { createApp, ref } = Vue;
+            createApp({
+              template: \`
+                <div>
+                  <div>{{ count }}</div>
+                  <button @click="addCount">Add count</button>
+                </div>
+              \`,
+              setup() {
+                const count = ref(0);
+                const addCount = () => count.value++;
+                return { count, addCount };
+              }
+            }).mount('#scoped-app')
+          `,
+        }}
+      />
+    </>
+  );
+}
+```
+
+  </TabItem>
+</Tabs>
+
+### 事件
+
+- onLoad 脚本加载完成时触发
+- onReady 脚本加载加载完成时, 每次组件挂载时触发
+- onError 脚本加载失败时触发
+
+## 导出静态站点
+
+```js
+// next.config.ts
+
+import type { NextConfig } from "next";
+const nextConfig: NextConfig = {
+  output: "export", // 导出静态站点
+  distDir: "out", // 导出目录
+  trailingSlash: true, // 添加 url 尾部斜杠, 打包 /about.html => /about/index.html
+};
+
+export default nextConfig;
+```
+
+### 图片优化
+
+导出静态站点时, 如果使用 `<Image />` 组件的默认 loader 优化图片, 则会报错
+
+方法 1: 禁用图片优化
+
+```ts
+// next.config.ts
+
+import type { NextConfig } from "next";
+const nextConfig: NextConfig = {
+  output: "export", // 导出静态站点
+  distDir: "out", // 导出目录
+  trailingSlash: true, // 添加 url 尾部斜杠, 打包 /about.html => /about/index.html
+  images: {
+    unoptimized: true, // 禁用图片优化
+  },
+};
+
+export default nextConfig;
+```
+
+方法 2: 自定义 loader + CDN
+
+<Tabs>
+  <TabItem label="next.config.ts">
+
+```ts filename="next.config.ts"
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
+  output: "export", // 导出静态站点
+  distDir: "out", // 导出目录
+  trailingSlash: true, // 添加 url 尾部斜杠, 打包 /about.html => /about/index.html
+  images: {
+    // 自定义 loader
+    loader: "custom",
+    loaderFile: "./image-loader.ts",
+  },
+};
+
+export default nextConfig;
+```
+
+  </TabItem>
+  <TabItem label="image-loader.ts">
+
+```ts filename="image-loader.ts"
+export default function imageLoader({
+  src,
+}: {
+  src: string;
+  width: number;
+  quality: number;
+}) {
+  return `https://github.com/hangtiancheng/hangtiancheng/tree/main/assets/${src}`; // CDN
+}
+```
+
+  </TabItem>
+</Tabs>
+
+### 动态路由
+
+导出静态站点时, 如果使用动态路由, 例如 `about/[id]/page.tsx`, 则需要使用 `generateStaticParams` 构建时生成路由, 而不是请求时按需生成路由
+
+```tsx
+export async function generateStaticParams() {
+  return [{ id: "1" }, { id: "2" }]; // All possible ids
+}
+
+export default async function AboutIdPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  return <>AboutIdPage {id}</>;
+}
+```
+
+## MDX
+
+<Tabs>
+  <TabItem label="next.config.js">
+
+```js filename="next.config.js"
+import createMDX from "@next/mdx";
+const withMDX = createMDX({});
+
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  reactCompiler: true,
+  // 页面的文件扩展名 page.{js,jsx,ts,tsx,md,mdx}
+  pageExtensions: ["js", "jsx", "ts", "tsx", "md", "mdx"],
+};
+
+export default withMDX(nextConfig);
+```
+
+  </TabItem>
+  <TabItem label="mdx-components.tsx">
+
+```tsx filename="mdx-components.tsx"
+import type { MDXComponents } from "mdx/types";
+
+const components: MDXComponents = {
+  // mdx 全局样式
+  h1: (props) => <h1 {...props} className="text-red-300" />,
+};
+
+export function useMDXComponents(): MDXComponents {
+  return components;
+}
+```
+
+  </TabItem>
+  <TabItem label="my-component.tsx">
+
+```tsx filename="my-component.tsx"
+"use client";
+
+import { useState } from "react";
+
+export default function MyComponent() {
+  const [cnt, setCnt] = useState(0);
+  return (
+    <>
+      <h1>{cnt}</h1>
+      <button onClick={() => setCnt(cnt + 1)}>Add</button>
+    </>
+  );
+}
+```
+
+  </TabItem>
+  <TabItem label="page.mdx">
+
+```mdx filename="page.mdx"
+import MyComponent from "./my-component";
+
+# Hello MDX
+
+<MyComponent />
+```
+
+  </TabItem>
+</Tabs>
+
+## 服务器函数 Server Actions
+
+```tsx
+export default function Login() {
+  // 服务器函数必须是 async 异步的
+  const action = async (id: number, formData: FormData) => {
+    "use server";
+    const username = formData.get("username");
+    const password = formData.get("password");
+    console.log(id, username, password);
+    console.log(id, Object.fromEntries(formData));
+  };
+  const actionWithId = action.bind(null, 3);
+  return (
+    <>
+      <h1>Login</h1>
+      <div className="mx-auto mt-20 w-20">
+        <form action={actionWithId} className="flex flex-col gap-2">
+          {/* input 必须有 name 属性, 作为 formData 对象的 key */}
+          <input type="text" name="username" placeholder="username" />
+          <input type="password" name="password" placeholder="password" />
+          {/* button type 属性值必须是 submit, 触发表单提交 */}
+          <button type="submit">submit</button>
+        </form>
+      </div>
+    </>
+  );
+}
+```
+
+## hook: useActionState
+
+参数
+
+- action 表单提交或按下表单中的按钮时, 触发的回调函数, 接收上一个状态 (initialState 或上一个返回值) 和表单数据, 返回当前状态
+- initialState 初始状态
+- permalink 表单提交后跳转的 url, 可选
+
+返回值
+
+- state 当前状态
+- formAction 可以作为 form 属性传递给表单组件, 或作为 formAction 属性传递给表单中的按钮组件
+
+```ts
+const [state, formAction, isPending] = useActionsState<IState, FormData>(
+  action, // (oldState: IState, formData: FormData) => Promise<IState>
+  initialState, // IState
+);
+```
+
+<Tabs>
+  <TabItem label="lib/login/actions.ts">
+
+```ts filename="lib/login/actions.ts"
+import { z } from "zod";
+
+const loginSchema = z.object({
+  username: z.string().min(4).max(16),
+  password: z.string().min(4).max(16),
+});
+
+export interface IState {
+  message: string;
+}
+
+export async function action(
+  oldState: IState,
+  formData: FormData,
+): Promise<IState> {
+  return new Promise((resolve) => {
+    console.log(oldState, Object.fromEntries(formData));
+    setTimeout(() => {
+      const res = loginSchema.safeParse(Object.fromEntries(formData));
+      if (!res.success) {
+        resolve({ message: res.error.message });
+      } else {
+        resolve({ message: new Date().toISOString() });
+      }
+    }, 5000);
+  });
+}
+```
+
+  </TabItem>
+  <TabItem label="login/pages.tsx">
+
+```tsx filename="login/pages.tsx"
+"use client";
+
+import { action, IState } from "@/app/lib/login/actions";
+import { useActionState } from "react";
+
+const initialState: IState = { message: "" };
+
+export default function Login() {
+  const [state, formAction, isPending] = useActionState<IState, FormData>(
+    action,
+    initialState,
+  );
+
+  return (
+    <>
+      <h1>{isPending ? "Loading..." : state.message}</h1>
+      <div className="mx-auto mt-20 w-20">
+        <form action={formAction} className="flex flex-col gap-2">
+          <input type="text" name="username" placeholder="username" />
+          <input type="password" name="password" placeholder="password" />
+          <button type="submit">submit</button>
+        </form>
+      </div>
+    </>
+  );
+}
+```
+
+  </TabItem>
+</Tabs>
+
+## 环境变量
+
+<Tabs>
+  <TabItem label="package.json">
+
+```json filename="package.json"
+{
+  "scripts": {
+    "dev": "BASE_URL=/homepage/ NEXT_PUBLIC_BASE_URL=/homepage/ next dev"
+  }
+}
+```
+
+  </TabItem>
+  <TabItem label="page.tsx">
+
+```ts filename="page.tsx"
+"use client";
+
+export default function Login() {
+  return (
+    <>
+      <div>process.env.NODE_ENV {process.env.NODE_ENV}</div>
+      {/* process.env.BASE_URL 只能在服务器组件中访问 */}
+      <div>process.env.BASE_URL {process.env.BASE_URL}</div>
+      {/* process.env.NEXT_PUBLIC_BASE_URL
+      以 NEXT_PUBLIC_ 开头的环境变量, 服务器组件, 客户端组件中都可以访问 */}
+      <div>process.env.NEXT_PUBLIC_BASE_URL {process.env.NEXT_PUBLIC_BASE_URL}</div>
+    </>
+  );
+}
+```
+
+  </TabItem>
+</Tabs>
+
+### 优先级
+
+- `process.env`, 例如 `BASE_URL=/homepage/ NEXT_PUBLIC_BASE_URL=/homepage/ next dev`
+- `.env.$NODE_ENV.local`, $NODE_ENV 是 Next.js 自动注入的环境变量, 开发模式 $NODE_ENV == development, 生产模式 $NODE_ENV == production
+- `.env.local`
+- `.env.$NODE_ENV`
+- `.env`
+
+## i18n
+
+- language 语言: en, zh, ja, ...
+- territory 地区: US, CN, JP, ...
+
+```shell
+pnpm add negotiator @formatjs/intl-localematcher
+pnpm add @types/negotiator -D
+```
+
+HTTP 请求头字段 `Accept-Language` 客户端的偏好语言, 例如 `Accept-Language: zh-CN`
+
+<Tabs>
+  <TabItem label="i18n/index.ts">
+
+```ts filename="i18n/index.ts"
+// 支持的语言
+export const locales = ["en", "zh", "ja"] as const;
+// 默认语言
+export const defaultLocale = "en";
+
+export interface IResource {
+  title: string;
+  description: string;
+  keywords: string;
+}
+
+export async function getResource(locale: string): Promise<IResource> {
+  return import(`./${locale}.json`).then((module) => module.default);
+}
+```
+
+  </TabItem>
+  <TabItem label="i18n/en.json">
+
+```json filename="i18n/en.json"
+{
+  "title": "title",
+  "description": "description",
+  "keywords": "keywords"
+}
+```
+
+  </TabItem>
+  <TabItem label="i18n/zh.json">
+
+```json filename="i18n/zh.json"
+{
+  "title": "标题",
+  "description": "描述",
+  "keywords": "关键词"
+}
+```
+
+  </TabItem>
+  <TabItem label="i18n/ja.json">
+
+```json filename="i18n/ja.json"
+{
+  "title": "タイトル",
+  "description": "説明",
+  "keywords": "キーワード"
+}
+```
+
+  </TabItem>
+</Tabs>
+
+### Demo
+
+<Tabs>
+  <TabItem label="proxy.ts">
+
+```ts filename="proxy.ts"
+// 获取客户端的偏好语言
+import { NextRequest, NextResponse, ProxyConfig } from "next/server";
+import { defaultLocale, locales } from "./i18n";
+import Negotiator from "negotiator";
+import { match } from "@formatjs/intl-localematcher";
+
+export async function proxy(req: NextRequest, res: NextResponse) {
+  if (req.nextUrl.pathname === "/") {
+    return NextResponse.next();
+  }
+  if (locales.some((locale) => req.nextUrl.pathname.startsWith(`/${locale}`))) {
+    return NextResponse.next();
+  }
+  const headers = {
+    "accept-language": req.headers.get("accept-language") ?? "",
+  };
+  const negotiator = new Negotiator({ headers });
+  const langs = negotiator.languages();
+  const lang = match(langs, locales, defaultLocale);
+  const { pathname } = req.nextUrl;
+  req.nextUrl.pathname = `/${lang}${pathname}`;
+  return NextResponse.redirect(req.nextUrl);
+}
+
+export const config: ProxyConfig = {
+  // (?!) 匹配的路径不包含 api, _next/static, _next/image, favicon.ico
+  // .* 匹配任意字符 0 次, 1 次或多次
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
+};
+```
+
+  </TabItem>
+  <TabItem label="app/[lang]/home/switch-i18n.tsx">
+
+```tsx filename="app/[lang]/home/switch-i18n.tsx"
+"use client";
+
+import { locales } from "@/i18n";
+import { usePathname, useRouter } from "next/navigation";
+import { ChangeEvent } from "react";
+
+export default function SwitchI18n({ lang }: { lang: string }) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const handleChange = (e: ChangeEvent<HTMLSelectElement>) => {
+    const newLang = e.target.value;
+    const newPath = pathname.replace(`/${lang}`, `/${newLang}`);
+    router.replace(newPath);
+  };
+  return (
+    <select value={lang} onChange={handleChange}>
+      {locales.map((locale) => (
+        <option key={locale} value={locale}>
+          {locale}
+        </option>
+      ))}
+    </select>
+  );
+}
+```
+
+  </TabItem>
+
+  <TabItem label="app/[lang]/home/page.tsx">
+```tsx filename="app/[lang]/home/page.tsx"
+import { getResource } from "@/i18n";
+import SwitchI18n from "./switch-i18n";
+export default async function Home({
+  params,
+}: {
+  params: Promise<{ lang: string }>;
+}) {
+  const { lang } = await params;
+  const { title, description, keywords } = await getResource(lang);
+  return (
+    <>
+      <SwitchI18n lang={lang} />
+      <h1>{title}</h1>
+      <p>{description}</p>
+      <p>{keywords}</p>
+    </>
+  );
+}
+```
+  </TabItem>
+</Tabs>
+
+## next.config
+
+<Tabs>
+  <TabItem label="next.config.ts">
+
+```ts filename="next.config.ts"
+import { PHASE_DEVELOPMENT_SERVER, PHASE_TYPE } from "next/constants";
+import type { NextConfig } from "next";
+
+export default (phase: PHASE_TYPE): NextConfig => {
+  const nextConfig: NextConfig = {
+    reactCompiler: false,
+  };
+  if (phase === PHASE_DEVELOPMENT_SERVER) {
+    nextConfig.reactCompiler = true; // 开发环境使用 react compiler
+  }
+  return nextConfig;
+};
+```
+
+  </TabItem>
+  <TabItem label="next/constants 内置常量">
+
+```ts filename="next/constants 内置常量"
+export declare const PHASE_EXPORT = "phase-export"; // 静态站点导出阶段
+export declare const PHASE_PRODUCTION_BUILD = "phase-production-build"; // 生产构建阶段
+export declare const PHASE_PRODUCTION_SERVER = "phase-production-server"; // 生产服务器阶段
+export declare const PHASE_DEVELOPMENT_SERVER = "phase-development-server"; // 开发服务器阶段
+export declare const PHASE_TEST = "phase-test"; // 测试阶段
+```
+
+  </TabItem>
+</Tabs>
+
+端口号
+
+```json
+{
+  "scripts": {
+    "dev": "next dev -p 8080", // 开发环境端口号
+    "build": "next build",
+    "start": "next start -p 3000" // 生产环境端口号
+  }
+}
+```
+
+其他配置
+
+```ts
+const nextConfig: NextConfig = {
+  basePath: "/docs", // 基础路径
+  redirects() {
+    return [
+      {
+        source: "/", // 源路径
+        destination: "/docs", // 目标路径
+        // 默认 true, source 和 destination 都会自动添加 basePath 前缀
+        basePath: false, // 是否自动添加 basePath 前缀
+        permanent: false, // 是否永久重定向 (301, 308)
+      },
+    ];
+  },
+  assetsPrefix: "https://github.com/hangtiancheng", // 静态资源前缀
+  compress: true, // 是否开启压缩
+  // devIndicators: true, // 是否开启开发调试器
+  devIndicators: {
+    // top-left top-right bottom-left bottom-right
+    position: "bottom-right", // 开发调试器 logo 的位置
+  },
+  generateEtags: true, // 是否生成.用于协商缓存的 etag
+  // 自定义响应头
+  headers: () => {
+    return [
+      {
+        source: "/:path*", // 匹配所有路径
+        headers: [
+          // 指定允许 (跨域) 资源共享的源站
+          { key: "Access-Control-Allow-Origin", value: "*" },
+          // 用于响应预检请求, 指定实际请求允许使用的请求方法
+          {
+            key: "Access-Control-Allow-Methods",
+            value: "GET,POST,PUT,DELETE,OPTIONS",
+          },
+          // 用于响应预检请求, 指定实际请求允许使用的请求头字段
+          {
+            key: "Access-Control-Allow-Headers",
+            value: "Authorization,Content-Type",
+          },
+        ],
+      },
+    ];
+  },
+  logging: {
+    fetches: {
+      fullUrl: true, // 日志记录 fetch 的完整 url
+    },
+  },
+  // 页面的文件扩展名 page.{js,jsx,ts,tsx,md,mdx}
+  pageExtensions: ["js", "jsx", "ts", "tsx", "md", "mdx"],
+  // 透传给 turbopack
+  turbopack: {
+    root: resolve(__dirname, "./"),
+    // root: resolve(__dirname, "../../"),
+  },
+  // 全局 scss 变量
+  sassOptions: {
+    // additionalData: `@use "@/styles/variables" as *;`,
+    additionalData: `$color-primary: lightgreen;`,
+  },
+  compiler: {
+    removeConsole: true, // 移除 console.log
+    styledComponents: true, // styled-components 支持
+  },
+};
+```
+
+- next.config [导出静态站点](#导出静态站点)
+- next.config [图片优化](#图片优化)

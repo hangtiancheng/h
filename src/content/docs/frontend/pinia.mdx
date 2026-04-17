@@ -1,0 +1,272 @@
+---
+title: "Pinia"
+---
+
+import { Tabs, TabItem } from "@astrojs/starlight/components";
+
+## 使用 Pinia
+
+```ts
+import { createApp } from "vue";
+import { createPinia } from "pinia";
+import App from "./App.vue";
+
+const app = createApp(App);
+
+const pinia = createPinia();
+app.use(pinia);
+
+app.mount("#app");
+```
+
+## storeToRefs
+
+对 store 直接解构会失去响应式, 需要使用 vue 的 `toRef`, `toRefs` 或 pinia 的 `storeToRefs` 解构
+
+```ts
+// 直接解构会失去响应式
+// const { age, name } = userStore;
+// 需要使用 vue 的 toRef, toRefs 或 pinia 的 storeToRefs 解构
+const { age, name } = storeToRefs(userStore);
+```
+
+## store 仓库实例 api
+
+- `store.$patch` 更新部分 state, 可以接收部分 state, 也可以接收一个更新函数
+- `store.$state` 更新全部 state
+- `store.$subscribe` (类似 watch) 侦听 state 的改变, 改变 state 时, 调用传入的 callback; 返回停止侦听 (移除该 callback) 的函数
+- `store.$onAction` 侦听 actions 的调用, 调用 actions 时, 调用传入的 callback; 返回停止侦听 (移除该 callback) 的函数
+
+### store.$subscribe
+
+`store.$subscribe((mutation, newState) => void)`
+
+```ts
+userStore.$subscribe(
+  (mutation, newState) => {
+    console.log(mutation, newState);
+  }, // callback
+  {
+    detached: false, // 默认 false, 组件卸载时移除 callback
+
+    // deep: true, // 默认 false, 深层侦听
+    immediate: false,
+    // 是否立即执行 callback
+    // 默认 false, 即默认懒执行 callback
+    flush: "pre", // "pre" | "post" | "sync", 默认 pre
+    // pre: state 更新前调用
+    // post: state 更新后调用 callback
+    // sync: 同步调用 callback
+    once: false, // 一次性侦听, callback 只调用一次
+  }, // options
+);
+```
+
+### store.$onAction
+
+- `store.$onAction((context) => void)`
+- `context.after((actionReturnValue) => void /** callback */)` callback 的参数是 action 方法的返回值
+- `context.onError((err) => void /** callback */)` callback 的参数是 action 方法抛出的错误
+- `context.args` action 方法的参数数组
+- `context.store` store 仓库实例
+
+```ts
+userStore.$onAction(
+  (context) => {
+    // callback 的参数是 action 方法的返回值
+    context.after(
+      (actionReturnValue) =>
+        console.log(
+          "[$onAction] context.after, actionReturnValue:",
+          actionReturnValue,
+        ) /** callback */,
+    );
+    // callback 的参数是 action 方法抛出的错误
+    context.onError(
+      (err) =>
+        console.log("[$onAction] context.onError, err:", err) /** callback */,
+    );
+    // action 方法的参数数组
+    console.log("[$onAction] context.args:", context.args);
+    // store 仓库实例
+    console.log(
+      "[$onAction] context.store === userStore:",
+      context.store === userStore,
+    );
+  },
+  false, // 默认 detached: false, 组件卸载时移除 callback
+);
+```
+
+## 组合式 store (setup 语法糖)
+
+使用 setup 语法糖创建的 store 仓库实例没有 $reset 方法, 需要手动实现
+
+<Tabs>
+  <TabItem label="@/stores/count.ts">
+
+```ts filename="@/stores/count.ts"
+import { defineStore } from "pinia";
+import { computed, reactive } from "vue";
+
+export const useCntStore = defineStore("count", () => {
+  // state
+  const cnt = reactive({ v: 0 });
+
+  // getters (使用计算属性)
+  const cntInfo = computed(() => `count: ${cnt.v}`);
+
+  // actions
+  const resetCnt = () => {
+    cnt.v = 0;
+  };
+  const incCnt = () => cnt.v++;
+  const decCnt = () => cnt.v--;
+
+  // 使用 setup 语法糖创建的 store 仓库实例没有 $reset 方法, 需要手动实现
+  const $reset = () => {
+    resetCnt();
+  };
+
+  // 一定要 return!
+  return {
+    // state
+    cnt,
+
+    // getters (使用计算属性)
+    cntInfo,
+
+    // actions
+    incCnt,
+    decCnt,
+    $reset,
+  };
+});
+```
+
+  </TabItem>
+  <TabItem label="@/App.vue">
+
+```vue filename="@/App.vue"
+<script lang="ts" setup>
+import { useCntStore } from "@/stores/count";
+import { storeToRefs } from "pinia";
+
+const cntStore = useCntStore();
+const { cnt, cntInfo } = storeToRefs(cntStore);
+const { incCnt, decCnt } = cntStore;
+
+const addCnt = () => cntStore.cnt.v++;
+const subCnt = () => cnt.value.v--;
+</script>
+
+<template>
+  <div>cntStore.cnt: {{ cntStore.cnt }}</div>
+  <div>cnt: {{ cnt }}</div>
+  <div>cntStore.cntInfo: {{ cntStore.cntInfo }}</div>
+  <div>cntStore.cnt: {{ cntInfo }}</div>
+
+  <div class="flex flex-col gap-5">
+    <button @click="addCnt">addCnt</button>
+    <button @click="subCnt">subCnt</button>
+    <button @click="incCnt">incCnt</button>
+    <button @click="decCnt">decCnt</button>
+
+    <button @click="cntStore.$reset()">$reset</button>
+  </div>
+</template>
+```
+
+  </TabItem>
+</Tabs>
+
+## Pinia 持久化
+
+对比 localStorage 和 sessionStorage
+
+- localStorage: 数据存储到磁盘, 没有过期时间
+- sessionStorage: 数据缓存到内存, 会话结束时自动清除
+
+:::caution
+
+- 页面刷新后, store 仓库缓存的 state 状态丢失
+- 对于组合式 store 仓库实例, 必须递归调用 `toRaw(store.$state)` 将 $state 转换为普通对象
+
+:::
+
+<Tabs>
+  <TabItem label="@/utils/deepToRaw.js">
+
+```js filename="@/utils/deepToRaw.js"
+import { isRef, unref } from "vue";
+
+export function deepToRaw(observed) {
+  const isObj = (val) => val !== null && typeof val === "object";
+  // unref(obj)
+  // 如果 obj 是 ref 创建的响应式对象, 则返回 obj.value, 否则直接返回 obj
+  const val = isRef(observed) ? unref(observed) : observed;
+
+  if (!isObj(val)) {
+    return val;
+  }
+
+  if (Array.isArray(val)) {
+    const rawArr = [];
+    val.forEach((item) => {
+      rawArr.push(deepToRaw(item));
+    });
+    return rawArr;
+  }
+
+  const rawObj = {};
+  Object.keys(val).forEach((key) => {
+    rawObj[key] = deepToRaw(val[key]);
+  });
+
+  return rawObj;
+}
+```
+
+  </TabItem>
+  <TabItem label="@/main.ts">
+
+```ts filename="@/main.ts"
+import { deepToRaw } from "@/utils/deepToRaw";
+
+import { createApp } from "vue";
+import { createPinia, type PiniaPlugin, type PiniaPluginContext } from "pinia";
+import App from "./App.vue";
+
+const app = createApp(App);
+
+const setLocalStorage = (key: string, value: unknown) => {
+  const rawVal = deepToRaw(value);
+  localStorage.setItem(key, JSON.stringify(rawVal));
+};
+
+const getLocalStorage = (key: string) =>
+  JSON.parse(localStorage.getItem(key) ?? "null");
+
+const piniaPluginPersist = (): PiniaPlugin => {
+  return (ctx: PiniaPluginContext) => {
+    const key = ctx.store.$id;
+    const val = getLocalStorage(key);
+    console.log(`[piniaPluginPersist] key: ${key}, value: ${val}`);
+    // store.$subscribe
+    // (类似 watch) 侦听 state 的改变, 改变 state 时, 调用传入的 callback; 返回停止侦听 (移除该 callback) 的函数
+    ctx.store.$subscribe(() =>
+      setLocalStorage(key, deepToRaw(ctx.store.$state)),
+    );
+    return val;
+  };
+};
+
+const pinia = createPinia();
+pinia.use(piniaPluginPersist());
+app.use(pinia);
+
+app.mount("#app");
+```
+
+  </TabItem>
+</Tabs>

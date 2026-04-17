@@ -1,0 +1,27 @@
+---
+title: "Docs"
+---
+
+- 多模态 (multimodal): 大模型可以理解 text、image、audio、video 等
+- 提示词增强 (prompt enhancement/engineering)
+- 会话记忆 (session memory): 使得大模型在多轮对话中, 可以记忆上下文
+  - 短期记忆: 使用上下文滑动窗口
+  - 长期记忆: 使用向量数据库持久化存储
+- 结构化输出 (structured output): 要求大模型按指定格式 (例如 json) 输出响应, 而不是 (markdown) 文本
+- 检索增强生成 (RAG, Retrieval-Augmented Generation): 补充「知识」缺失
+  - 大模型从外部知识库 (通常是向量数据库) 中检索与用户查询相关的内容, 作为参考上下文提供给模型消费; 可以减少模型幻觉,并提供基于最新/私有数据的响应
+  - RAG 中, 将长文档切割为多个文本块 chunk 并向量化, 通过计算相似度 (例如余弦相似度), 召回与用户查询最相关的 K 个 (topK) 文本块作为参考上下文
+- 护轨 (guardrails) 类似请求拦截器
+- mcp 模型上下文协议 (model context protocol)
+  - mcp host: 例如 vscode
+  - mcp client: 例如 vscode 内置的 mcp 客户端, 负责连接、请求 mcp server
+  - mcp server: 可以连接数据库, 向 mcp client 提供工具调用服务
+  - mcp 模型上下文协议将工具调用解耦到独立、可插拔的 mcp server
+- tool 工具
+  - 大模型不执行客户端的 tool 函数, 只负责决策
+  - 注册工具, 包括 tool_name 工具名、description 描述、args 参数 schema
+  - 大模型决定调用 tool 时, 会输出结构化工具调用指令, 例如 `{ "tool_name": "get_weather", "args": { "city": "Shanghai" } }`
+  - 客户端收到大模型的结构化工具调用指令, 执行 tool 函数
+  - 客户端 tool 函数执行结束后, 将执行结果封装为 tool 消息 `{ "role": "tool", "content": "执行结果" }` 并发送给大模型
+  - 大模型将 tool 消息追加到历史对话列表, 模型读取包含 tool 消息的新上下文后, 输出最终的响应
+- skill 技能: 补充「行为」缺失, 参考 [Agent.md](../../AGENTS.md)

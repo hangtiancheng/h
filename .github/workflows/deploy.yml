@@ -1,0 +1,38 @@
+name: Deploy to hangtiancheng.github.io GitHub Pages # 工作流名
+
+on: # 触发工作流的 github 事件, 例如 push, pull_request 等
+  push: # push 操作时, 触发工作流
+    # tags: # 指定 tag 上的 push 操作, 才会触发工作流
+    #   - "v*.*.*" # 指定 tag
+# 例如 git tag v0.0.1 && git push origin v0.0.1 时, 才会触发工作流
+
+jobs: # 工作流中的作业
+  build-and-deploy: # 作业名
+    runs-on: ubuntu-latest # 操作系统
+
+    steps: # 作业的步骤
+      - name: checkout # 步骤名
+        uses: actions/checkout@v4 # 使用预定义的 actions/checkout 动作 checkout 仓库
+
+      - name: setup Node.js
+        uses: actions/setup-node@v4 # 使用预定义的 actions/setup-node 动作安装 Node.js
+        with: # 动作的参数
+          node-version: 24 # 指定 Node.js 版本
+
+      - name: cleanup
+        run: | # 运行命令或脚本, | 表示多行命令
+          rm -rf node_modules package-lock.json
+
+      - name: npm install
+        run: npm install
+
+      - name: npm run build
+        run: npm run build
+
+      - name: deploy
+        uses: peaceiris/actions-gh-pages@v4 # 使用预定义的 peaceiris/actions-gh-pages 动作部署 GitHub Pages
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
+          user_name: "hangtiancheng"
+          user_email: "hangtiancheng@qq.com"
