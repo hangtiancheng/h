@@ -1,0 +1,107 @@
+package main
+
+import (
+	"container/heap"
+	"math"
+)
+
+type minHeapNode struct {
+	x int
+	y int
+	d int
+}
+
+type minHeap []minHeapNode
+
+// Len implements [heap.Interface].
+func (m minHeap) Len() int {
+	return len(m)
+}
+
+// Less implements [heap.Interface].
+func (m minHeap) Less(i int, j int) bool {
+	return m[i].d < m[j].d
+}
+
+// Pop implements [heap.Interface].
+func (m *minHeap) Pop() any {
+	t := (*m)[len(*m)-1]
+	*m = (*m)[:len(*m)-1]
+	return t
+}
+
+// Push implements [heap.Interface].
+func (m *minHeap) Push(x any) {
+	*m = append(*m, x.(minHeapNode))
+}
+
+// Swap implements [heap.Interface].
+func (m minHeap) Swap(i int, j int) {
+	m[i], m[j] = m[j], m[i]
+}
+
+var _ heap.Interface = (*minHeap)(nil)
+
+func findSafeWalk(grid [][]int, health int) bool {
+	type pair struct {
+		x int
+		y int
+	}
+	m, n := len(grid), len(grid[0])
+	dir4 := []pair{{0, 1}, {1, 0}, {0, -1}, {-1, 0}}
+
+	dist := make([][]int, m)
+	for i := range m {
+		dist[i] = make([]int, n)
+		for j := range n {
+			dist[i][j] = math.MaxInt
+		}
+	}
+
+	dist[0][0] = grid[0][0]
+	h := minHeap{{
+		x: 0,
+		y: 0,
+		d: grid[0][0],
+	}}
+
+	heap.Init(&h)
+
+	vis := make([][]bool, m)
+	for i := range m {
+		vis[i] = make([]bool, n)
+	}
+
+	for h.Len() > 0 {
+    // Shift the heap's top element
+		top := heap.Pop(&h).(minHeapNode)
+		px, py := top.x, top.y
+
+		if vis[px][py] {
+			continue
+		}
+		vis[px][py] = true
+
+		if px == m-1 && py == n-1 {
+			break
+		}
+
+		for _, d := range dir4 {
+			x, y := px+d.x, py+d.y
+
+			if x >= 0 && x < m && y >= 0 && y < n {
+				cost := grid[x][y]
+				if dist[px][py]+cost < dist[x][y] {
+					dist[x][y] = dist[px][py] + cost
+					heap.Push(&h, minHeapNode{
+						x: x,
+						y: y,
+						d: dist[x][y],
+					})
+				}
+			}
+		}
+	}
+
+	return dist[m-1][n-1] < health
+}

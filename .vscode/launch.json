@@ -1,0 +1,38 @@
+{
+  "configurations": [
+    {
+      "command": "pnpm main:js",
+      "name": "pnpm main:js",
+      "request": "launch",
+      "type": "node-terminal"
+    },
+    {
+      "command": "pnpm main:ts",
+      "name": "pnpm main:ts",
+      "request": "launch",
+      "type": "node-terminal"
+    },
+    {
+      "console": "integratedTerminal",
+      "name": "python",
+      "program": "${file}",
+      "request": "launch",
+      "type": "debugpy"
+    },
+    {
+      "name": "JS",
+      "program": "${file}",
+      "request": "launch",
+      "skipFiles": ["<node_internals>/**"],
+      "type": "node"
+    },
+    {
+      "name": "TS",
+      "program": "${workspaceFolder}/dist/${relativeFileDirname}/${fileBasenameNoExtension}.js",
+      "request": "launch",
+      "skipFiles": ["<node_internals>/**"],
+      "type": "node"
+    }
+  ],
+  "version": "0.2.0"
+}

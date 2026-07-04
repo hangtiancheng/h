@@ -1,0 +1,18 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans:
+    "Iosevka", "Maple Mono", Menlo, "Cascadia Code", "PingFang SC",
+    "Microsoft YaHei" !important;
+  --font-mono:
+    "Iosevka", "Maple Mono", Menlo, "Cascadia Code", "PingFang SC",
+    "Microsoft YaHei" !important;
+}
+
+:root {
+  --vp-c-brand-1: hsl(160deg 100% 37%);
+  --vp-c-brand-2: hsl(160deg 100% 42%);
+  --vp-c-brand-3: hsl(160deg 100% 32%);
+  --vp-font-family-base: var(--font-sans);
+  --vp-font-family-mono: var(--font-mono);
+}
