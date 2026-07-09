@@ -1,0 +1,328 @@
+# Server Components
+
+## Server Components without a Server
+
+> Compare to SSG?
+
+::: code-group
+
+```js [client]
+// bundle.js
+import marked from "marked"; // 35.9K (11.2K gzipped)
+import sanitizeHtml from "sanitize-html"; // 206K (63.3K gzipped)
+
+function Page({ page }) {
+  const [content, setContent] = useState("");
+  // NOTE: loads *after* first page render.
+  useEffect(() => {
+    fetch(`/api/content/${page}`).then((data) => {
+      setContent(data.content);
+    });
+  }, [page]);
+
+  return <div>{sanitizeHtml(marked(content))}</div>;
+}
+```
+
+```js [server]
+// api.js
+app.get(`/api/content/:page`, async (req, res) => {
+  const page = req.params.page;
+  const content = await file.readFile(`${page}.md`);
+  res.send({ content });
+});
+```
+
+:::
+
+CSR 模式意味着, 用户需要下载并解析 75KB 的 gzip 压缩文件中的 js 库文件, 页面加载完成后, 还需要请求接口, 仅仅只是为了渲染在页面整个生命周期内, 都不会改变的静态内容
+
+服务器组件可以构建时渲染这些组件
+
+```js
+import marked from "marked"; // Not included in bundle
+import sanitizeHtml from "sanitize-html"; // Not included in bundle
+
+// 服务器组件可以是异步的
+async function Page({ page }) {
+  // NOTE: loads *during* render, when the app is built.
+  const content = await file.readFile(`${page}.md`);
+
+  return <div>{sanitizeHtml(marked(content))}</div>;
+}
+```
+
+服务器渲染为 html, 上传到 CDN; 页面加载时, 浏览器不需要渲染 `<Page />` 组件、不需要下载并解析 js 库文件, 直接拿到服务器渲染的 html
+
+```html
+<div><!-- I was lighting before the thunder --></div>
+```
+
+## Server Components with a Server
+
+:::
+
+```js [client]
+// bundle.js
+function Note({ id }) {
+  const [note, setNote] = useState("");
+  // NOTE: loads *after* first render.
+  useEffect(() => {
+    fetch(`/api/notes/${id}`).then((data) => {
+      setNote(data.note);
+    });
+  }, [id]);
+
+  return (
+    <div>
+      <Author id={note.authorId} />
+      <p>{note}</p>
+    </div>
+  );
+}
+
+function Author({ id }) {
+  const [author, setAuthor] = useState("");
+  // NOTE: loads *after* Note renders.
+  // Causing an expensive client-server waterfall.
+  useEffect(() => {
+    fetch(`/api/authors/${id}`).then((data) => {
+      setAuthor(data.author);
+    });
+  }, [id]);
+
+  return <span>By: {author.name}</span>;
+}
+```
+
+```js [server]
+// api
+import db from "./database";
+
+app.get(`/api/notes/:id`, async (req, res) => {
+  const note = await db.notes.get(id);
+  res.send({ note });
+});
+
+app.get(`/api/authors/:id`, async (req, res) => {
+  const author = await db.authors.get(id);
+  res.send({ author });
+});
+```
+
+:::
+
+可以在服务器组件中, 读 db 的数据并渲染
+
+```js
+import db from "./database";
+
+async function Note({ id }) {
+  // NOTE: loads *during* render.
+  const note = await db.notes.get(id);
+  return (
+    <div>
+      <Author id={note.authorId} />
+      <p>{note}</p>
+    </div>
+  );
+}
+
+async function Author({ id }) {
+  // NOTE: loads *after* Note,
+  // but is fast if data is co-located.
+  const author = await db.authors.get(id);
+  return <span>By: {author.name}</span>;
+}
+```
+
+传统的 SPA, 用户在 / 页面点击 `<Link href="/author">`
+
+1. 浏览器发送请求: GET /author, 服务端返回 index.html
+2. 浏览器请求并解析 JS bundle, react 渲染 `<Author />` 组件
+3. `<Author />` 组件的 useEffect 钩子函数请求接口
+4. 服务器收到请求, 读数据库
+5. `<Author />` 组件 setState, 触发重新渲染
+6. 页面更新为 `<span>By: Alice</span>`
+
+如果 `<Author />` 中有客户端子组件, 例如 `<Author />` 中有 `<FavorButton />` (标记了 "use client"), 则响应的 RSC payload 中会包含一个 client component 子组件的引用, 浏览器收到后, 额外下载 `<FavorButton />` 的 js bundle 并在客户端渲染、水合
+
+对于 Next.js App Router, 用户在 / 页面点击 `<Link href="/author">`
+
+1. 浏览器发送请求
+   - 不是 SPA 的路由跳转, `<Link>` 组件拦截点击, 向服务器发送 RSC 请求
+   - GET /author; Headers RSC: 1
+   - 告诉服务端返回 RSC payload 而不是完整 html
+2. 服务器收到请求, 匹配 /author 路由对应的服务器组件
+   - 服务器执行 `Author({ id })`, 读数据库
+   - 拿到 `author = { name: "Alice" }`
+   - 渲染得到 RSC payload
+3. 浏览器收到 RSC payload 并 patch
+   - 对比当前 DOM 树, patch 改变的部分, 类似 react reconcile
+   - 页面更新为 `<span>By: Alice</span>`
+
+RSC payload 简化
+
+```json
+// RSC payload
+{
+  "layout": "...",
+  "page": {
+    "type": "span",
+    "children": "By: Alice"
+  }
+}
+```
+
+```html
+<div>
+  <!-- Old Title -->
+  <span>Old Title</span>
+  <!-- Old Content -->
+  <p>Old Content</p>
+</div>
+```
+
+Server Components can be made dynamic by re-fetching them from a server, where they can access the data and render again. This new application architecture combines the simple “request/response” mental model of server-centric Multi-Page Apps with the seamless interactivity of client-centric Single-Page Apps, giving you the best of both worlds.
+
+> Q/A
+>
+> 关于 Server Components can be made dynamic by re-fetching them from a server, 这里 re-fetching 拿到的是什么数据? (是整块 html)
+
+是新的 title 和 content? 还是整块 html?
+
+```html
+<div>
+  <!-- Title -->
+  <span>New Title</span>
+  <!-- Content -->
+  <p>New Content</p>
+</div>
+```
+
+## Adding interactivity to Server Components
+
+服务器组件不会被发送到浏览器中, 无法使用 `useState` 的交互式 API, 可以使用 "use client" 指令, 用于标记可交互的客户端组件
+
+"use client" 指令
+
+- 标记浏览器边界
+- js 代码发送到浏览器 (bundling)
+- 可以使用 hooks, 可交互
+- 支持水合 (hydration)
+- 客户端组件可以作为服务器组件的子组件: 服务器组件在服务器渲染时, 遇到 import 的 客户端组件子组件, 跳过渲染, 生成一个引用节点 `{ $$typeof: Symbol(react.element), type: "client:./bundle.js", props: { noteId: 1 } }`; 继续渲染剩余的服务器组件, 输出的 rsc payload 是已渲染的 html 片段 + 客户端组件引用
+- 服务器组件不能作为客户端组件的子组件: "use client" 标记浏览器边界, import 语句在浏览器执行, 无法在服务端获取数据等
+- 可以将服务器组件作为客户端组件的 props 传递
+
+```js
+// Server Component
+// 服务器组件 <Notes /> 在服务器渲染时, 遇到 import 的客户端子组件 <Expandable />
+// 跳过 <Expandable /> 渲染, 生成一个引用节点
+// 打包工具为客户端组件打包为 js 文件
+import Expandable from "./Expandable";
+
+async function Notes() {
+  const notes = await db.notes.getAll();
+  return (
+    <div>
+      {notes.map((note) => (
+        <Expandable key={note.id}>
+          <p note={note} />
+        </Expandable>
+      ))}
+    </div>
+  );
+}
+```
+
+```html
+<head>
+  <!-- the bundle for Client Components -->
+  <script src="bundle.js" />
+</head>
+<body>
+  <div>
+    {/* 浏览器中，服务器可以传递 props 给客户端组件 */}
+    <Expandable key="{1}">
+      <p>this is the first note</p>
+    </Expandable>
+    <Expandable key="{2}">
+      <p>this is the second note</p>
+    </Expandable>
+    <!-- ... -->
+  </div>
+</body>
+```
+
+> 服务器组件可以使用 async/await, 在 async 的服务器组件中 await 时, react
+
+### There is no directive for Server Components.
+
+- `"use client"` 指令用于标记可交互的客户端组件
+- 没有用于标记服务器组件的指令
+- `"use server"` 指令用于标记服务器函数
+
+```js
+// Server Component
+import db from "./database";
+
+async function Page({ id }) {
+  // Will suspend the Server Component.
+  const note = await db.notes.get(id);
+
+  // NOTE: not awaited, will start here and await on the client.
+  const commentsPromise = db.comments.get(note.id);
+  return (
+    <div>
+      {note}
+      <Suspense fallback={<p>Loading Comments...</p>}>
+        <Comments commentsPromise={commentsPromise} />
+      </Suspense>
+    </div>
+  );
+}
+```
+
+```js
+// Client Component
+"use client";
+import { use } from "react";
+
+function Comments({ commentsPromise }) {
+  // NOTE: this will resume the promise from the server.
+  // It will suspend until the data is available.
+
+  // use is a React API that lets you read the value of a Promise or context.
+  const comments = use(commentsPromise);
+  return comments.map((comment) => <p>{comment}</p>);
+}
+
+// 需要配合 <Suspense />
+// <Suspense fallback={<p>Loading Comments...</p>}>
+//   <Comments commentsPromise={commentsPromise} />
+// </Suspense>
+```
+
+useState + useEffect
+
+```js
+"use client";
+import { useState, useEffect } from "react";
+
+function Comments({ commentsPromise }) {
+  const [comments, setComments] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    commentsPromise.then((data) => {
+      setComments(data);
+      setLoading(false);
+    });
+  }, [commentsPromise]);
+
+  if (loading) {
+    return <p>Loading Comments...</p>;
+  }
+  return comments.map((comment) => <p>{comment}</p>);
+}
+```

@@ -58,34 +58,13 @@ const input = async () => String((await iter.next()).value);
 })();
 ```
 
-# UV 命令
+## Go
 
-```bash
-uv init ./algorithm
-cd ./algorithm
+```sh
+go env -w GOPROXY=https://goproxy.cn,direct
 
-uv add jupyter notebook --dev
-uv remove jupyter notebook
-
-uv run main.py
-uv run python main.py
-uv run ruff check
-
-uv lock
-uv sync
-
-uv venv
-uv venv --python 3.13
-
-uv python install 3.13
-uv python pin 3.13
-
-uvx ruff check
-
-uv tool install ruff
-uv tool list
-
-uv pip install -r requirements.txt
-uv pip compile requirements.in -o requirements.txt
-uv pip sync requirements.txt
+go install github.com/josharian/impl@latest
+go install github.com/haya14busa/goplay/cmd/goplay@latest
+go install github.com/go-delve/delve/cmd/dlv@latest
+go install golang.org/x/tools/gopls@latest
 ```
