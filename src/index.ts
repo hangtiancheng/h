@@ -168,3 +168,77 @@ function pivotArray(nums: number[], pivot: number): number[] {
   }
   return [...sNums, ...new Array<number>(repeat).fill(pivot), ...lNums];
 }
+
+function arrayRankTransform(arr: number[]): number[] {
+  const n = arr.length;
+  const tmp = Array.from(new Set(arr))
+    .map((item, idx) => [item, idx] as const)
+    .toSorted((a, b) => a[0] - b[0]);
+  const rank = new Map(tmp);
+  const ans = Array.from({ length: n }, () => 0);
+  for (let i = 0; i < n; i++) {
+    ans[i] = rank.get(arr[i]) ?? 0;
+  }
+  return ans;
+}
+function countCompleteComponents(n: number, edges: number[][]): number {
+  const g = new Map<number, number[]>();
+
+  for (const [from, to] of edges) {
+    if (!g.has(from)) {
+      g.set(from, [to]);
+    } else {
+      g.get(from)?.push(to);
+    }
+
+    if (!g.has(to)) {
+      g.set(to, [from]);
+    } else {
+      g.get(to)?.push(from);
+    }
+  }
+  const seen = Array.from({ length: n }, () => false);
+  const bfs = (i: number): boolean => {
+    let queue: number[] = [i];
+    let nodeCnt = 1,
+      edgeCnt = 0;
+
+    while (queue.length) {
+      const tmp: number[] = [];
+      while (queue.length) {
+        const t = queue[0];
+        queue.shift();
+
+        for (const n of g.get(t) ?? []) {
+          edgeCnt++;
+          if (!seen[n]) {
+            seen[n] = true;
+            nodeCnt++;
+            tmp.push(n);
+          }
+        }
+      }
+
+      queue = tmp;
+    }
+
+    return edgeCnt === nodeCnt * (nodeCnt - 1);
+  };
+
+  let ans = 0;
+  for (let i = 0; i < n; i++) {
+    if (seen[i]) {
+      continue;
+    }
+
+    seen[i] = true;
+    if (!g.has(i)) {
+      ans++;
+      continue;
+    }
+
+    ans += bfs(i) ? 1 : 0;
+  }
+
+  return ans;
+}
