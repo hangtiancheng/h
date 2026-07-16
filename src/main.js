@@ -1,61 +1,40 @@
-// @ts-check
+const arr = [1, 2, 3];
 
-const dir4 = [
-  [1, 0],
-  [-1, 0],
-  [0, 1],
-  [0, -1],
-];
+arr[Symbol.asyncIterator] = function () {
+  const syncIter = this[Symbol.iterator]();
+  return {
+    next() {
+      const result = syncIter.next();
+      return Promise.resolve(result);
+    },
+  };
+};
 
-/**
- * @param {number[][]} grid
- * @param {number} health
- * @return {boolean}
- */
-var findSafeWalk = function (grid, health) {
-  const m = grid.length,
-    n = grid[0].length;
-
-  const cost = Array.from({ length: m }, () =>
-    Array.from({ length: n }, () => -1),
-  );
-  cost[0][0] = grid[0][0];
-
-  /**
-   * @type {[x: number, y: number][]}
-   */
-  let q = [[0, 0]];
-  let ans = false;
-
-  while (q.length) {
-    const tmp = q;
-    q = [];
-
-    while (tmp.length) {
-      const top = tmp.shift();
-
-      if (top) {
-        const [tx, ty] = top;
-        const tc = cost[tx][ty];
-        if (tx === m - 1 && ty === n - 1) {
-          ans = true;
-          break;
-        }
-
-        for (const [dx, dy] of dir4) {
-          const x = tx + dx,
-            y = ty + dy;
-          if (x >= 0 && x < m && y >= 0 && y < n) {
-            const nc = tc + grid[x][y];
-            if ((cost[x][y] === -1 && nc < health) || nc < cost[x][y]) {
-              cost[x][y] = nc;
-              q.push([x, y]);
-            }
-          }
-        }
-      }
-    }
+(async () => {
+  for await (const v of arr) {
+    console.log(v); // 1, 2, 3
   }
+})();
 
-  return ans;
+const arr2 = [1, 2, 3];
+
+arr2[Symbol.asyncIterator] = async function* () {
+  const syncIter = this[Symbol.iterator]();
+  let result = syncIter.next();
+  while (!result.done) {
+    yield result.value;
+    result = syncIter.next();
+  }
+};
+
+(async () => {
+  for await (const v of arr) {
+    console.log(v); // 1, 2, 3
+  }
+})();
+
+const arr3 = [1, 2, 3];
+
+arr3[Symbol.asyncIterator] = async function* () {
+  yield* this;
 };

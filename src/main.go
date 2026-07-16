@@ -73,7 +73,7 @@ func findSafeWalk(grid [][]int, health int) bool {
 	}
 
 	for h.Len() > 0 {
-    // Shift the heap's top element
+		// Shift the heap's top element
 		top := heap.Pop(&h).(minHeapNode)
 		px, py := top.x, top.y
 
@@ -104,4 +104,30 @@ func findSafeWalk(grid [][]int, health int) bool {
 	}
 
 	return dist[m-1][n-1] < health
+}
+
+func minScore(n int, roads [][]int) int {
+	type edge struct{ to, dis int }
+	g := make([][]edge, n+1)
+
+	for _, e := range roads {
+		x, y, dis := e[0], e[1], e[2]
+		g[x] = append(g[x], edge{y, dis})
+		g[y] = append(g[y], edge{x, dis})
+	}
+
+	vis := make([]bool, n+1)
+	ans := math.MaxInt
+	var dfs func(int)
+	dfs = func(x int) {
+		vis[x] = true
+		for _, e := range g[x] {
+			ans = min(ans, e.dis)
+			if !vis[e.to] {
+				dfs(e.to)
+			}
+		}
+	}
+	dfs(1)
+	return ans
 }

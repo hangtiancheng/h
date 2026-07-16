@@ -864,6 +864,117 @@ function setData() {
 3. 后端解决: 设置请求头 `Access-Control-Allow-Credentials`, `Access-Control-Expose-Headers`, `Access-Control-Allow-Methods`, `Access-Control-Allow-Origin`, `Access-Control-Allow-Headers`
 4. 使用 Nginx 代理
 
+### JSONP
+
+原理: HTML 文件的 `<script>` 标签没有跨域限制
+
+::: code-group
+
+```html [frontend (localhost:5500)]
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <script>
+      function jsonp(req /* { url, callback } */) {
+        const script = document.createElement("script");
+        const url = `${req.url}?callback=${req.callback.name}`;
+        script.src = url;
+        // 浏览器请求该 <script> 标签的 src
+        // 响应: frontendFn({"data":"I love you"})
+        document.getElementsByTagName("head")[0].appendChild(script);
+      }
+
+      function frontendFn(res) {
+        alert(`res.data: ${res.data}`);
+      }
+
+      // frontendFn.name: frontendFn
+      console.log("frontendFn.name:", frontendFn.name);
+      jsonp({ url: "http://localhost:8080", callback: frontendFn });
+    </script>
+  </head>
+  <body></body>
+</html>
+```
+
+```js [backend (localhost:8080)]
+import http from "node:http";
+import urllib from "node:url";
+
+const port = 8080;
+const cbParams = { data: "I love you" };
+http
+  .createServer((req, res) => {
+    const params = urllib.parse(req.url, true);
+    if (params.query.callback) {
+      // callback: frontendFn
+      console.log("callback:", params.query.callback);
+      // JSONP, JSON with Padding
+      const jsonWithPadding = `${params.query.callback}(${JSON.stringify(cbParams)})`;
+      // jsonWithPadding: frontendFn({"data":"I love you"})
+      console.log("jsonWithPadding:", jsonWithPadding);
+      res.end(jsonWithPadding);
+    } else {
+      res.end();
+    }
+  })
+  .listen(port, () => {
+    console.log(`http://localhost:${port}`);
+  });
+```
+
+:::
+
+### Vite 代理
+
+```ts
+import { fileURLToPath, URL } from "node:url";
+
+import { defineConfig } from "vite";
+import vue from "@vitejs/plugin-vue";
+
+// https://vite.dev/config/
+export default defineConfig({
+  plugins: [vue()],
+  resolve: {
+    alias: {
+      "@": fileURLToPath(new URL("./src", import.meta.url)),
+    },
+  },
+  server: {
+    proxy: {
+      "/api": {
+        target: "http://localhost:8080",
+        rewrite: (path) => path.replace(/^\/api/, ""),
+      },
+    },
+  },
+});
+```
+
+### 后端允许跨域
+
+```js
+function cors(req, res, next) {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header(
+    "Access-Control-Allow-Headers",
+    "Origin, X-Requested-With, Content-Type, Accept, Authorization",
+  );
+  // res.header("Access-Control-Allow-Credentials", true);
+  res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
+  res.header("Content-type", "application/json;charset=utf-8");
+  // 预检 (pre-flight) 请求
+  if (req.method.toUpperCase() === "OPTIONS") {
+    return res.sendStatus(204);
+  }
+  next();
+}
+```
+
 ### CSP 内容安全策略
 
 目的: 预防跨站脚本攻击 XSS, Cross-Site Scripting

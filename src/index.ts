@@ -1,244 +1,195 @@
-// Let dis[i][j] be the Manhattan distance from cell (i, j) to the nearest 1.
-// The safeness factor is the minimum dis[i][j] along a path from (0, 0) to (n-1, n-1).
-// Enumerate the safeness factor from largest to smallest. Suppose the safeness factor is d:
-// use a Union-Find to connect every cell with dis[i][j] >= d to its adjacent cells that also
-// have dis >= d. If (0, 0) and (n-1, n-1) become connected, then the answer is d.
-//
-// In terms of implementation, there is no need to traverse the entire dis array for each d.
-// Instead, incrementally connect cells whose dis[i][j] is exactly d to their adjacent cells
-// with dis >= d. Cells sharing the same dis value can be grouped together (stored in `groups`)
-// to avoid repeatedly scanning the full dis array.
-//
-// To compute dis, run a multi-source BFS starting from all cells containing 1.
-
-function maximumSafenessFactor(grid: number[][]): number {
-  const n = grid.length;
-  const dis = Array.from({ length: n }, () =>
-    Array.from({ length: n }, () => 0),
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
+function pathExistenceQueries(
+  n: number,
+  nums: number[],
+  maxDiff: number,
+  queries: number[][],
+): boolean[] {
+  const pa = new Map<number, number>(
+    Array.from({ length: n }, (_, idx) => [idx, idx]),
   );
-  let ps: [x: number, y: number][] = [];
 
-  for (let i = 0; i < grid.length; i++) {
-    const row = grid[i];
-    for (let j = 0; j < row.length; j++) {
-      const x = row[j];
-      if (x === 1) {
-        // A thief
-        ps.push([i, j]);
-      } else {
-        dis[i][j] = -1; // Not a thief
-      }
+  const find = (x: number) => {
+    const px = pa.get(x)!;
+    if (px !== x) {
+      const rt = pa.get(px)!;
+      pa.set(x, rt);
+      return rt;
     }
-  }
-
-  const groups: (typeof ps)[] = [ps];
-
-  while (ps.length > 0) {
-    const tmp = [...ps];
-    ps = [];
-    for (const t of tmp) {
-      for (const [dx, dy] of dir4) {
-        const [x, y] = [t[0] + dx, t[1] + dy];
-        if (x >= 0 && x < n && y >= 0 && y < n && dis[x][y] === -1) {
-          dis[x][y] = groups.length;
-          ps.push([x, y]);
-        }
-      }
-    }
-    groups.push(ps);
-  }
-
-  const fa = Array.from({ length: n * n }, (_v, k) => k);
-  const find = (x: number): number => {
-    if (fa[x] !== x) {
-      fa[x] = find(fa[x]);
-    }
-    return fa[x];
+    return px;
   };
 
   const union = (x: number, y: number) => {
-    const fx = find(x);
-    const fy = find(y);
-    fa[fx] = fy;
+    const px = find(x);
+    const py = find(y);
+    if (px === py) return;
+    pa.set(py, px);
   };
 
-  for (let ans = groups.length - 2; ans > 0; ans--) {
-    for (const g of groups[ans]) {
-      const [i, j] = g;
-      for (const [dx, dy] of dir4) {
-        const [x, y] = [i + dx, j + dy];
-        if (x >= 0 && x < n && y >= 0 && y < n && dis[x][y] >= ans) {
-          union(x * n + y, i * n + j);
-        }
-      }
-    }
+  const isSame = (x: number, y: number) => {
+    const px = find(x);
+    const py = find(y);
+    return px === py;
+  };
 
-    if (find(0) === find(n * n - 1)) {
-      return ans;
+  for (let i = 1; i < nums.length; i++) {
+    if (nums[i] - nums[i - 1] <= maxDiff) {
+      union(i - 1, i);
+    } else {
+      pa.set(nums[i], nums[i]);
     }
   }
 
-  return 0;
-}
-
-const dir4: [dx: number, dy: number][] = [
-  [1, 0],
-  [-1, 0],
-  [0, 1],
-  [0, -1],
-];
-function findSafeWalk(grid: number[][], health: number): boolean {
-  const m = grid.length,
-    n = grid[0].length;
-
-  const vis = Array.from({ length: m }, () =>
-    Array.from({ length: n }, () => false),
-  );
-
-  vis[0][0] = true;
-
-  const least = Array.from({ length: m }, () =>
-    Array.from({ length: n }, () => Infinity),
-  );
-
-  const dfs = (i: number, j: number, cost: number): number => {
-    if (cost >= health) return Infinity;
-    if (cost >= least[i][j]) return Infinity;
-    least[i][j] = cost;
-
-    if (i === m - 1 && j === n - 1) {
-      return cost + grid[i][j];
-    }
-
-    vis[i][j] = true;
-
-    let ret = Infinity;
-    for (const [dx, dy] of dir4) {
-      const x = i + dx,
-        y = j + dy;
-      if (x >= 0 && x < m && y >= 0 && y < n && !vis[x][y]) {
-        ret = Math.min(ret, dfs(x, y, cost + grid[i][j]));
-      }
-    }
-
-    vis[i][j] = false;
-    return ret;
-  };
-
-  return dfs(0, 0, 0) < health;
-}
-
-const res = findSafeWalk(
-  [
-    [0, 1, 0, 0, 0],
-    [0, 1, 0, 1, 0],
-    [0, 0, 0, 1, 0],
-  ],
-  1,
-);
-
-console.log(res); // Should be true
-
-const res2 = findSafeWalk(
-  [
-    [0, 1, 1, 0, 0, 0],
-    [1, 0, 1, 0, 0, 0],
-    [0, 1, 1, 1, 0, 1],
-    [0, 0, 1, 0, 1, 0],
-  ],
-  3,
-);
-
-console.log(res2); // Should be false
-
-function pivotArray(nums: number[], pivot: number): number[] {
-  const sNums: number[] = [];
-  const lNums: number[] = [];
-  let repeat = 0;
-  for (const n of nums) {
-    if (n < pivot) {
-      sNums.push(n);
-      continue;
-    }
-    if (n > pivot) {
-      lNums.push(n);
-      continue;
-    }
-    repeat++;
-  }
-  return [...sNums, ...new Array<number>(repeat).fill(pivot), ...lNums];
-}
-
-function arrayRankTransform(arr: number[]): number[] {
-  const n = arr.length;
-  const tmp = Array.from(new Set(arr))
-    .map((item, idx) => [item, idx] as const)
-    .toSorted((a, b) => a[0] - b[0]);
-  const rank = new Map(tmp);
-  const ans = Array.from({ length: n }, () => 0);
-  for (let i = 0; i < n; i++) {
-    ans[i] = rank.get(arr[i]) ?? 0;
+  const ans: boolean[] = [];
+  for (const [a, b] of queries) {
+    ans.push(isSame(a, b));
   }
   return ans;
 }
-function countCompleteComponents(n: number, edges: number[][]): number {
-  const g = new Map<number, number[]>();
 
-  for (const [from, to] of edges) {
-    if (!g.has(from)) {
-      g.set(from, [to]);
-    } else {
-      g.get(from)?.push(to);
+// /**
+//  * Definition for singly-linked list.
+//  * class ListNode {
+//  *     val: number
+//  *     next: ListNode | null
+//  *     constructor(val?: number, next?: ListNode | null) {
+//  *         this.val = (val===undefined ? 0 : val)
+//  *         this.next = (next===undefined ? null : next)
+//  *     }
+//  * }
+//  */
+
+// function deleteMiddle(head: ListNode | null): ListNode | null {
+
+// };
+
+class LRUCache {
+  cap: number;
+  kvs = new Map<number, number>();
+
+  constructor(capacity: number) {
+    this.cap = capacity;
+  }
+
+  get(key: number): number {
+    if (!this.kvs.has(key)) {
+      return -1;
     }
+    const val = this.kvs.get(key)!;
+    // Re-insert to move key to end (most recently used)
+    this.kvs.delete(key);
+    this.kvs.set(key, val);
+    return val;
+  }
 
-    if (!g.has(to)) {
-      g.set(to, [from]);
+  put(key: number, value: number): void {
+    if (this.kvs.has(key)) {
+      // Delete first so re-insert moves it to end
+      this.kvs.delete(key);
+    } else if (this.kvs.size >= this.cap) {
+      // Evict the least recently used (first entry in insertion order)
+      const [k, v] = this.kvs[Symbol.iterator]().next().value!;
+      this.kvs.delete(k);
+    }
+    this.kvs.set(key, value);
+  }
+}
+
+/**
+ * Your LRUCache object will be instantiated and called as such:
+ * var obj = new LRUCache(capacity)
+ * var param_1 = obj.get(key)
+ * obj.put(key,value)
+ */
+
+function gcdOfOddEvenSums(n: number): number {
+  let sumOdd = 0,
+    sumEven = 0;
+  for (let i = 1; i <= 2 * n; i++) {
+    if (i % 2 === 0) {
+      sumEven += i;
     } else {
-      g.get(to)?.push(from);
+      sumOdd += i;
     }
   }
-  const seen = Array.from({ length: n }, () => false);
-  const bfs = (i: number): boolean => {
-    let queue: number[] = [i];
-    let nodeCnt = 1,
-      edgeCnt = 0;
 
-    while (queue.length) {
-      const tmp: number[] = [];
-      while (queue.length) {
-        const t = queue[0];
-        queue.shift();
-
-        for (const n of g.get(t) ?? []) {
-          edgeCnt++;
-          if (!seen[n]) {
-            seen[n] = true;
-            nodeCnt++;
-            tmp.push(n);
-          }
-        }
-      }
-
-      queue = tmp;
-    }
-
-    return edgeCnt === nodeCnt * (nodeCnt - 1);
+  // Euclid's algorithm
+  const gcd = (a: number, b: number): number => {
+    return b === 0 ? a : gcd(b, a % b);
   };
 
-  let ans = 0;
-  for (let i = 0; i < n; i++) {
-    if (seen[i]) {
+  const lcm = (a: number, b: number) => {
+    return (a / gcd(a, b)) * b;
+  };
+
+  return gcd(sumEven, sumOdd);
+}
+
+class ListNode {
+  val: number;
+  next: ListNode | null;
+  constructor(val?: number, next?: ListNode | null) {
+    this.val = val === undefined ? 0 : val;
+    this.next = next === undefined ? null : next;
+  }
+}
+
+function deleteMiddle(head: ListNode | null): ListNode | null {
+  if (!head!.next) {
+    return null;
+  }
+  const vh = new ListNode(NaN, head);
+  let s: ListNode | null = vh,
+    ps: ListNode | null = null,
+    f: ListNode | null = vh;
+  while (f !== null && f.next !== null) {
+    f = f.next.next;
+    ps = s;
+    s = s!.next;
+  }
+  if (f) {
+    const tmp = s!.next!.next;
+    s!.next!.next = null;
+    s!.next = tmp;
+    vh.next = null;
+  } else {
+    const tmp = ps!.next!.next;
+    ps!.next!.next = null;
+    ps!.next = tmp;
+    vh.next = null;
+  }
+  return head;
+}
+function processStr(s: string): string {
+  let ans: string[] = [];
+  const arr = s.split("");
+  let r = true;
+  for (const chr of arr) {
+    if (chr === "*" && arr.length) {
+      if (r) {
+        ans.pop();
+      } else {
+        ans.shift();
+      }
       continue;
     }
 
-    seen[i] = true;
-    if (!g.has(i)) {
-      ans++;
+    if (chr === "#") {
+      ans = [...ans, ...ans];
       continue;
     }
 
-    ans += bfs(i) ? 1 : 0;
+    if (chr === "%") {
+      r = !r;
+      continue;
+    }
+
+    if (r) {
+      ans.push(chr);
+    } else {
+      ans.unshift(chr);
+    }
   }
 
-  return ans;
+  return r ? ans.join("") : ans.reverse().join("");
 }
