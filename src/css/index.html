@@ -1,0 +1,714 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Drawing Triangles with Pure CSS</title>
+    <style>
+      :root {
+        --bg: #f5f5f7;
+        --surface: #ffffff;
+        --ink: #1d1d1f;
+        --ink-2: #6e6e73;
+        --ink-3: #86868b;
+        --line: rgba(0, 0, 0, 0.08);
+        --accent: #0071e3;
+        --accent-soft: rgba(0, 113, 227, 0.08);
+        --code-bg: #f6f8fa;
+        --code-fg: #1f2328;
+        --radius: 14px;
+      }
+
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        margin: 0;
+        padding: 0 20px 80px;
+        font-family:
+          "Geist Mono",
+          -apple-system,
+          BlinkMacSystemFont,
+          "SF Pro Text",
+          "Segoe UI",
+          Roboto,
+          "Helvetica Neue",
+          Arial,
+          sans-serif;
+        background: var(--bg);
+        color: var(--ink);
+        line-height: 1.5;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      .container {
+        max-width: 860px;
+        margin: 0 auto;
+      }
+
+      /* ---------- Hero ---------- */
+      .hero {
+        text-align: center;
+        padding: 88px 24px 56px;
+      }
+      .hero .eyebrow {
+        display: block;
+        font-size: 13px;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--accent);
+        margin-bottom: 12px;
+      }
+      .hero h1 {
+        font-size: clamp(32px, 5vw, 44px);
+        font-weight: 700;
+        letter-spacing: -0.025em;
+        line-height: 1.08;
+        margin: 0 0 14px;
+      }
+      .hero .subtitle {
+        color: var(--ink-2);
+        font-size: 17px;
+        line-height: 1.5;
+        max-width: 600px;
+        margin: 0 auto;
+      }
+
+      /* ---------- Cards ---------- */
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        padding: 32px;
+        margin-bottom: 24px;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+      }
+      .card h2 {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 19px;
+        font-weight: 700;
+        letter-spacing: -0.015em;
+        line-height: 1.25;
+        margin: 0 0 8px;
+      }
+      .card h2 .num {
+        flex: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 26px;
+        height: 26px;
+        padding: 0 6px;
+        border-radius: 8px;
+        background: var(--accent-soft);
+        color: var(--accent);
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0;
+      }
+      .card .desc {
+        color: var(--ink-2);
+        font-size: 15px;
+        margin: 0 0 24px;
+        max-width: 680px;
+      }
+      .card .desc code {
+        font-family:
+          "Geist Mono", "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+        font-size: 0.85em;
+        background: rgba(0, 0, 0, 0.045);
+        padding: 0.12em 0.4em;
+        border-radius: 5px;
+      }
+
+      /* ---------- Demo stage ---------- */
+      .stage {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 40px;
+        align-items: flex-end;
+        justify-content: center;
+        padding: 36px 24px;
+        background: var(--bg);
+        border-radius: 12px;
+        margin-bottom: 24px;
+      }
+      .demo-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 14px;
+      }
+      .demo-item .label {
+        font-size: 12px;
+        font-weight: 500;
+        letter-spacing: 0.01em;
+        color: var(--ink-3);
+        text-align: center;
+        max-width: 180px;
+      }
+
+      /* ---------- Code ---------- */
+      pre {
+        margin: 0;
+        padding: 18px 20px;
+        background: var(--code-bg);
+        color: var(--code-fg);
+        border-radius: 12px;
+        font-size: 13px;
+        line-height: 1.65;
+        overflow-x: auto;
+        font-family:
+          "Geist Mono", "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+        border: 1px solid var(--line);
+      }
+      pre .c {
+        color: var(--ink-3);
+      }
+
+      /* ---------- Comparison table ---------- */
+      .compare {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 14px;
+        min-width: 560px;
+      }
+      .compare th,
+      .compare td {
+        text-align: left;
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--line);
+        vertical-align: top;
+      }
+      .compare th {
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--ink-3);
+        font-weight: 600;
+        padding-top: 14px;
+      }
+      .compare tr:last-child td {
+        border-bottom: none;
+      }
+      .compare td:first-child {
+        font-weight: 600;
+        white-space: nowrap;
+      }
+      .compare-wrap {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        overflow-x: auto;
+      }
+
+      /* ========== 0. Border-junction visualization ========== */
+      .corner-demo {
+        width: 0;
+        height: 0;
+        border-top: 40px solid #ef4444;
+        border-right: 40px solid #3b82f6;
+        border-bottom: 40px solid #22c55e;
+        border-left: 40px solid #f59e0b;
+      }
+      .corner-demo-faded {
+        width: 0;
+        height: 0;
+        border-top: 40px solid #ef4444;
+        border-right: 40px solid rgba(59, 130, 246, 0.15);
+        border-bottom: 40px solid rgba(34, 197, 94, 0.15);
+        border-left: 40px solid rgba(245, 158, 11, 0.15);
+      }
+
+      /* ========== 1. Border technique ========== */
+      .t-up {
+        width: 0;
+        height: 0;
+        border-left: 40px solid transparent;
+        border-right: 40px solid transparent;
+        border-bottom: 70px solid #6366f1;
+      }
+      .t-down {
+        width: 0;
+        height: 0;
+        border-left: 40px solid transparent;
+        border-right: 40px solid transparent;
+        border-top: 70px solid #6366f1;
+      }
+      .t-left {
+        width: 0;
+        height: 0;
+        border-top: 40px solid transparent;
+        border-bottom: 40px solid transparent;
+        border-right: 70px solid #6366f1;
+      }
+      .t-right {
+        width: 0;
+        height: 0;
+        border-top: 40px solid transparent;
+        border-bottom: 40px solid transparent;
+        border-left: 70px solid #6366f1;
+      }
+      .t-right-angle {
+        width: 0;
+        height: 0;
+        border-top: 60px solid #6366f1;
+        border-right: 60px solid transparent;
+      }
+
+      /* ========== 2. Gradient technique ========== */
+      .t-gradient-corner {
+        width: 80px;
+        height: 80px;
+        background: linear-gradient(
+          to bottom right,
+          #22c55e 50%,
+          transparent 50%
+        );
+      }
+      .t-gradient-arrow {
+        width: 48px;
+        height: 48px;
+        background:
+          linear-gradient(45deg, transparent 50%, #22c55e 50%),
+          linear-gradient(-45deg, #22c55e 50%, transparent 50%);
+        background-size: 50% 100%;
+        background-position:
+          left top,
+          right top;
+        background-repeat: no-repeat;
+      }
+
+      /* ========== 3. clip-path technique ========== */
+      .t-clip {
+        width: 100px;
+        height: 90px;
+        background: linear-gradient(180deg, #f59e0b, #ef4444);
+        clip-path: polygon(50% 0, 0 100%, 100% 100%);
+      }
+      .t-clip-skew {
+        width: 100px;
+        height: 90px;
+        background: #f59e0b;
+        clip-path: polygon(20% 10%, 10% 90%, 95% 60%);
+      }
+
+      /* ========== 4. Rotated-square technique ========== */
+      .t-rotate {
+        width: 48px;
+        height: 48px;
+        background: #fff;
+        border-left: 2px solid #ef4444;
+        border-top: 2px solid #ef4444;
+        transform: rotate(45deg) translate(14px, -14px);
+      }
+
+      /* ========== 5. Outlined triangle: layered technique ========== */
+      .t-bordered {
+        position: relative;
+        width: 0;
+        height: 0;
+        border-left: 30px solid transparent;
+        border-right: 30px solid transparent;
+        border-bottom: 50px solid #8b5cf6;
+      }
+      .t-bordered::after {
+        content: "";
+        position: absolute;
+        left: -28px;
+        top: 3px;
+        border-left: 28px solid transparent;
+        border-right: 28px solid transparent;
+        border-bottom: 47px solid #fff;
+      }
+
+      /* ========== 6. Application: speech bubble ========== */
+      .bubble-wrap {
+        display: flex;
+        gap: 40px;
+        flex-wrap: wrap;
+        align-items: flex-start;
+      }
+      .bubble {
+        position: relative;
+        max-width: 260px;
+        padding: 12px 16px;
+        background: #fff;
+        border: 1px solid #e2e5ea;
+        border-radius: 8px;
+        font-size: 14px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+      }
+      .bubble-arrow {
+        position: absolute;
+        top: -7px;
+        left: 24px;
+        width: 12px;
+        height: 12px;
+        background: #fff;
+        border-left: 1px solid #e2e5ea;
+        border-top: 1px solid #e2e5ea;
+        transform: rotate(45deg);
+      }
+      .bubble-bottom .bubble-arrow {
+        top: auto;
+        bottom: -7px;
+        left: 24px;
+        transform: rotate(225deg);
+      }
+
+      .footer {
+        text-align: center;
+        color: var(--ink-3);
+        font-size: 13px;
+        margin-top: 48px;
+      }
+
+      @media (max-width: 640px) {
+        .hero {
+          padding: 64px 16px 40px;
+        }
+        .card {
+          padding: 22px;
+        }
+        .stage {
+          gap: 28px;
+          padding: 28px 16px;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        html {
+          scroll-behavior: auto;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <header class="hero">
+        <span class="eyebrow">CSS Techniques</span>
+        <h1>Drawing Triangles with Pure CSS</h1>
+        <p class="subtitle">
+          Six practical approaches — borders, gradients, clip-path, rotated
+          squares, layered outlines, and a real-world speech-bubble pattern.
+        </p>
+      </header>
+
+      <div class="card">
+        <h2>
+          <span class="num">0</span>Core Principle: Border Junctions Are 45°
+          Diagonals
+        </h2>
+        <p class="desc">
+          When an element has zero width and height, each of its four borders
+          renders as a trapezoid, meeting its neighbors along a 45° diagonal.
+          Set three borders to <code>transparent</code> and the remaining one
+          becomes a triangle.
+        </p>
+        <div class="stage">
+          <div class="demo-item">
+            <div class="corner-demo"></div>
+            <span class="label">All four borders colored</span>
+          </div>
+          <div class="demo-item">
+            <div class="corner-demo-faded"></div>
+            <span class="label">Three borders faded</span>
+          </div>
+        </div>
+
+        <pre><span class="c">/* Zero dimensions + four thick borders */</span>
+.box {
+  width: 0;
+  height: 0;
+  border-top: 40px solid #ef4444;
+  border-right: 40px solid #3b82f6;
+  border-bottom: 40px solid #22c55e;
+  border-left: 40px solid #f59e0b;
+}</pre>
+      </div>
+      <div class="card">
+        <h2>
+          <span class="num">1</span>The Border Technique (Classic, Best
+          Compatibility)
+        </h2>
+        <p class="desc">
+          Keep one border colored and its two neighbors transparent. Vary the
+          border widths to control the triangle's proportions, or keep two
+          adjacent borders to form a right triangle.
+        </p>
+        <div class="stage">
+          <div class="demo-item">
+            <div class="t-up"></div>
+            <span class="label">Up</span>
+          </div>
+          <div class="demo-item">
+            <div class="t-down"></div>
+            <span class="label">Down</span>
+          </div>
+          <div class="demo-item">
+            <div class="t-left"></div>
+            <span class="label">Left</span>
+          </div>
+          <div class="demo-item">
+            <div class="t-right"></div>
+            <span class="label">Right</span>
+          </div>
+          <div class="demo-item">
+            <div class="t-right-angle"></div>
+            <span class="label">Right triangle</span>
+          </div>
+        </div>
+        <pre><span class="c">/* Upward-pointing triangle */</span>
+.triangle-up {
+  width: 0;
+  height: 0;
+  border-left: 40px solid transparent;
+  border-right: 40px solid transparent;
+  border-bottom: 70px solid #6366f1;
+}
+
+<span class="c">/* Right triangle: two adjacent borders, one colored */</span>
+.triangle-right-angle {
+  width: 0;
+  height: 0;
+  border-top: 60px solid #6366f1;
+  border-right: 60px solid transparent;
+}</pre>
+      </div>
+
+      <div class="card">
+        <h2><span class="num">2</span>The Gradient Technique</h2>
+        <p class="desc">
+          A hard color stop at 50% inside a <code>linear-gradient</code> draws a
+          clean diagonal edge — ideal for corner cuts and arrow icons. Two
+          gradients, each painting half the box, combine into a directional
+          arrow.
+        </p>
+        <div class="stage">
+          <div class="demo-item">
+            <div class="t-gradient-corner"></div>
+            <span class="label">Corner cut</span>
+          </div>
+          <div class="demo-item">
+            <div class="t-gradient-arrow"></div>
+            <span class="label">Up arrow</span>
+          </div>
+        </div>
+        <pre><span class="c">/* Corner cut: hard stop at 50% */</span>
+.t-corner {
+  width: 80px;
+  height: 80px;
+  background: linear-gradient(to bottom right, #22c55e 50%, transparent 50%);
+}
+
+<span class="c">/* Arrow: two gradients, each painting one half */</span>
+.t-arrow {
+  width: 48px;
+  height: 48px;
+  background:
+    linear-gradient(45deg, transparent 50%, #22c55e 50%),
+    linear-gradient(-45deg, #22c55e 50%, transparent 50%);
+  background-size: 50% 100%;
+  background-position: left top, right top;
+  background-repeat: no-repeat;
+}</pre>
+      </div>
+
+      <div class="card">
+        <h2>
+          <span class="num">3</span>The clip-path Technique (Most Intuitive)
+        </h2>
+        <p class="desc">
+          <code>polygon()</code> clips an element to arbitrary vertex
+          coordinates, free from the border-box model — any polygon works, and
+          the background can be a gradient or image. Note that
+          <code>box-shadow</code> outside the clipped region is cut away too.
+        </p>
+        <div class="stage">
+          <div class="demo-item">
+            <div class="t-clip"></div>
+            <span class="label">Isosceles triangle</span>
+          </div>
+          <div class="demo-item">
+            <div class="t-clip-skew"></div>
+            <span class="label">Arbitrary triangle</span>
+          </div>
+        </div>
+        <pre><span class="c">/* Isosceles triangle */</span>
+.t-clip {
+  width: 100px;
+  height: 90px;
+  background: linear-gradient(180deg, #f59e0b, #ef4444);
+  clip-path: polygon(50% 0, 0 100%, 100% 100%);
+}</pre>
+      </div>
+
+      <div class="card">
+        <h2>
+          <span class="num">4</span>The Rotated-Square Technique (Easiest to
+          Outline)
+        </h2>
+        <p class="desc">
+          Give a square two adjacent borders and rotate it 45°. Because its
+          background and border colors can match the container, this is the
+          standard way to build popover and tooltip arrows.
+        </p>
+        <div class="stage">
+          <div class="demo-item">
+            <div class="t-rotate"></div>
+            <span class="label">Small outlined arrow pointing up</span>
+          </div>
+        </div>
+        <pre>
+.t-rotate {
+  width: 48px;
+  height: 48px;
+  background: #fff;
+  border-left: 2px solid #ef4444;
+  border-top: 2px solid #ef4444;
+  transform: rotate(45deg);
+}</pre>
+      </div>
+
+      <div class="card">
+        <h2>
+          <span class="num">5</span>Outlined Triangle: The Layered Technique
+        </h2>
+        <p class="desc">
+          The border technique cannot outline a triangle on its own. The
+          workaround: paint a slightly smaller pseudo-element triangle in the
+          fill color and offset it by 1–2px over a larger triangle in the
+          outline color — the exposed rim becomes the stroke.
+        </p>
+        <div class="stage">
+          <div class="demo-item">
+            <div class="t-bordered"></div>
+            <span class="label">White triangle with a purple stroke</span>
+          </div>
+        </div>
+        <pre>.t-bordered {
+  position: relative;
+  width: 0;
+  height: 0;
+  border-left: 30px solid transparent;
+  border-right: 30px solid transparent;
+  border-bottom: 50px solid #8b5cf6; <span class="c">/* Outer layer: outline color */</span>
+}
+.t-bordered::after {
+  content: '';
+  position: absolute;
+  left: -28px;
+  top: 3px;                       <span class="c">/* Offset down to reveal the top edge */</span>
+  border-left: 28px solid transparent;
+  border-right: 28px solid transparent;
+  border-bottom: 47px solid #fff; <span class="c">/* Inner layer: fill color, slightly smaller */</span>
+}</pre>
+      </div>
+
+      <div class="card">
+        <h2>
+          <span class="num">6</span>Putting It Together: The Speech Bubble
+        </h2>
+        <p class="desc">
+          In production UI, triangles usually appear as pointer arrows on
+          bubbles, dropdowns, and menus. The rotated-square approach (Section 4)
+          lets the arrow share the bubble's background and border for a seamless
+          look.
+        </p>
+        <div class="stage" style="align-items: flex-start">
+          <div class="bubble-wrap">
+            <div class="bubble">
+              <div class="bubble-arrow"></div>
+              Arrow on top — typical of dropdown menus and popovers
+            </div>
+            <div class="bubble bubble-bottom">
+              <div class="bubble-arrow"></div>
+              Arrow on the bottom — typical of tooltips and guided tours
+            </div>
+          </div>
+        </div>
+        <pre>.bubble {
+  position: relative;
+  background: #fff;
+  border: 1px solid #e2e5ea;
+  border-radius: 8px;
+}
+.bubble-arrow {
+  position: absolute;
+  top: -7px;
+  left: 24px;
+  width: 12px;
+  height: 12px;
+  background: #fff;               <span class="c">/* Matches the bubble background */</span>
+  border-left: 1px solid #e2e5ea; <span class="c">/* Matches the bubble border */</span>
+  border-top: 1px solid #e2e5ea;
+  transform: rotate(45deg);       <span class="c">/* Use rotate(225deg) for a bottom arrow */</span>
+}</pre>
+      </div>
+
+      <div class="card">
+        <h2><span class="num">★</span>Comparison at a Glance</h2>
+        <p class="desc">
+          Choose the technique that fits your constraints: compatibility,
+          outline support, and background flexibility.
+        </p>
+        <div class="compare-wrap">
+          <table class="compare">
+            <thead>
+              <tr>
+                <th>Technique</th>
+                <th>Strengths</th>
+                <th>Trade-offs</th>
+                <th>Best for</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Border</td>
+                <td>Widest browser support; zero dependencies</td>
+                <td>No outlines; solid colors only</td>
+                <td>Simple solid triangles</td>
+              </tr>
+              <tr>
+                <td>Gradient</td>
+                <td>Compact; no extra elements</td>
+                <td>Limited to diagonal cuts</td>
+                <td>Small icons and corner cuts</td>
+              </tr>
+              <tr>
+                <td>clip-path</td>
+                <td>Any polygon; gradients and images allowed</td>
+                <td>Clips away box-shadow outside the shape</td>
+                <td>Complex shapes and hero graphics</td>
+              </tr>
+              <tr>
+                <td>Rotated square</td>
+                <td>Supports real borders that match the container</td>
+                <td>Only right-angle arrows at 45°</td>
+                <td>Popover and tooltip arrows</td>
+              </tr>
+              <tr>
+                <td>Layered outline</td>
+                <td>Adds a stroke to the border technique</td>
+                <td>Fragile pixel offsets; fill color must be solid</td>
+                <td>Outlined triangles without SVG</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <p class="footer">Pure CSS · No images, no SVG, no JavaScript</p>
+    </div>
+  </body>
+</html>

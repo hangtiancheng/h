@@ -36,7 +36,7 @@ BFC, Block Formatting Context 块级格式上下文
 2. 父元素设置宽度 >0 的 border
 3. 父元素成为 BFC, 例如设置 `overflow: hidden` 或 `display: flow-root`
 
-### BEM 架构
+### BEM 命名规范
 
 block\_\_element--modifier
 
@@ -59,7 +59,7 @@ block\_\_element--modifier
 - 交集 (与) 选择器 `.selector1.selector2`
 - 并集 (或) 选择器, 也称为分组选择器 `.selector1, .selector2`
 - 后代选择器 `.selector1 .selector2`
-- 子代选择器 `.selector1 > .selector2`
+- 子选择器 `.selector1 > .selector2`
 - 相邻兄弟选择器 `.selector1 + .selector2`
 - 通用兄弟选择器 `.selector1 ~ .selector2`
 - 属性选择器
@@ -110,12 +110,14 @@ block\_\_element--modifier
 
 !important > 内联样式 > ID 选择器 > 类/伪类/属性选择器 > 元素/伪元素选择器 > \* 通配符选择器 > 继承的样式
 
-### 计算权重 (a, b, c, d)
+### specificity 特异性四元组 (a, b, c, d)
 
 - a: 内联样式
 - b: ID 选择器的数量
 - c: 类, 伪类, 属性选择器的数量
-- d: 元素, 伪元素选择器的数量
+- d: 元素, 伪元素选择器 (例如 ::before, ::after) 的数量
+
+\* 通配符选择器, > 子选择器, + 相邻兄弟选择器, ~ 通用兄弟选择器不影响选择器的优先级
 
 例
 

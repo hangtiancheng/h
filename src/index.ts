@@ -193,3 +193,29 @@ function processStr(s: string): string {
 
   return r ? ans.join("") : ans.reverse().join("");
 }
+
+function shuffle(nums: number[], n: number): number[] {
+  return Array.from({ length: 2 * n }, (_, idx) =>
+    idx % 2 === 1 ? nums[Math.floor(idx / 2)] : nums[n + idx / 2],
+  );
+}
+
+function findMaxConsecutiveOnes(nums: number[]): number {
+  return nums
+    .join("")
+    .split(/0+/)
+    .toSorted((a, b) => b.length - a.length)[0].length;
+}
+
+function findErrorNums(nums: number[]): number[] {
+  const all = new Set<number>(
+    Array.from({ length: nums.length }, (_, idx) => idx + 1),
+  );
+  const ans: number[] = [];
+  for (const num of nums) {
+    if (all.has(num)) all.delete(num);
+    else ans.push(num);
+  }
+  ans.push(all.keys().next().value!);
+  return ans;
+}
