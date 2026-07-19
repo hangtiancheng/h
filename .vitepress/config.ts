@@ -95,9 +95,9 @@ const plugins: PluginOption[] = [
     ],
     manifest: {
       id: "/h/",
-      name: "Swifty Homepage",
-      short_name: "Swifty Homepage",
-      description: "Swifty Homepage",
+      name: "homepage",
+      short_name: "homepage",
+      description: "homepage",
       theme_color: "#f05138",
       background_color: "#f05138",
       display: "standalone",
