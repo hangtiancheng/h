@@ -87,6 +87,7 @@ const plugins: PluginOption[] = [
   tailwindcss(),
   VitePWA({
     registerType: "autoUpdate",
+    injectRegister: "script",
     includeAssets: [
       "favicon.svg",
       "favicon.ico",
@@ -184,16 +185,23 @@ export default defineConfig({
 
     ["meta", { name: "theme-color", content: "#f05138" }],
     // <link rel="icon" href="/h/favicon.svg" type="image/svg+xml" />
-    [
-      "link",
-      { rel: "icon", href: "/h/favicon.svg", type: "image/svg+xml" },
-    ],
+    ["link", { rel: "icon", href: "/h/favicon.svg", type: "image/svg+xml" }],
     // <link rel="icon" href="/h/favicon.ico" sizes="48x48" />
     ["link", { rel: "icon", href: "/h/favicon.ico", sizes: "48x48" }],
     // <link rel="apple-touch-icon" href="/h/apple-touch-icon-180x180.png" />
     [
       "link",
       { rel: "apple-touch-icon", href: "/h/apple-touch-icon-180x180.png" },
+    ],
+    // <link rel="manifest" href="/h/manifest.webmanifest" />
+    ["link", { rel: "manifest", href: "/h/manifest.webmanifest" }],
+    // <script id="vite-plugin-pwa:register-sw" src="/h/registerSW.js"></script>
+    [
+      "script",
+      {
+        id: "vite-plugin-pwa:register-sw",
+        src: "/h/registerSW.js",
+      },
     ],
   ],
   markdown: {
