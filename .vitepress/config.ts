@@ -95,11 +95,12 @@ const plugins: PluginOption[] = [
       "apple-touch-icon-180x180.png",
     ],
     manifest: {
+      id: base,
       name: "homepage",
       short_name: "homepage",
       description: "homepage",
-      theme_color: "#f05138cc",
-      background_color: "#f05138cc",
+      theme_color: "#f05138",
+      background_color: "#f05138",
       display: "standalone",
       scope: base,
       start_url: base,
@@ -162,8 +163,8 @@ const plugins: PluginOption[] = [
 export default defineConfig({
   srcDir: "docs",
   lang: "zh-CN",
-  title: "homepage",
-  description: "homepage",
+  title: "Swifty Homepage",
+  description: "Swifty Homepage",
   base,
   vite: {
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -173,9 +174,28 @@ export default defineConfig({
   cleanUrls: true,
   ignoreDeadLinks: false,
   head: [
+    // Auto generated
+    // <meta charset="UTF-8" />
+    // ["meta", { charset: "UTF-8" }],
+    // <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    // ["meta", { name: "viewport", content: "width=device-width, initial-scale=1.0" }],
+    // <meta name="color-scheme" content="light" />
+    // ["meta", { name: "color-scheme", content: "light" }],
+    // <meta name="description" content="Swifty Homepage" />
+    // ["meta", { name: "description", content: "Swifty Homepage" }],
+
+    ["meta", { name: "theme-color", content: "#f05138" }],
+    // <link rel="icon" href="/h/favicon.svg" type="image/svg+xml" />
     [
       "link",
       { rel: "icon", href: `${base}favicon.svg`, type: "image/svg+xml" },
+    ],
+    // <link rel="icon" href="/h/favicon.ico" sizes="48x48" />
+    ["link", { rel: "icon", href: `${base}favicon.ico`, sizes: "48x48" }],
+    // <link rel="apple-touch-icon" href="/h/apple-touch-icon-180x180.png" />
+    [
+      "link",
+      { rel: "apple-touch-icon", href: `${base}apple-touch-icon-180x180.png` },
     ],
   ],
   markdown: {
