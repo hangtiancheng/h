@@ -83,8 +83,6 @@ function buildNav(): DefaultTheme.NavItem[] {
   ];
 }
 
-const base = "/h/";
-
 const plugins: PluginOption[] = [
   tailwindcss(),
   VitePWA({
@@ -95,15 +93,15 @@ const plugins: PluginOption[] = [
       "apple-touch-icon-180x180.png",
     ],
     manifest: {
-      id: base,
-      name: "homepage",
-      short_name: "homepage",
-      description: "homepage",
+      id: "/h/",
+      name: "Swifty Homepage",
+      short_name: "Swifty Homepage",
+      description: "Swifty Homepage",
       theme_color: "#f05138",
       background_color: "#f05138",
       display: "standalone",
-      scope: base,
-      start_url: base,
+      scope: "/h/",
+      start_url: "/h/",
       icons: [
         {
           src: "pwa-64x64.png",
@@ -165,7 +163,7 @@ export default defineConfig({
   lang: "zh-CN",
   title: "Swifty Homepage",
   description: "Swifty Homepage",
-  base,
+  base: "/h/",
   vite: {
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
@@ -188,14 +186,14 @@ export default defineConfig({
     // <link rel="icon" href="/h/favicon.svg" type="image/svg+xml" />
     [
       "link",
-      { rel: "icon", href: `${base}favicon.svg`, type: "image/svg+xml" },
+      { rel: "icon", href: "/h/favicon.svg", type: "image/svg+xml" },
     ],
     // <link rel="icon" href="/h/favicon.ico" sizes="48x48" />
-    ["link", { rel: "icon", href: `${base}favicon.ico`, sizes: "48x48" }],
+    ["link", { rel: "icon", href: "/h/favicon.ico", sizes: "48x48" }],
     // <link rel="apple-touch-icon" href="/h/apple-touch-icon-180x180.png" />
     [
       "link",
-      { rel: "apple-touch-icon", href: `${base}apple-touch-icon-180x180.png` },
+      { rel: "apple-touch-icon", href: "/h/apple-touch-icon-180x180.png" },
     ],
   ],
   markdown: {
