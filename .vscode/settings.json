@@ -5,13 +5,15 @@
     "deque",
     "esbuild",
     "flexbox",
+    "gstatic",
     "hangtiancheng",
     "heapified",
     "heapify",
     "Menlo",
     "nums",
     "swifty",
-    "vitepress"
+    "vitepress",
+    "xlink"
   ],
   "livePreview.defaultPreviewPath": "/src/css/index.html"
 }

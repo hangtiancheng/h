@@ -3,9 +3,9 @@
 layout: home
 
 hero:
-  name: homepage
-  text: homepage
-  tagline: homepage
+  name: Swifty
+  text: Homepage
+  tagline: Swifty Homepage
   image: ./favicon.svg
   actions:
     - theme: brand
@@ -20,7 +20,7 @@ hero:
 
 features:
   - title: base
-    details: CSS, Git, JS/TS, Linux, Network
+    details: CSS, Git, JS/TS, Linux, Network, Agent
   - title: frontend
     details: Next, Pinia, react-router, React, Vite, Vitest, vue-router, Vue3, Zustand
   - title: backend

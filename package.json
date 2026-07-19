@@ -26,22 +26,22 @@
   "packageManager": "pnpm@10.33.0",
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@tailwindcss/vite": "^4.3.2",
-    "@types/node": "^25.9.4",
-    "concurrently": "^9.2.3",
-    "eslint": "^10.6.0",
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/node": "^25.9.5",
+    "concurrently": "^9.2.4",
+    "eslint": "^10.7.0",
     "husky": "^9.1.7",
-    "lint-staged": "^17.0.8",
+    "lint-staged": "^17.1.0",
     "mermaid": "^11.16.0",
-    "prettier": "^3.9.4",
-    "prettier-plugin-tailwindcss": "^0.8.0",
-    "tailwindcss": "^4.3.2",
+    "prettier": "^3.9.5",
+    "prettier-plugin-tailwindcss": "^0.8.1",
+    "tailwindcss": "^4.3.3",
     "typescript": "^6.0.3",
-    "typescript-eslint": "^8.62.1",
-    "vite": "^8.1.2",
+    "typescript-eslint": "^8.64.0",
+    "vite": "^8.1.5",
     "vite-plugin-pwa": "^1.3.0",
     "vitepress": "1.6.4",
-    "vue": "^3.5.39"
+    "vue": "^3.5.40"
   },
   "lint-staged": {
     "*.{json,jsonc,js,cjs,mjs,jsx,ts,cts,mts,tsx,html,vue,css,scss,md,mdx}": [

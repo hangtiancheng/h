@@ -10,9 +10,9 @@
 }
 
 :root {
-  --vp-c-brand-1: hsl(160deg 100% 37%);
-  --vp-c-brand-2: hsl(160deg 100% 42%);
-  --vp-c-brand-3: hsl(160deg 100% 32%);
+  --vp-c-brand-1: #f05138cc;
+  --vp-c-brand-2: #f26550cc;
+  --vp-c-brand-3: #ee3c20cc;
   --vp-font-family-base: var(--font-sans);
   --vp-font-family-mono: var(--font-mono);
 }

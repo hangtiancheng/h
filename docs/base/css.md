@@ -2,13 +2,15 @@
 
 ## 速记
 
-- 子元素 my-auto 只在父元素 flex, 父元素 grid 或父元素 relative 子元素 absolute top-[value] bottom-[value] 下有效
+- 子元素 mx-auto, my-auto 只在父元素 flex, 父元素 grid 或父元素 relative 子元素 `absolute top-[value] bottom-[value]` 下有效
 
 ## 面试题
 
 ### BFC
 
 BFC, Block Formatting Context 块级格式上下文
+
+块级格式化上下文: 独立的渲染容器, 内部的布局不会影响外部, 外部的布局也不会影响内部
 
 1. 元素开启 BFC 后, 该元素的子元素没有 margin 塌陷问题
 2. 元素开启 BFC 后, 该元素不会被其他浮动元素覆盖
@@ -18,17 +20,29 @@ BFC, Block Formatting Context 块级格式上下文
 
 - 根元素 html
 - 浮动元素, float 属性值不等于 none 的元素 `float: left | right`
-- absolute 绝对或 fixed 固定定位的元素 `position: absolute | fixed`
+- absolute 绝对定位或 fixed 固定定位的元素 `position: absolute | fixed`
 - 非 block 的块级容器: display 属性值为 `display: inline-block | flex | inline-flex | grid | inline-grid | flow-root` 的元素
 - overflow 属性值不等于 visible 的元素 `overflow: hidden | auto | scroll`
 - 表格单元: `display: table-cell | table-caption`
 - 多列容器
 
-### margin 塌陷
+### BFC 的布局规则
 
-1. 父元素没有 border/padding/inline 内容, 并且不是 BFC 时, 顶部子元素的 margin-top 会与父元素合并
-2. 父元素没有 border/padding/inline 内容, 并且不是 BFC 时, 底部子元素的 margin-bottom 会与父元素合并
-3. 相邻块级元素的垂直外边距会合并: 都为正则取较大值, 都为负则取较小值, 一正一负则相加
+box: 参与文档流的块级盒子 (in-flow block-level box), 不包括脱离文档流的: 浮动子元素、absolute 绝对或 fixed 固定定位的子元素
+
+- BFC 内部 box 垂直方向按顺序排列
+- BFC 内部相邻 box 的垂直 margin 合并
+- BFC 是一个独立的渲染容器, 内部的布局不会影响外部, 外部的布局也不会影响内部
+- BFC 不会与相邻的浮动元素重叠
+- 计算 BFC 高度时, 浮动子元素也参与计算
+
+BFC 的应用: 清除浮动
+
+### margin 合并
+
+1. 相邻块级元素的垂直 margin 外边距会合并: 都为正则取较大值, 都为负则取较小值, 一正一负则相加
+2. 父元素没有 border/padding/inline 内容, 并且不是 BFC 时, 顶部子元素的 margin-top 会与父元素合并
+3. 父元素没有 border/padding/inline 内容, 并且不是 BFC 时, 底部子元素的 margin-bottom 会与父元素合并
 
 解决
 
@@ -381,6 +395,24 @@ padding: 10px 20px 30px 40px; /* 上 10px, 右 20px, 下 30px, 左 40px */
 
 ## 盒子模型
 
+A: 盒模型 (Box Model) 是 CSS 布局的基础, 每个 HTML 元素都被视为一个矩形盒子, 由内容区 (content)、内边距 (padding)、边框 (border)、外边距 (margin) 四层组成.
+
+盒模型结构:
+
+```
++--------------- margin -----------------------+
+|  +----------- border ------------------+    |
+|  |  +------- padding -------------+   |    |
+|  |  |  +--- content --------+    |   |    |
+|  |  |  |                    |    |   |    |
+|  |  |  |   width / height   |    |   |    |
+|  |  |  |                    |    |   |    |
+|  |  |  +--------------------+    |   |    |
+|  |  +----------------------------+   |    |
+|  +-----------------------------------+    |
++-------------------------------------------+
+```
+
 盒子宽度 = content 宽度 + 2\*padding + 2\*border
 
 默认盒子宽度 = 父元素 content 宽度 - 2\*margin
@@ -389,6 +421,11 @@ padding: 10px 20px 30px 40px; /* 上 10px, 右 20px, 下 30px, 左 40px */
 - border 边框
 - padding 内边距: padding-top, padding-right, padding-bottom, padding-left, padding
 - content 内容: width, max-width, min-width, height, max-height, min-height
+
+## 怪异盒模型
+
+- `box-sizing: content-box`: width 和 height 设置盒子内容区的大小
+- `box-sizing: border-box`: width 和 height 设置盒子总大小 (怪异盒模型)
 
 ## 溢出
 
@@ -468,7 +505,7 @@ padding: 10px 20px 30px 40px; /* 上 10px, 右 20px, 下 30px, 左 40px */
 
 ## 定位
 
-### 相对定位, 绝对定位, 固定定位
+### 相对定位, 绝对定位, 固定定位, 粘性定位
 
 #### 定位元素
 
@@ -480,8 +517,15 @@ absolute 绝对或 fixed 固定定位的元素, 会脱离文档流, 成为定位
 2. 对于脱离文档流的元素, 包含块是最近的有定位属性的祖先元素; 如果不存在, 则是视口
 
 - 相对定位 `position: relative`, 参考本元素的原位置, 不会脱离文档流
-- 绝对定位 `position: absolute`, 参考本元素的包含块, (最近的有定位属性的祖先元素; 如果不存在, 则是视口), 会脱离文档流, 成为定位元素, BFC
+- 绝对定位 `position: absolute`, 参考最近的有定位属性的祖先元素; 如果不存在, 则是视口; 会脱离文档流, 成为定位元素, BFC
 - 固定定位 `position: fixed`, 参考视口, 会脱离文档流, 成为定位元素, BFC
+
+粘性定位 `position: sticky`
+
+- 参考最近的有滚动属性的祖先元素; 如果不存在, 则是视口
+- 不会脱离文档流
+- 阈值内表现为相对定位 `position: relative`, 阈值外表现为固定定位 `position: fixed`
+- 至少指定一个 top、right、bottom、left 阈值属性
 
 #### 定位元素在包含块的中间
 
@@ -547,11 +591,6 @@ absolute 绝对或 fixed 固定定位的元素, 会脱离文档流, 成为定位
 
 - 定位元素的显示层级比普通元素高
 - z-index 属性值越大, 显示层级越高
-
-## 怪异盒模型
-
-- `box-sizing: content-box`: width 和 height 设置盒子内容区的大小
-- `box-sizing: border-box`: width 和 height 设置盒子总大小 (怪异盒模型)
 
 ## 盒子阴影
 
