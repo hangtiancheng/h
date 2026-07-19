@@ -131,8 +131,3 @@ func minScore(n int, roads [][]int) int {
 	dfs(1)
 	return ans
 }
-
-
-func getConcatenation(nums []int) []int {
-  return append(nums, nums...)
-}

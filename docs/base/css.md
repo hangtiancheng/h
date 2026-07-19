@@ -445,7 +445,7 @@ padding: 10px 20px 30px 40px; /* 上 10px, 右 20px, 下 30px, 左 40px */
 
 1. 父元素成为 BFC, 设置 `overflow: hidden` 或 `display: flow-root`
 2. 所有浮动元素后面, 添加一个空的块级元素, 并设置 `clear: both`
-3. 父元素使用 `::after` 创建空的伪元素并清除浮动
+3. 父元素使用 `::after` 创建空的伪元素以清除浮动
 
 ```html
 <style>

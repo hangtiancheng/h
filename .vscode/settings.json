@@ -12,5 +12,6 @@
     "nums",
     "swifty",
     "vitepress"
-  ]
+  ],
+  "livePreview.defaultPreviewPath": "/src/css/index.html"
 }
