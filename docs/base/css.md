@@ -82,34 +82,55 @@ block\_\_element--modifier
   - `.selector[attr^="val"]` 选择有 attr 属性, 并且 attr 以 val 开头的元素, 例如 `div[class^="bg-"]` 选择存在 class 属性, 并且 class 以 bg- 开头的 div 元素
   - `.selector[attr$="val"]` 选择有 attr 属性, 并且 attr 以 val 结尾的元素, 例如 `div[class$="-green"]` 选择存在 class 属性, 并且 class 以 -green 结尾的 div 元素
   - `.selector[attr*="val"]` 选择有 attr 属性, 并且 attr 包含 val 的元素, 例如 `div[class*="-"]` 选择存在 class 属性, 并且 class 包含 - 的 div 元素
-- 伪类选择器
-  - `:hover` 鼠标悬浮时选择元素
-  - `:active` 鼠标按下时选择元素
-  - `:focus` 获得焦点 (鼠标点击, 触摸, tab 键选中) 时选择元素
-  - `:first-child` 所有兄弟元素中的第一个, 例如 `div > p:first-child` 选择 div 的第一个子元素, 并且是 p 元素
-  - `:last-child` 所有兄弟元素中的最后一个, 例如 `div > p:last-child` 选择 div 的最后一个子元素, 并且是 p 元素
-  - `:nth-child(n)` 所有兄弟元素中的第 n 个, 例如 `div > p:nth-child(2)` 选择 div 的第 2 个子元素, 并且是 p 元素
-  - `:first-of-type` 所有同类型的兄弟元素中的第一个, 例如 `div > p:first-of-type` 选择 div 的所有 p 子元素中的第一个
-  - `:last-of-type` 所有同类型的兄弟元素中的最后一个, 例如 `div > p:last-of-type` 选择 div 的所有 p 子元素中的最后一个
-  - `:nth-of-type(n)` 所有同类型的兄弟元素中的第 n 个, 例如 `div > p:nth-of-type(2)` 选择 div 的所有 p 子元素中的第 2 个
-  - `:nth-last-child(n)` 所有兄弟元素中的倒数第 n 个, 例如 `div > p:nth-last-child(2)` 选择 div 的倒数第二个子元素, 并且是 p 元素
-  - `:only-child` 没有兄弟的元素, 例如 `div > p:only-child` 选择 div 唯一的 p 子元素
-  - `:only-of-type` 没有同类型兄弟的元素, 例如 `div > p:only-of-type` 选择 div 唯一的 p 子元素
-  - `:root` 根元素
-  - `:empty` 没有子节点, 并且没有文本内容的元素 (包括空白字符)
-  - `:not(condition)` 选择不满足 condition 的元素
-    - 例如 `div > p:not(.exclude)` 选择 div 的所有 p 子元素, 但不包含有 .exclude 类名的 p 元素
-    - 例如 `div > p:not(:first-child)` 选择 div 的所有 p 子元素, 但不包含第一个子元素的 p 元素
-  - `:checked` 选择被选中的 radio 单选 `<input type="radio" checked>` 或 checkbox 复选 `<input type="checkbox" checked>`
-  - `:enabled` 选择可用的表单元素 (没有 disabled)
-  - `:disabled` 选择禁用的表单元素 (有 disabled)
-- 伪元素选择器
-  - `::first-letter` 选择元素中的第一个字母
-  - `::first-line` 选择元素中的第一行
-  - `::selection` 选择被选中的内容
-  - `::placeholder` 选择输入框的 placeholder
-  - `::before` 在元素前创建一个伪元素, 必须使用 content 属性指定内容, 例如 `div:before { content: "Hello CSS" }` 在 div 元素前创建一个子元素, 内容为 "Hello CSS"
-  - `::after` 在元素后创建一个伪元素, 必须使用 content 属性指定内容, 例如 `div:after { content: "Hello CSS" }` 在 div 元素后创建一个子元素, 内容为 "Hello CSS"
+
+### 伪类和伪元素
+
+伪类: 描述元素的状态或位置
+
+- 状态伪类 :hover, :active, :focus, :checked, :enabled, :disabled
+- 结构伪类 :first-child, :last-child, :nth-child, :first-of-type, :last-of-type, :nth-of-type, :nth-last-child, :only-child, :only-of-type, :not
+- 其他 :root, :empty, :fullscreen
+
+伪元素: ::before, ::after, ::first-letter, ::first-line, ::selection, ::placeholder
+
+状态伪类
+
+- `:hover` 鼠标悬浮时选择元素
+- `:active` 鼠标按下时选择元素
+- `:focus` 获得焦点 (鼠标点击, 触摸, tab 键选中) 时选择元素
+- `:checked` 选择被选中的 radio 单选 `<input type="radio" checked>` 或 checkbox 复选 `<input type="checkbox" checked>`
+- `:enabled` 选择可用的表单元素 (没有 disabled)
+- `:disabled` 选择禁用的表单元素 (有 disabled)
+
+结构伪类
+
+- `:first-child` 所有兄弟元素中的第一个, 例如 `div > p:first-child` 选择 div 的第一个子元素, 并且是 p 元素
+- `:last-child` 所有兄弟元素中的最后一个, 例如 `div > p:last-child` 选择 div 的最后一个子元素, 并且是 p 元素
+- `:nth-child(n)` 所有兄弟元素中的第 n 个, 例如 `div > p:nth-child(2)` 选择 div 的第 2 个子元素, 并且是 p 元素
+- `:first-of-type` 所有同类型的兄弟元素中的第一个, 例如 `div > p:first-of-type` 选择 div 的所有 p 子元素中的第一个
+- `:last-of-type` 所有同类型的兄弟元素中的最后一个, 例如 `div > p:last-of-type` 选择 div 的所有 p 子元素中的最后一个
+- `:nth-of-type(n)` 所有同类型的兄弟元素中的第 n 个, 例如 `div > p:nth-of-type(2)` 选择 div 的所有 p 子元素中的第 2 个
+- `:nth-last-child(n)` 所有兄弟元素中的倒数第 n 个, 例如 `div > p:nth-last-child(2)` 选择 div 的倒数第二个子元素, 并且是 p 元素
+- `:only-child` 没有兄弟的元素, 例如 `div > p:only-child` 选择 div 唯一的 p 子元素
+- `:only-of-type` 没有同类型兄弟的元素, 例如 `div > p:only-of-type` 选择 div 唯一的 p 子元素
+- `:not(condition)` 选择不满足 condition 的元素
+  - 例如 `div > p:not(.exclude)` 选择 div 的所有 p 子元素, 但不包含有 .exclude 类名的 p 元素
+  - 例如 `div > p:not(:first-child)` 选择 div 的所有 p 子元素, 但不包含第一个子元素的 p 元素
+
+其他伪类
+
+- `:root` 根元素
+- `:empty` 没有子节点, 并且没有文本内容的元素 (包括空白字符)
+- `:fullscreen`
+
+伪元素: 创建 DOM 节点
+
+- `::before` 在元素前创建一个伪元素, 必须使用 content 属性指定内容, 例如 `div:before { content: "Hello CSS" }` 在 div 元素前创建一个子元素, 内容为 "Hello CSS"
+- `::after` 在元素后创建一个伪元素, 必须使用 content 属性指定内容, 例如 `div:after { content: "Hello CSS" }` 在 div 元素后创建一个子元素, 内容为 "Hello CSS"
+- `::first-letter` 选择元素中的第一个字母
+- `::first-line` 选择元素中的第一行
+- `::selection` 选择被选中的内容
+- `::placeholder` 选择输入框的 placeholder
 
 关于 n
 
@@ -143,7 +164,7 @@ block\_\_element--modifier
 
 ## CSS 三大特性
 
-1. 层叠性: 如果有样式冲突, 则根据选择器优先级, 层叠 (覆盖) 样式
+1. 层叠性: z-index
 2. 继承性: 元素继承父元素或祖先元素的某些样式
 3. 优先级: !important > 内联样式 > ID 选择器 > 类/属性/伪类选择器 > 元素/伪元素选择器; 同权重时后声明覆盖
 
@@ -286,7 +307,7 @@ text-overflow 生效的前提是: 块级元素显式设置 overflow 为 hidden, 
 ## 长度单位
 
 1. px 像素
-2. em 相对元素 font-size 的倍数
+2. em 相对当前元素 font-size 的倍数, 如果当前元素未设置 font-size, 则继承父元素的 font-size
 3. rem 相对根元素 (html) font-size 的倍数
 4. % 相对包含块 font-size 的倍数
 5. vw: viewport width, 1vw = 视口宽度的 1%
@@ -393,7 +414,7 @@ padding: 10px 20px 30px 40px; /* 上 10px, 右 20px, 下 30px, 左 40px */
 - outline 复合属性
 - outline-offset 外轮廓和边框的距离
 
-## 盒子模型
+## 盒模型
 
 A: 盒模型 (Box Model) 是 CSS 布局的基础, 每个 HTML 元素都被视为一个矩形盒子, 由内容区 (content)、内边距 (padding)、边框 (border)、外边距 (margin) 四层组成.
 
@@ -445,10 +466,15 @@ A: 盒模型 (Box Model) 是 CSS 布局的基础, 每个 HTML 元素都被视为
 
 ## 样式继承
 
-只继承与盒子模型无关的属性
+只继承与盒模型无关的属性
 
-- 继承的属性: 字体属性, 文本属性, color
-- 不继承的属性: 宽高, 内外边距, 边框, 背景, 溢出处理
+- 继承的属性: 文本属性等
+- 不继承的属性
+  - 盒模型: width, height, margin, padding, border
+  - display
+  - background 背景
+  - overflow 溢出
+  - ...
 
 ## 浮动
 
@@ -587,10 +613,17 @@ absolute 绝对或 fixed 固定定位的元素, 会脱离文档流, 成为定位
 
 :::
 
-### 显示层级
+## 层叠上下文
 
-- 定位元素的显示层级比普通元素高
-- z-index 属性值越大, 显示层级越高
+- 层叠上下文中的元素, 按层级决定元素在 z 轴上的排列顺序
+- 子元素的 z-index 只在父级层叠上下文中有效
+- 一个层叠上下文中的元素, 不会与另一个层叠上下文中的相同层级的元素交错
+- 不同的层叠上下文, 只比较两个层叠上下文根元素的层级
+
+### 层叠上下文的层级
+
+- z-index 属性值越大, 层叠上下文的层级越高
+- 定位元素层叠上下文的层级比普通元素高
 
 ## 盒子阴影
 
@@ -660,7 +693,26 @@ absolute 绝对或 fixed 固定定位的元素, 会脱离文档流, 成为定位
 }
 ```
 
+> CSS 动画的实现方式: transform 变换、transition 过渡、@keyframe 关键帧
+
 ## transform 变换
+
+### CSS GPU 加速
+
+浏览器渲染一帧的画面
+
+1. 执行 JS
+2. 计算样式
+3. 回流 reflow, 有关宽高等, 性能开销大
+4. 重绘 repaint, 有关颜色等, 性能开销小
+5. 合成 composite: 将多个图层 layer 合并为渲染的画面
+
+GPU 加速: 对于 transform 变换, opacity 不透明度, 可以跳过回流和重绘, 直接进入合成阶段使用 GPU 将多个图层 layer 合并为渲染的画面
+
+触发 GPU 加速
+
+- transform 变换, opacity 不透明度
+- 提示浏览器 `will-change: transform;`, `will-change: opacity;`
 
 ### 2D 位移
 
@@ -707,7 +759,7 @@ y 垂直
 - `transform-origin: left top` 变换原点是元素的左上角
 - `transform-origin: 3rem 3rem` 变换原点距离元素的左上角 3rem, 3rem
 
-## 过渡
+## transition 过渡
 
 过渡: 使得元素从一种样式, 平滑的过渡到另一种样式
 
@@ -729,9 +781,7 @@ y 垂直
   - `transition-timing-function: step-end` 结束时瞬间过渡
 - transition 复合属性 `transition: 1s linear all`
 
-## 动画
-
-### `@keyframes` 关键帧
+## `@keyframes` 关键帧
 
 ::: code-group
 
@@ -782,9 +832,9 @@ y 垂直
 
 ### 过渡和动画的区别
 
-1. 过渡需要触发条件, 例如 `&:hover`; 动画不需要触发条件, 可以自动播放
-2. 过渡仅有开始和结束两个状态; 动画可以有多个关键帧
-3. 过渡仅执行 1 次; 动画可以循环多次或无限循环
+1. transition 过渡需要事件触发, 例如鼠标悬浮; animation 动画不需要事件触发, 可以自动播放
+2. transition 过渡仅有开始和结束两个状态; animation 动画可以有多个关键帧
+3. transition 过渡仅触发 1 次; animation 动画可以循环多次或无限循环
 
 ## 多列容器
 
@@ -799,6 +849,8 @@ y 垂直
 - column-span 跨列: `column-span: all` 跨越所有列, `column-span: none` 不跨列
 
 ## `@media` 媒体查询
+
+screen 屏幕
 
 - 超小屏幕 0 ~ 768px
 - 中等屏幕 768px ~ 992px
@@ -1015,54 +1067,3 @@ order: flex 项目在主轴上的排列顺序, 值越小越靠前, 默认 `order
 - grid-row 复合属性: `grid-row: <grid-row-start> <grid-row-end>`
 - grid-column 复合属性: `grid-column: <grid-column-start> <grid-column-end>`
 - grid-area: grid 项目放置的区域, 复合属性 `grid-area: <grid-row-start> <grid-column-start> <grid-row-end> <grid-column-end>`
-
-## Sass
-
-- 嵌套 (CSS Nesting)
-- 父选择器 & (CSS Nesting)
-- 变量 $
-- 插值 #{}
-
-```scss
-$name: bg-color;
-$attr: background;
-
-.parent.#{$name} {
-  #{$attr}-color: lightgreen;
-}
-```
-
-### 混入 `@mixin`
-
-::: code-group
-
-```scss [SCSS]
-@mixin block-container($display) {
-  display: ($display);
-}
-
-@mixin clear-float($display, $clear) {
-  @include block-container($display);
-
-  &::after {
-    content: "";
-    clear: $clear;
-  }
-}
-
-.container {
-  @include clear-float(block, both);
-}
-```
-
-```css [CSS]
-.container {
-  display: block;
-}
-.container::after {
-  content: "";
-  clear: both;
-}
-```
-
-:::

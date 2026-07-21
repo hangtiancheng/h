@@ -2,35 +2,47 @@
 
 /**
  *
- * @param {any} val
+ * @param {any} obj
+ * @param {WeakMap} seen 保存原对象到克隆对象的映射
  * @returns {any}
  */
-function deepClone(val) {
-  if (val === null || val === undefined) {
-    return val;
+function deepClone(obj, seen = new WeakMap()) {
+  // 基础类型
+  if (obj === null || typeof obj !== "object") {
+    return obj;
   }
 
-  if (val instanceof Date) {
-    return new Date(val);
+  // 循环引用
+  if (seen.has(obj)) {
+    return seen.get(obj);
   }
 
-  if (val instanceof RegExp) {
-    return new RegExp(val.source, val.flags);
+  let clone;
+
+  if (obj instanceof Date) {
+    clone = new Date(obj);
+    seen.set(obj, clone);
+    return clone;
   }
 
-  if (Array.isArray(val)) {
-    return val.map((item) => deepClone(item));
+  if (obj instanceof RegExp) {
+    clone = new RegExp(obj.source, obj.flags);
+    clone.lastIndex = obj.lastIndex;
+    seen.set(obj, clone);
+    return clone;
   }
 
-  if (typeof val === "object") {
-    const /** @type {typeof val} */ clonedObj = {};
-    for (const key in val) {
-      clonedObj[key] = deepClone(val[key]);
+  clone = Array.isArray(obj) ? [] : {};
+  seen.set(obj, clone);
+
+  for (const key in obj) {
+    // 过滤原型链属性
+    if (obj.hasOwnProperty(key)) {
+      clone[key] = deepClone(obj[key], seen);
     }
-    return clonedObj;
   }
 
-  return val;
+  return clone;
 }
 
 export default deepClone;
