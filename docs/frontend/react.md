@@ -1945,10 +1945,7 @@ export default function useStyled(tag: string, styles: CSSProperties) {
 
   const className = useMemo(
     () =>
-      `${tag}-${btoa(cssRule)
-        .replace(/\+/g, "-")
-        .replace(/\//g, "_")
-        .replace(/=+$/, "")}`,
+      `${tag}-${btoa(cssRule).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "")}`,
     [tag, cssRule],
   );
 

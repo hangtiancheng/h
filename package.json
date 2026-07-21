@@ -1,8 +1,15 @@
 {
   "name": "homepage",
   "version": "1.0.0",
-  "description": "homepage",
   "private": true,
+  "description": "homepage",
+  "keywords": [
+    "algorithm",
+    "homepage"
+  ],
+  "license": "MIT",
+  "author": "https://github.com/hangtiancheng",
+  "type": "module",
   "scripts": {
     "dev": "vitepress dev",
     "build": "vitepress build",
@@ -17,13 +24,6 @@
     "git:push:ci": "pnpm git:commit:ci && git push origin main",
     "pwa": "pnpm dlx @vite-pwa/assets-generator --preset minimal docs/public/favicon.svg"
   },
-  "keywords": [
-    "homepage",
-    "algorithm"
-  ],
-  "author": "https://github.com/hangtiancheng",
-  "license": "MIT",
-  "packageManager": "pnpm@10.33.0",
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@tailwindcss/vite": "^4.3.3",
@@ -48,5 +48,5 @@
       "pnpm format"
     ]
   },
-  "type": "module"
+  "packageManager": "pnpm@10.33.0"
 }
