@@ -267,7 +267,7 @@ Swifty 开启新会话时, 自动读取指令文件和 MEMORY.md, 使用 `<syste
 - user 和 feedback 类型的新记忆写入到 `~/.swifty/memory` 全局目录
 - 写入后自动调用 rebuildIndex 重建 MEMORY.md 索引文件
 
-## 记忆整理 (autoDream, 未实现)
+## 记忆整理 (autoDream)
 
 Swifty 后台定期执行「记忆整理」, fork 一个 subagent, grep 最近的会话日志
 
@@ -292,7 +292,7 @@ function shouldAutoDream() {
 }
 ```
 
-## 防止并发冲突: 锁文件 (未实现)
+## 防止并发冲突: 锁文件
 
 如果同时打开两个终端运行 Swifty, 两个进程可能同时触发记忆整理
 
@@ -329,7 +329,7 @@ utimesSync(
 );
 ```
 
-### 记忆整理过程 (未实现)
+### 记忆整理过程
 
 记忆整理由 fork 的一个 subagent 执行, 不阻塞用户交互
 

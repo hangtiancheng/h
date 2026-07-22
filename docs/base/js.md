@@ -615,9 +615,17 @@ const b = {
       case "number":
       case "default": {
         return this.val++;
+        // 默认调用对象的 valueOf 方法
+        // return this.valueOf();
       }
-      case "string":
+      case "string": {
+        throw new TypeError();
+        // 默认调用对象的 toString() 方法
+        // return this.toString();
+      }
+
       default: {
+        // Might never happen
         throw new TypeError();
       }
     }
@@ -904,6 +912,59 @@ self.onmessage = function (ev) {
 };
 ```
 
+## prototype
+
+```js
+function Foo() {}
+const f = new Foo();
+Object.getPrototypeOf(f) === Foo.prototype; // true
+Foo.prototype.constructor === Foo; // true
+
+f.constructor === Foo; // true
+Object.getPrototypeOf(f).constructor === Foo; // true
+
+Foo.prototype.print = console.log;
+f.print("Hello World");
+```
+
+```txt
+┌─────────────────────────────────────────────┐
+│   ┌──────────┐       ┌──────────┐           │
+│   │ Function │       │  Object  │           │
+│   └─────┬────┘       └────┬─────┘           │
+│         │  __proto__      │  __proto__      │
+│         └────────┬────────┘                 │
+│                  │                          │
+│      ┌───────────────---──-┐                │
+│      │ Function.prototype  │  ← callable,  │
+│      │ (returns undefined) │  not new-able. │
+│      └───────────┬─────----┘                │
+│                  │  __proto__               │
+│                  │                          │
+│         ┌──────────────────┐                │
+│         │ Object.prototype │  ← toString,  │
+│         │ (hasOwnProperty, │     valueOf,   │
+│         │ __proto__, ...)  │     etc.       │
+│         └────────┬─────────┘                │
+│                  │  __proto__               │
+│                  │                          │
+│              ┌──────┐                       │
+│              │ null │ ← end of every chain │
+│              └──────┘                       │
+└─────────────────────────────────────────────┘
+
+function foo() {}        const obj = {}         const arr = []
+           │ __proto__             │ __proto__            │ __proto__
+           │                       │                      │
+   Function.prototype        Object.prototype        Array.prototype
+                                                          │ __proto__
+                                                          │
+                                                    Object.prototype
+                                                          │ __proto__
+                                                          │
+                                                       null
+```
+
 ## TS 装饰器
 
 ::: code-group
@@ -1154,7 +1215,7 @@ type InferredType2 /** number */ = TryInferType<{
 }>;
 ```
 
-### Demo
+### 案例
 
 ::: code-group
 

@@ -193,7 +193,6 @@ rules.ninja
 *.swo
 
 **/.vitepress/cache/
-swifty-vscode/swifty-vscode-*.vsix
 
 tsconfig.tsbuildinfo
 **/tsconfig.tsbuildinfo

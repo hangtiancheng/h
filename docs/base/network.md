@@ -1090,11 +1090,50 @@ ctx.cookies.set("session_id", "...", {
 
 ### element.addEventListener(eventName, callback, useCapture)
 
+> 事件监听器, 也称为事件回调
+
 - eventName: 事件名
 - callback: 事件触发时执行的回调函数
 - useCapture
   - true: 回调函数在捕获阶段执行
   - false: 回调函数在冒泡阶段执行, 默认
+
+第三个参数也可以是对象 `{ capture, once, passive, signal }`
+
+- capture: 同 useCapture, 默认 false
+- once: callback 执行 1 次后是否自动移除, 默认 false
+- passive: `passive: true` 承诺 callback 中不会调用 `e.preventDefault()`, 浏览器无需等待 callback 执行结束, 可以立刻滚动, 以消除 touch/wheel 事件回调导致的滚动延迟
+- signal：支持传递 AbortSignal, 调用 AbortController 的 abort() 移除 listener, 对比保存 listener 引用再 element.removeEventListener(listener) 更方便, 并且支持批量移除
+
+```js
+const controller = new AbortController();
+button.addEventListener(
+  "click",
+  (e) => {
+    console.log("click");
+  },
+  { signal: controller.signal },
+);
+
+window.addEventListener(
+  "resize",
+  () => {
+    console.log("resize");
+  },
+  { signal: controller.signal },
+);
+
+document.addEventListener(
+  "keydown",
+  (e) => {
+    console.log("keydown:", e.key);
+  },
+  { signal: controller.signal },
+);
+
+// 批量移除事件监听器
+controller.abort();
+```
 
 ::: code-group
 
@@ -1159,7 +1198,15 @@ ctx.cookies.set("session_id", "...", {
 - 利用事件冒泡, 将目标元素的事件委托给父/祖先元素处理
 - 例如 `<ul>`, 需要给每个 `<li>` 都绑定事件, 消耗内存; 插入新的 `<li>` 时, 需要给新的 `<li>` 绑定事件
 - 使用事件委托, 只需要给父/祖先元素绑定事件, 节约内存; 插入新的 `<li>` 时, 不需要给新的 `<li>` 绑定事件
-- event.target 是触发事件的元素, event.currentTarget 是绑定事件的元素, 使用事件委托时, event.currentTarget 是 event.target 的父/祖先元素
+- event.target 是触发事件的元素, event.currentTarget 是绑定事件的回调函数的元素, 使用事件委托时, event.currentTarget 是 event.target 的父/祖先元素
+- 不冒泡的事件无法委托
+
+| 不冒泡     | 冒泡版本  |
+| ---------- | --------- |
+| focus      | focusin   |
+| blur       | focusout  |
+| mouseenter | mouseover |
+| mouseleave | mouseout  |
 
 ### Vue 事件修饰符
 
