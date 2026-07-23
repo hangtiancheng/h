@@ -20,16 +20,108 @@
 
 ```go
 type slice struct {
-	array unsafe.Pointer
-	len   int
-	cap   int
+	array unsafe.Pointer // 指向底层数组的指针
+	len   int // 切片长度
+	cap   int // 从指针指向的位置, 到底层数组末尾的容量
 }
 ```
+
+## 数组 append 扩容
+
+```go
+newCap := oldCap
+doubleCap := newCap + newCap
+if newLen > doubleCap {
+  newCap = newLen
+} else {
+  const threshold = 256
+  if oldCap < threshold {
+    newCap = doubleCap // 小 slice: 扩容 2x
+  } else {
+    for 0 < newCap && newCap < newLen {
+      // 随 slice 增大, 从扩容 2x 平滑过渡到扩容 1.25x
+      newCap += (newCap + 3*threshold) / 4
+    }
+  }
+}
+capMem := roundupSize(uintptr(newCap) * elemSize)
+newCap = int(capMem / elemSize)
+```
+
+`roundupSize`: Go 预定义了一组 size class: 8, 16, 24, 32, ...., 数组扩容时 cap 数组容量 * elemSize 元素大小向上取整到最近的 size class
+
+```go
+func main() {
+	a := []int{1, 2, 3, 4, 5}
+	b := a[1:3]        // len=2, cap=4
+	b = append(b, 100) // cap 足够, 不扩容
+	fmt.Println(a)     // [1 2 3 100 5]
+	fmt.Println(b)     // [2 3 100]
+
+	b2 := append(b, 200) // cap 足够, 不扩容
+  fmt.Println(a) // [1 2 3 100 200]
+	fmt.Println(b2) // [2 3 100 200]
+}
+```
+
+修复
+
+1. 使用 `b := a[1:3:3]` 强制 cap=len, append b 时 cap = len, 必然触发扩容
+2. 显式拷贝 `b := make([]int, 2); copy(b, a[1:3])`, 或 `b := slice.Clone(a[1:3])`
+
+Pitfall: 大数组的小切片导致的内存驻留: 例如从 100MB 大数组 data 中切片得到的 `data[:100]`, 会导致整个 100MB 大数组无法被 GC
+
+## 对比 `var nilSlice []int` 和 `emptySlice := []int{}`
+
+|                                     | `var nilSlice []int` | `emptySlice := []int{}`                                 |
+| ----------------------------------- | -------------------- | ------------------------------------------------------- |
+| array 指针                          | nil                  | 指向 `runtime.zerobase` (所有长度 = 0 的对象共享的地址) |
+| len, cap                            | len=0, cap=0         | len=0, cap=0                                            |
+| `s == nil`                          | true                 | false                                                   |
+| `json.Marshal`                      | `null`               | `[]`                                                    |
+| len / for / range / append 是否安全 | 全部安全             | 全部安全                                                |
+
+## 从 slice 中删除元素
+
+```go
+// 保序删除
+s = append(s[:i], s[i+1:]...)
+s = slices.Delete(s, i, i+1)
+
+// 不保序删除
+s[i] = s[len(s) - 1]
+s = s[:len(s) - 1]
+```
+
+删除元素可能导致内存泄漏: 当元素是指针, 或者包含指针的结构体时, 需要手动断开引用
+
+```go
+// case1
+s = append(s[:i], s[i+1:]...)
+s[len(s) - 1] = nil
+
+// case2
+copy(s[i:], s[i+1:])
+s[len(s) - 1] = nil // 手动断开引用
+s = s[:len(s) - 1]
+```
+
+`slices.Delete(s, i, i+1)` 自动断开引用
 
 ## for range
 
 - go 1.22 前, `for index, value := range collection` 中的 index 内存地址不会改变
 - go 1.22 后, 使用 pre-iteration, `for index, value := range collection` 中的 index 内存地址会改变
+
+```go
+func mutateSlice(s []int) {
+  return append(s, 1, 2) // 返回新的 slice
+}
+// 或者传递指针
+func mutateSlice(s *[]int) {
+  append(*s, 1, 2);
+}
+```
 
 ## 字符串拼接
 

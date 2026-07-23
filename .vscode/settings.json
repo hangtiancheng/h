@@ -18,10 +18,13 @@
     "mouseleave",
     "mouseout",
     "nums",
+    "Println",
     "swifty",
+    "uintptr",
     "vitepress",
     "worktree",
-    "xlink"
+    "xlink",
+    "zerobase"
   ],
   "livePreview.defaultPreviewPath": "/src/css/index.html"
 }

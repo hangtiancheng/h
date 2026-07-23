@@ -6,6 +6,18 @@ import (
 	"math"
 )
 
+func main() {
+	a := []int{1, 2, 3, 4, 5}
+	b := a[1:3]        // len=2, cap=4
+	b = append(b, 100) // cap 足够, 不扩容
+	fmt.Println(a)     // [1 2 3 100 5]
+	fmt.Println(b)     // [2 3 100]
+
+	b2 := append(b, 200) // cap 足够, 不扩容
+  fmt.Println(a) // [1 2 3 100 200]
+	fmt.Println(b2) // [2 3 100 200]
+}
+
 type minHeapNode struct {
 	x int
 	y int
