@@ -8,7 +8,7 @@
     <title>Swifty Homepage</title>
     <script>
       (function () {
-        var theme = localStorage.getItem("swifty-docs-theme");
+        const theme = localStorage.getItem("swifty-docs-theme");
         if (
           theme === "dark" ||
           (!theme && matchMedia("(prefers-color-scheme: dark)").matches)

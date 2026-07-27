@@ -133,7 +133,7 @@ func main() {
 
 ## 比较 interface
 
-interface 底层包含 2 个字段: 类型 T 和值 V, 可以使用 == 或 != 比较 interface
+interface 包含 2 个字段: 类型 T 和值 V, 可以使用 == 或 != 比较 interface
 
 ```go
 type emptyStu interface {}
@@ -154,7 +154,95 @@ func main() {
 
 ## 两个 nil 可能不相等
 
-## 数组 append 扩容
+interface 包含 2 个字段: 类型 T 和值 V, 只有 T 和 V 都是 nil 时, 接口才等于 nil
+
+::: code-group
+
+```go [Will not print]
+type MyError struct{}
+
+// Error implements [error].
+func (m *MyError) Error() string {
+ return "MyError"
+}
+
+var _ error = (*MyError)(nil)
+
+func foo() *MyError { // 返回结构体
+	var err *MyError = nil
+	return err
+}
+
+func main() {
+	if foo() != nil {
+		fmt.Println("What can I say.") // Will not print.
+	}
+}
+```
+
+```go [Will print]
+type MyError struct{}
+
+// Error implements [error].
+func (m *MyError) Error() string {
+ return "MyError"
+}
+
+var _ error = (*MyError)(nil)
+
+func foo() error { // 返回 typed 接口 (T = *MyError)
+	var err *MyError = nil
+	return err
+}
+
+func main() {
+	if foo() != nil {
+		fmt.Println("What can I say.") // Will print
+	}
+}
+```
+
+:::
+
+## Go 函数传参
+
+Go 函数传参都是值拷贝
+
+## 逃逸分析
+
+```go
+go build -gcflags '-m -m -l' ./src/main.go
+```
+
+### 逃逸场景
+
+1. 函数返回局部变量的指针: 局部变量从栈逃逸到堆
+2. closure 闭包
+3. any/interface{}: 编译器不知道 any 类型的变量内部是否有持有指针
+4. reflect 反射
+5. 大对象、栈空间不足
+6. 切片/map 的 len/cap 不确定、切片/map 扩容
+7. 切片/map 的成员持有指针
+8. 发送指针到 channel: 编译器不知道接收方的生命周期
+
+## Go 如何实现多返回值
+
+1. 编译时, 计算函数 (多个) 返回值的总大小
+2. 调用者 caller 在栈上预留一块连续内存: callee 参数区 + callee 返回值区
+3. 被调用者 callee 执行到 return 语句时, 拷贝 return 的 (多个) 值到预留的返回值区
+4. 被调用者 callee 执行结束
+5. Go 1.17 开始, (多个) 返回值优先通过寄存器传递
+
+## unsafe.Pointer 对比 uintptr
+
+- unsafe.Pointer 和 uintptr 可以相互转换
+- unsafe.Pointer 会被垃圾回收器跟踪, unsafe.Pointer 指向的内存不会被错误回收
+- uintptr 是保存地址值的无符号整数, 不会被垃圾回收器跟踪, 指向的内存随时可能被回收
+
+## slice 扩容
+
+- 如果旧切片容量 oldCap < 256 时, 新切片容量 newCap 扩容 2x
+- 如果旧切片容量 oldCap >= 256 时, 随切片容量增大, 新切片容量 newCap 从扩容 2x 平滑过渡到扩容 1.25x
 
 ```go
 newCap := oldCap
@@ -167,7 +255,7 @@ if newLen > doubleCap {
     newCap = doubleCap // 小 slice: 扩容 2x
   } else {
     for 0 < newCap && newCap < newLen {
-      // 随 slice 增大, 从扩容 2x 平滑过渡到扩容 1.25x
+      // 随切片容量增大, 从扩容 2x 平滑过渡到扩容 1.25x
       newCap += (newCap + 3*threshold) / 4
     }
   }
@@ -189,6 +277,18 @@ func main() {
 	b2 := append(b, 200) // cap 足够, 不扩容
   fmt.Println(a) // [1 2 3 100 200]
 	fmt.Println(b2) // [2 3 100 200]
+}
+```
+
+切片 demo
+
+```go
+func main() {
+	a := []int{1, 2, 3}
+  b := a[:]
+  a = append(a, 4); // [1 2 3 4]
+  b = append(b, 5) // [1 2 3 5]
+  fmt.Println(a, b)
 }
 ```
 

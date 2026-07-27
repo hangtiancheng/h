@@ -7,6 +7,7 @@ import (
 )
 
 func init() {
+
 	fmt.Println("initA")
 }
 
@@ -303,7 +304,24 @@ func test2() (i int, a int) {
 	return i, st.a
 }
 
+type MyError struct{}
+
+// Error implements [error].
+func (m *MyError) Error() string {
+ return "MyError"
+}
+
+var _ error = (*MyError)(nil)
+
+func foo() *MyError {
+	var err *MyError = nil
+	return err
+}
+
 func main() {
-	i, a := test2()
-	fmt.Println("test returns", i, a)
+	a := []int{1, 2, 3, 4, 5}
+  b := a[:]
+  a = append(a, 7);
+  b = append(b, 8)
+  fmt.Println(a, b)
 }

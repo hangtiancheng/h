@@ -72,13 +72,6 @@ export default defineConfig({
         import.meta.dirname,
         ".swifty-docs/generated",
       ),
-      "@swifty.js/docs": resolve(
-        import.meta.dirname,
-        "..",
-        "swifty.js",
-        "packages",
-        "swifty-docs",
-      ),
     },
   },
   build: {
