@@ -308,7 +308,7 @@ type MyError struct{}
 
 // Error implements [error].
 func (m *MyError) Error() string {
- return "MyError"
+	return "MyError"
 }
 
 var _ error = (*MyError)(nil)
@@ -320,8 +320,8 @@ func foo() *MyError {
 
 func main() {
 	a := []int{1, 2, 3, 4, 5}
-  b := a[:]
-  a = append(a, 7);
-  b = append(b, 8)
-  fmt.Println(a, b)
+	b := a[:]
+	a = append(a, 7)
+	b = append(b, 8)
+	fmt.Println(a, b)
 }
