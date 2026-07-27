@@ -4,7 +4,8 @@
   "private": true,
   "description": "homepage",
   "keywords": [
-    "algorithm",
+    "@swifty.js",
+    "hangtiancheng",
     "homepage"
   ],
   "license": "MIT",
@@ -26,10 +27,12 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@rspress/core": "^2.0.18",
     "@tailwindcss/vite": "^4.3.3",
     "@types/node": "^25.9.5",
     "concurrently": "^9.2.4",
     "eslint": "^10.7.0",
+    "globals": "^17.8.0",
     "husky": "^9.1.7",
     "lint-staged": "^17.1.0",
     "mermaid": "^11.16.0",

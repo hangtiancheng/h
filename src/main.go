@@ -6,16 +6,12 @@ import (
 	"math"
 )
 
-func main() {
-	a := []int{1, 2, 3, 4, 5}
-	b := a[1:3]        // len=2, cap=4
-	b = append(b, 100) // cap 足够, 不扩容
-	fmt.Println(a)     // [1 2 3 100 5]
-	fmt.Println(b)     // [2 3 100]
+func init() {
+	fmt.Println("initA")
+}
 
-	b2 := append(b, 200) // cap 足够, 不扩容
-  fmt.Println(a) // [1 2 3 100 200]
-	fmt.Println(b2) // [2 3 100 200]
+func init() {
+	fmt.Println("initB")
 }
 
 type minHeapNode struct {
@@ -267,4 +263,47 @@ func maxActiveSectionsAfterTrade(s string) (ans int) {
 		}
 	}
 	return ans + mx
+}
+
+func test() (int, int) {
+	i := 0
+	var st struct{ a int } = struct{ a int }{a: 1}
+
+	defer func() {
+		fmt.Println("defer1")
+	}()
+
+	defer func() {
+		i++
+		st.a++
+		fmt.Println("defer2")
+	}()
+
+	return i, st.a
+}
+
+// func main() {
+//   i, a := test()
+// 	fmt.Println("test returns", i, a)
+// }
+
+func test2() (i int, a int) {
+	var st struct{ a int } = struct{ a int }{a: 1}
+
+	defer func() {
+		fmt.Println("defer1")
+	}()
+
+	defer func() {
+		i++
+		st.a++
+		fmt.Println("defer2")
+	}()
+
+	return i, st.a
+}
+
+func main() {
+	i, a := test2()
+	fmt.Println("test returns", i, a)
 }

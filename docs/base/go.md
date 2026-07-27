@@ -2,7 +2,8 @@
 
 ## 什么是协程
 
-协程是用户态的轻量级线程, 是线程调度的基本单位; 一个 goroutine 以很小的栈空间 (2KB) 启动, 栈可以自动扩缩容
+> 异步 task
+> 协程是用户态的轻量级线程, 是线程调度的基本单位; 一个 goroutine 以很小的栈空间 (2KB) 启动 (goroutine 是有栈协程), 栈可以自动伸缩
 
 - 进程: 进程是操作系统资源分配的基本单位, 每个进程都有独立的内存空间, 进程通过进程间通信 (IPC) 进行通信; 进程上下文切换开销较大
 - 线程: 线程是 CPU 调度的基本单位, 线程是在内核态调度的, 线程通过共享内存进行通信
@@ -10,7 +11,7 @@
 
 ## make 和 new 的区别
 
-- make 分配内存并初始化, 创建 slice、map 和 channel, 返回实例
+- make 分配内存并初始化, 用于创建 slice、map 和 channel, 并返回实例
 - new 只分配内存
 
 ## 数组对比切片
@@ -25,6 +26,133 @@ type slice struct {
 	cap   int // 从指针指向的位置, 到底层数组末尾的容量
 }
 ```
+
+## 拼接字符串
+
+性能: strings.Join ≈ strings.Builder > bytes.Buffer > "+" > fmt.Sprintf
+
+- strings.Join, strings.Builder 内存预分配
+- "+" 需要遍历字符串
+- fmt.Sprintf 需要反射获取值
+
+## defer 执行顺序
+
+LIFO
+
+::: code-group
+
+```go
+import "fmt"
+
+func test() int {
+	i := 0
+	defer func() {
+		fmt.Println("defer1")
+	}()
+
+	defer func() {
+		i++
+		fmt.Println("defer2")
+	}()
+
+	return i // 拷贝返回值
+}
+
+func main() {
+  // defer2
+  // defer1
+  // test returns 0
+	fmt.Println("test returns", test())
+}
+```
+
+```go
+import "fmt"
+
+func test2() (i int) {
+	defer func() {
+		fmt.Println("defer1")
+	}()
+
+	defer func() {
+		i++
+		fmt.Println("defer2")
+	}()
+
+	return i
+}
+
+func main() {
+  // defer2
+  // defer1
+  // test returns 1
+	fmt.Println("test2 returns", test2())
+}
+```
+
+:::
+
+rune 是 int32 的别名
+
+```go
+package main
+
+import "fmt"
+
+func main() {
+  str := "Hello 上海"
+  fmt.Println("len(str):", len(str)) // 12 (一个汉字 3 个字节)
+  fmt.Println("rune:", len([]rune(str))) // 8
+}
+```
+
+## fmt.Printf
+
+```go
+package main
+
+import "fmt"
+
+type stu struct {
+  id int32
+  name string
+}
+
+func main() {
+  a := &stu{id: 1, name:"jane"}
+  fmt.Printf("a=%v\n", a); // a=&{1 jane}
+  fmt.Printf("a=%+v\n", a); // a=&{id:1 name:jane}
+  fmt.Printf("a=%#v\n", a); // a=&main.stu{id:1, name:"jane"}
+}
+```
+
+## init 函数
+
+- init 函数比 main 函数先执行, 一个 .go 文件中 init 函数可以有多个
+- 执行顺序 import -> const -> var -> `init()` -> `main()`
+
+## 比较 interface
+
+interface 底层包含 2 个字段: 类型 T 和值 V, 可以使用 == 或 != 比较 interface
+
+```go
+type emptyStu interface {}
+type stuImpl struct {
+  Name string
+}
+
+func main() {
+  var stu1, stu2 emptyStu = &stuImpl{"jane"}, &stuImpl{"jane"}
+  var stu3, stu4 emptyStu = stuImpl{"jane"}, stuImpl{"jane"}
+
+  // stu1, stu2 类型 *stuImpl, 值是 &stuImpl{"jane"} 地址
+  fmt.Println(stu1 == stu2) // false
+  // stu3, stu4 类型 stuImpl, 值是 stuImpl{"jane"}
+  fmt.Println(stu3 == stu4) // true
+}
+```
+
+## 两个 nil 可能不相等
 
 ## 数组 append 扩容
 
@@ -48,7 +176,7 @@ capMem := roundupSize(uintptr(newCap) * elemSize)
 newCap = int(capMem / elemSize)
 ```
 
-`roundupSize`: Go 预定义了一组 size class: 8, 16, 24, 32, ...., 数组扩容时 cap 数组容量 * elemSize 元素大小向上取整到最近的 size class
+`roundupSize`: Go 预定义了一组 size class: 8, 16, 24, 32, ...., 数组扩容时 cap 数组容量 \* elemSize 元素大小向上取整到最近的 size class
 
 ```go
 func main() {
