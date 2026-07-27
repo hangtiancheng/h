@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Swifty Homepage" />
+    <link rel="icon" href="/h/favicon.svg" type="image/svg+xml" />
+    <title>Swifty Homepage</title>
+    <script>
+      (function () {
+        var theme = localStorage.getItem("swifty-docs-theme");
+        if (
+          theme === "dark" ||
+          (!theme && matchMedia("(prefers-color-scheme: dark)").matches)
+        ) {
+          document.documentElement.classList.add("dark");
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="./boot.tsx"></script>
+  </body>
+</html>

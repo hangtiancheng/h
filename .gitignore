@@ -197,3 +197,5 @@ rules.ninja
 tsconfig.tsbuildinfo
 **/tsconfig.tsbuildinfo
 .swifty/
+.swifty-docs/
+dist-swifty/
