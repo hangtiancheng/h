@@ -1294,3 +1294,42 @@ type ReversedArr = InferredType;
 ```
 
 :::
+
+## 禁止用户复制
+
+拦截 copy 事件
+
+```js
+document.addEventListener("copy", (e) => {
+  e.preventDefault();
+});
+```
+
+拦截键盘事件
+
+```js
+document.addEventListener("keydown", (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key === "c") {
+    e.preventDefault();
+  }
+});
+```
+
+禁用右键菜单
+
+```js
+document.addEventListener("contextmenu", (e) => e.preventDefault());
+```
+
+CSS 禁止选中
+
+```css
+body {
+  user-select: none;
+  -webkit-user-select: none;
+}
+```
+
+- 文字渲染为 svg / canvas / 图片
+- 透明遮罩层
+- 字体混淆: 自定义字体映射，复制得到乱码

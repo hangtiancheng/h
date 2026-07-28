@@ -38,3 +38,13 @@ const arr3 = [1, 2, 3];
 arr3[Symbol.asyncIterator] = async function* () {
   yield* this;
 };
+
+document.addEventListener("copy", (e) => {
+  e.preventDefault();
+});
+
+document.addEventListener("keydown", (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key === "c") {
+    e.preventDefault();
+  }
+});

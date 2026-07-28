@@ -518,7 +518,7 @@ type hchan struct {
    - 检查缓冲区是否有剩余空间: qcount < dataqsiz
    - 如果 qcount < dataqsiz, 则缓冲区中有剩余空间, 写入数据到 `buf[sendx]`, 更新 sendx 索引和 qcount 计数
 3. 如果缓冲区满, 没有剩余空间, 则创建一个 sudog 结构体实例, 包装当前 goroutine 和数据, 加入 sendq 发送者队列, 调用 gopark 阻塞当前生产者 goroutine
-4. 向「已关闭」的 channel 中发送数据会导致 panic
+4. 向「已关闭」的 channel 中发送数据会 panic
 
 ### 从 channel 中接收数据
 
@@ -559,6 +559,32 @@ func leak() {
   // leak 函数返回后, in、out、泄漏的 goroutine 都不能被 GC 回收
 }
 ```
+
+### 关闭 channel 可能 panic
+
+1. 重复关闭一个 channel 会 panic
+2. 关闭一个仅接收 channel 会 panic
+3. 关闭一个 nil 的 channel 会 panic
+4. 向「已关闭」的 channel 中发送数据会 panic
+
+```go
+var ch chan int
+fmt.Println(ch == nil) // true
+```
+
+### select
+
+向「已关闭」的 channel 中发送数据会 panic
+
+scase b
+
+Go语言实现select时，定义了一个数据结构scase表示每个case语句(包含default)。scase结构包含channel指针、操作类型等信息。select操作的整个过程通过selectgo函数在runtime层面实现。
+
+Go运行时会将所有case进行随机排序，这是为了避免饥饿问题。然后执行两轮扫描策略：第一轮直接检查每个channel是否可读写，如果找到就绪的立即执行；如果都没就绪，第二轮就把当前goroutine加入到所有channel的发送或接收队列中，然后调用gopark进入睡眠状态，使当前goroutine让出CPU。
+
+当某个channel变为可操作时，调度器会唤醒对应的goroutine，此时需要从其他channel的等待队列中清理掉这个goroutine，然后执行对应的case分支。
+
+其核心原理是：case随机化 + 双重循环检测
 
 ## Sync
 
