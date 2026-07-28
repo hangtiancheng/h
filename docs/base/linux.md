@@ -21,8 +21,6 @@ export CMAKE_GENERATOR="Ninja"
 export CGO_ENABLED=1
 export GOPATH="$HOME/go"
 export GOBIN="$GOPATH/bin"
-export GOROOT="/opt/homebrew/Cellar/go/1.26.4/libexec"
-export PATH="$GOROOT:$GOBIN:$PATH"
 
 # JavaScript nvm
 export NVM_DIR="$HOME/.nvm"

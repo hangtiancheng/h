@@ -1,5 +1,7 @@
 # Go
 
+## 基础
+
 ### 什么是协程
 
 > 异步 task
@@ -183,7 +185,7 @@ func (m *MyError) Error() string {
 
 var _ error = (*MyError)(nil)
 
-func foo() *MyError { // 返回结构体
+func foo() *MyError { // 返回结构体实例指针
 	var err *MyError = nil
 	return err
 }
@@ -240,7 +242,7 @@ go build -gcflags '-m -m -l' ./src/main.go
 7. 切片/map 的成员持有指针
 8. 发送指针到 channel: 编译器不知道接收方的生命周期
 
-### Go 多返回值
+### 多返回值
 
 1. 编译时, 计算函数 (多个) 返回值的总大小
 2. 调用者 caller 在栈上预留一块连续内存: callee 参数区 + callee 返回值区
@@ -336,7 +338,7 @@ s[i] = s[len(s) - 1]
 s = s[:len(s) - 1]
 ```
 
-删除元素可能导致内存泄漏: 当元素是指针, 或者包含指针的结构体时, 需要手动断开引用
+删除元素可能导致内存泄漏: 当元素是指针, 或者包含指针的结构体实例时, 需要手动断开引用
 
 ```go
 // case1
@@ -372,7 +374,7 @@ func main() {
 
 :::
 
-### map 底层原理
+### map
 
 - go 的 map 的遍历是无序的, ES 的 map 遍历是按插入顺序的
 - go 的 map 并发不安全: get/set (upsert)/for range/remove 时都会检测写标志
@@ -390,7 +392,36 @@ func main() {
   - B < 15, 桶数 2^B < 2 ^ 15, 溢出的桶数量 >= 2^B 时, 触发等量扩容
   - B >= 15, 即桶数 2^B >= 2 ^ 15, 溢出的桶数量 >= 2^15 时, 触发等量扩容
 
-### map 扩容细节
+### map 底层实现
+
+Go <1.24
+
+- 计算 hash(key), 低 B 位决定哪个桶
+- 一个桶装满 8 个 kv 后, 链接一个溢出桶
+- 桶中 8 个 key 连续放、8 个 value 连续放
+
+```txt
+hmap
+  ├── count       kv 数量 len(map) = count
+  ├── B           桶数量 = 2^B
+  ├── buckets ──> [桶 0][桶 1][桶 2]...[桶 2^B-1]
+  └── oldbuckets  扩容时的旧桶
+```
+
+```go
+// cSpell: words hmap noverflow bmap oldbuckets nevacuate mapextra
+type hmap struct {
+  count     int             // kv 数量, len(m) 直接返回 count
+  flags     uint8           // 状态标志, 例如 hashWriting 写标志
+  B         uint8           // 桶数量 2^B
+  noverflow uint16          // 溢出桶的近似数量
+  hash0     uint32          // 哈希种子
+  buckets    unsafe.Pointer // 指向 buckets 桶数组 [2^B]bmap 的指针
+  oldbuckets unsafe.Pointer // 扩容时的旧 buckets 桶数组
+  nevacuate  uintptr        // 表示搬迁进度的计数器: 小于该值的桶已搬迁完成
+  extra     *mapextra       // 管理溢出桶
+}
+```
 
 Go <1.24: 渐进式搬迁
 
@@ -401,12 +432,133 @@ Go <1.24: 渐进式搬迁
 
 Go >=1.24: Swiss Table
 
-- map 改为 directory 目录 + 多个子 table 的结构, 每个子 table 最多 1024 个 kv 键值对 (128 group * 8 slot)
+```txt
+Map
+└── directory ──> [table0][table1]... 每个子 table 最多 1024 个 kv
+                    └── groups --- 1 个 group 有 8 个 slots
+```
+
+```go
+type Map struct {
+  used       uint64         // kv 数量, len(m) 直接返回 used
+  seed       uintptr        // 哈希种子
+  dirPtr     unsafe.Pointer // 指向 directory: 子 table 指针数组 []*table 的指针
+}
+
+// 每个子 table 最多 1024 个 kv
+type table struct {
+  used     uint16
+  capacity uint16
+  groups   groupsReference  // group 数组
+  // 每个子 table 最多 128 个 groups
+  // 1 个 group 有 8 个 slots
+}
+```
+
+- map 改为 directory 目录 + 多个子 table 的结构, 每个子 table 最多 1024 个 kv 键值对 (128 groups * 8 slots): table 是 <=128 个 groups 的集合, group 是 8 个 slots 的集合
 - 某个 table 长度超过 7/8 时, 该 table 单独扩容/分裂
 - table 满 1024 后分裂为 2 个 table
 - 单个 table 的搬迁一次性完成, 不再需要渐进式搬迁
 
+### 从 map 中删除 kv
+
+从 map 中删除 kv, 不会立刻释放 map 占用的内存
+
+map 底层使用桶 (bucket, Go <1.24) 或槽 (slot, Go >=1.24) 存储 kv 键值对, map 的 bucket 或 slot 内存只有 map 本身不可达时, 才会被 gc 回收
+
+- 一个 goroutine 中, 可以一边遍历一边删除/插入 kv
+  - 如果某 key 未被遍历到就被删除, 则后续不会遍历到该 kv
+  - 如果一边遍历一边插入新 kv, 则后续可能遍历到, 也可能遍历不到该 kv
+- 多个 goroutine 中, 不可以一边遍历一边删除/插入 kv
+  - 一个 goroutine 遍历, 另一个 goroutine 删除/插入 kv, 是并发读写, go 的 map 并发不安全
+
 ## Channel
+
+### CSP: Communicating Sequential Process
+
+> Don't communicate by sharing memory; share memory by communicating.
+
+通过通信来共享内存, 不要通过共享内存来通信
+
+- Sequential Process: 即 goroutine
+- Communicating: 即 channel
+
+### channel 底层实现
+
+- 环形缓冲区: 带缓冲的 channel 内部有一个固定大小的循环数组
+  - buf 指针: 指向循环数组的指针
+  - sendx、recvx: 指向下一次发送、接收的数组下标
+- 两个等待队列 sendq 和 recvq: 双向链表, 保存阻塞的 goroutine
+  - sendq: 保存由于 channel 满, 或者对于无缓冲 channel 没有等待中的接收者, 被阻塞的发送者
+  - recvq: 保存由于 channel 空, 被阻塞的接收者
+  - 条件满足时, 会唤醒对应的 goroutine
+- 互斥锁: 所有的发送、接收操作都需要先获取锁, 以保证并发安全
+
+```go
+// cSpell: words hchan qcount dataqsiz sendx recvx recvq sendq waitq sudog
+type hchan struct {
+  qcount   uint           // 缓冲区中的元素数量
+  dataqsiz uint           // make 时指定的缓冲区容量 (循环数组长度)
+  buf      unsafe.Pointer // 指向循环数组的指针
+  sendx    uint           // 下一次发送, 写入的循环数组下标
+  recvx    uint           // 下一次接收, 读取的循环数组下标
+  recvq    waitq          // 由于 channel 空, 被阻塞的接收者 goroutine 队列
+  sendq    waitq          // 由于 channel 满, 或者对于无缓冲 channel 没有等待中的接收者, 被阻塞的发送者 goroutine 队列
+  lock     mutex          // 互斥锁
+  closed   uint32         // channel 是否已关闭
+}
+```
+
+### 向 channel 中发送数据
+
+向 channel 中发送数据的过程受到 mutex 保护, 保证并发安全
+
+1. 先检查是否有等待中的接收者: 如果 recvq 接收者队列不为空, 则有 goroutine 等待接收数据, 直接发送数据给等待中的接收者, 同时唤醒该 goroutine 继续执行
+2. 如果没有等待中的接收者, 则尝试向缓冲区中写入
+   - 检查缓冲区是否有剩余空间: qcount < dataqsiz
+   - 如果 qcount < dataqsiz, 则缓冲区中有剩余空间, 写入数据到 `buf[sendx]`, 更新 sendx 索引和 qcount 计数
+3. 如果缓冲区满, 没有剩余空间, 则创建一个 sudog 结构体实例, 包装当前 goroutine 和数据, 加入 sendq 发送者队列, 调用 gopark 阻塞当前生产者 goroutine
+4. 向「已关闭」的 channel 中发送数据会导致 panic
+
+### 从 channel 中接收数据
+
+1. 先检查是否有等待中的发送者, 如果 sendq 发送者队列不为空, 则有 goroutine 等待发送数据
+
+- 对于无缓冲 channel, 直接从等待中的发送者接收数据
+- 对于带缓冲 channel (缓冲区满), 先从缓冲区中读数据, 再将等待中的发送者的数据写入到缓冲区, 保持 FIFO 顺序
+
+2. 如果没有等待中的发送者, 则尝试从缓冲区中读出
+   - 检查该 channel 是否带缓冲、并且缓冲区中是否有数据: qcount > 0
+   - 如果 qcount > 0, 则该 channel 带缓冲、并且缓冲区中有数据, 从 `buf[recvx]` 读出数据, 更新 recvx 索引和 qcount 计数
+3. 如果缓冲区为空, 没有数据, 则创建一个 sudog 结构体实例, 包装当前 goroutine, 加入 recvq 接收者队列, 调用 gopark 阻塞当前消费者 goroutine
+4. 从「已关闭」的 channel 中接收数据时, 不会 panic, 返回零值和 false
+
+### channel 内存泄漏
+
+案例
+
+- 一个消费者 goroutine 等待从一个 channel 中接收数据, 但是生产者 goroutine 已退出, 并且未关闭该 channel, 导致消费者 goroutine 被持续阻塞, 消费者 goroutine 自身和引用的所有变量都不能被 GC 回收
+- 没有 default 分支的 select 语句, 如果所有 case 发送/接收的 channel 都无法就绪, 则 goroutine 被持续阻塞, 该 goroutine 自身和引用的所有变量都不能被 GC 回收
+
+```go
+func leak() {
+  in := make(chan int)   // 无缓冲、无生产者发送数据、未关闭
+  out := make(chan int)  // 无缓冲、无消费者接收数据
+
+  go func() {
+    // 没有 default 分支, 两个 case 都无法就绪
+    // 该 goroutine 被永久阻塞, goroutine 泄漏
+    select {
+    case v := <-in:
+      fmt.Println("recv", v)
+    case out <- 1:
+      fmt.Println("sent")
+    }
+  }()
+
+  // leak 函数返回后, in、out、泄漏的 goroutine 都不能被 GC 回收
+}
+```
 
 ## Sync
 
