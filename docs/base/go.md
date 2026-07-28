@@ -1,6 +1,6 @@
 # Go
 
-## 什么是协程
+### 什么是协程
 
 > 异步 task
 > 协程是用户态的轻量级线程, 是线程调度的基本单位; 一个 goroutine 以很小的栈空间 (2KB) 启动 (goroutine 是有栈协程), 栈可以自动伸缩
@@ -9,12 +9,27 @@
 - 线程: 线程是 CPU 调度的基本单位, 线程是在内核态调度的, 线程通过共享内存进行通信
 - 协程: 协程是用户态的轻量级线程, 协程是在用户态调度的, 没有用户态和内核态的切换开销, 协程上下文切换开销小
 
-## make 和 new 的区别
+### make 和 new 的区别
 
 - make 分配内存并初始化, 用于创建 slice、map 和 channel, 并返回实例
 - new 只分配内存
 
-## 数组对比切片
+### for range
+
+- go 1.22 前, `for index, value := range collection` 中的 index 内存地址不会改变
+- go 1.22 后, 使用 pre-iteration, `for index, value := range collection` 中的 index 内存地址会改变
+
+```go
+func mutateSlice(s []int) {
+  return append(s, 1, 2) // 返回新的 slice
+}
+// 或者传递指针
+func mutateSlice(s *[]int) {
+  append(*s, 1, 2);
+}
+```
+
+### 数组对比切片
 
 - 数组是固定长度, 数组类型包括数组长度
 - 切片可以改变长度, 切片是一个 struct, 包括: 指针、长度 len 和容量 cap
@@ -27,7 +42,7 @@ type slice struct {
 }
 ```
 
-## 拼接字符串
+### 拼接字符串
 
 性能: strings.Join ≈ strings.Builder > bytes.Buffer > "+" > fmt.Sprintf
 
@@ -35,7 +50,7 @@ type slice struct {
 - "+" 需要遍历字符串
 - fmt.Sprintf 需要反射获取值
 
-## defer 执行顺序
+### defer 执行顺序
 
 LIFO
 
@@ -106,7 +121,7 @@ func main() {
 }
 ```
 
-## fmt.Printf
+### fmt.Printf
 
 ```go
 package main
@@ -126,12 +141,12 @@ func main() {
 }
 ```
 
-## init 函数
+### init 函数
 
 - init 函数比 main 函数先执行, 一个 .go 文件中 init 函数可以有多个
 - 执行顺序 import -> const -> var -> `init()` -> `main()`
 
-## 比较 interface
+### 比较 interface
 
 interface 包含 2 个字段: 类型 T 和值 V, 可以使用 == 或 != 比较 interface
 
@@ -152,7 +167,7 @@ func main() {
 }
 ```
 
-## 两个 nil 可能不相等
+### Pitfall: nil 接口
 
 interface 包含 2 个字段: 类型 T 和值 V, 只有 T 和 V 都是 nil 时, 接口才等于 nil
 
@@ -204,11 +219,11 @@ func main() {
 
 :::
 
-## Go 函数传参
+### 函数传参
 
 Go 函数传参都是值拷贝
 
-## 逃逸分析
+### 逃逸分析
 
 ```go
 go build -gcflags '-m -m -l' ./src/main.go
@@ -225,7 +240,7 @@ go build -gcflags '-m -m -l' ./src/main.go
 7. 切片/map 的成员持有指针
 8. 发送指针到 channel: 编译器不知道接收方的生命周期
 
-## Go 如何实现多返回值
+### Go 多返回值
 
 1. 编译时, 计算函数 (多个) 返回值的总大小
 2. 调用者 caller 在栈上预留一块连续内存: callee 参数区 + callee 返回值区
@@ -233,13 +248,13 @@ go build -gcflags '-m -m -l' ./src/main.go
 4. 被调用者 callee 执行结束
 5. Go 1.17 开始, (多个) 返回值优先通过寄存器传递
 
-## unsafe.Pointer 对比 uintptr
+### unsafe.Pointer 对比 uintptr
 
 - unsafe.Pointer 和 uintptr 可以相互转换
 - unsafe.Pointer 会被垃圾回收器跟踪, unsafe.Pointer 指向的内存不会被错误回收
 - uintptr 是保存地址值的无符号整数, 不会被垃圾回收器跟踪, 指向的内存随时可能被回收
 
-## slice 扩容
+### slice 扩容
 
 - 如果旧切片容量 oldCap < 256 时, 新切片容量 newCap 扩容 2x
 - 如果旧切片容量 oldCap >= 256 时, 随切片容量增大, 新切片容量 newCap 从扩容 2x 平滑过渡到扩容 1.25x
@@ -299,17 +314,17 @@ func main() {
 
 Pitfall: 大数组的小切片导致的内存驻留: 例如从 100MB 大数组 data 中切片得到的 `data[:100]`, 会导致整个 100MB 大数组无法被 GC
 
-## 对比 `var nilSlice []int` 和 `emptySlice := []int{}`
+### `var s []int` 对比 `s := []int{}`
 
-|                                     | `var nilSlice []int` | `emptySlice := []int{}`                                 |
-| ----------------------------------- | -------------------- | ------------------------------------------------------- |
-| array 指针                          | nil                  | 指向 `runtime.zerobase` (所有长度 = 0 的对象共享的地址) |
-| len, cap                            | len=0, cap=0         | len=0, cap=0                                            |
-| `s == nil`                          | true                 | false                                                   |
-| `json.Marshal`                      | `null`               | `[]`                                                    |
-| len / for / range / append 是否安全 | 全部安全             | 全部安全                                                |
+|                                     | `var s []int` | `s := []int{}`                                          |
+| ----------------------------------- | ------------- | ------------------------------------------------------- |
+| array 指针                          | nil           | 指向 `runtime.zerobase` (所有长度 = 0 的对象共享的地址) |
+| len, cap                            | len=0, cap=0  | len=0, cap=0                                            |
+| `s == nil`                          | true          | false                                                   |
+| `json.Marshal`                      | `null`        | `[]`                                                    |
+| len / for / range / append 是否安全 | 全部安全      | 全部安全                                                |
 
-## 从 slice 中删除元素
+### 从 slice 中删除元素
 
 ```go
 // 保序删除
@@ -336,28 +351,80 @@ s = s[:len(s) - 1]
 
 `slices.Delete(s, i, i+1)` 自动断开引用
 
-## for range
-
-- go 1.22 前, `for index, value := range collection` 中的 index 内存地址不会改变
-- go 1.22 后, 使用 pre-iteration, `for index, value := range collection` 中的 index 内存地址会改变
+::: code-group
 
 ```go
-func mutateSlice(s []int) {
-  return append(s, 1, 2) // 返回新的 slice
-}
-// 或者传递指针
-func mutateSlice(s *[]int) {
-  append(*s, 1, 2);
+func main() {
+	slice := []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9}
+	s1 := slice[2:5]
+	s2 := s1[2:6:7]
+
+	s2 = append(s2, 100)
+	s2 = append(s2, 200)
+
+	s1[2] = 20
+
+	fmt.Println(s1) // [2 3 20]
+	fmt.Println(s2) // [4 5 6 7 100 200]
+	fmt.Println(slice) // [0 1 2 3 20 5 6 7 100 9]
 }
 ```
 
-## 字符串拼接
+:::
 
-字符串拼接方法: +、fmt.Sprintf、strings.Builder、bytes.Buffer、strings.Join
+### map 底层原理
 
-## 堆
+- go 的 map 的遍历是无序的, ES 的 map 遍历是按插入顺序的
+- go 的 map 并发不安全: get/set (upsert)/for range/remove 时都会检测写标志
+  - 如果写标志已被置位, 则直接抛出 fatal error, 不能被 recover 捕获
+  - 如果写标志未被置位, 则 set/remove 先将写标志置位, 再进行后续操作
+- map 的 key 必须 comparable 可比较
+- 无法对 map 的 key 或 value 取地址
 
-[LeetCode 设计推特](https://leetcode.cn/problems/design-twitter)
+### map 扩容
+
+桶数: 2^B
+
+- 负载因子超过阈值 6.5 (kv 键值对数 > 6.5 * 桶数): 触发 2x 双倍扩容, B += 1
+- 溢出的桶数量过多: 触发等量扩容, 将稀疏的 kv 键值对排列紧凑
+  - B < 15, 桶数 2^B < 2 ^ 15, 溢出的桶数量 >= 2^B 时, 触发等量扩容
+  - B >= 15, 即桶数 2^B >= 2 ^ 15, 溢出的桶数量 >= 2^15 时, 触发等量扩容
+
+### map 扩容细节
+
+Go <1.24: 渐进式搬迁
+
+- map 触发扩容时, 只分配新内存, 不会 stop the world 一次性将所有数据移动到新内存
+- 后续的每次 set (upsert)/remove 时, 同时搬迁 1~2 个旧桶中的数据
+- 将大的扩容成本分摊到后续的多次 set (upsert)/remove 操作
+- get 和 for range 不参与搬迁, 触发扩容后如果只读不写, 则会一直停在「扩容中」状态
+
+Go >=1.24: Swiss Table
+
+- map 改为 directory 目录 + 多个子 table 的结构, 每个子 table 最多 1024 个 kv 键值对 (128 group * 8 slot)
+- 某个 table 长度超过 7/8 时, 该 table 单独扩容/分裂
+- table 满 1024 后分裂为 2 个 table
+- 单个 table 的搬迁一次性完成, 不再需要渐进式搬迁
+
+## Channel
+
+## Sync
+
+## Interface
+
+## 反射
+
+## GMP
+
+## 内存管理
+
+## 垃圾回收
+
+## 数据结构
+
+### 堆
+
+[设计推特](https://leetcode.cn/problems/design-twitter)
 
 ```go
 import "container/heap"
@@ -505,43 +572,4 @@ func (t *Twitter) Unfollow(followerId int, followeeId int) {
 	}
 	delete(followees, followeeId)
 }
-```
-
-## 限流器
-
-```ts
-import Koa from "koa";
-import Router from "@koa/router";
-import ratelimit from "koa-ratelimit";
-import LRU from "lru-cache";
-
-const app = new Koa();
-const router = new Router();
-const db = new LRU({ max: 10_000 });
-
-const limiter = ratelimit({
-  driver: "memory",
-  db,
-  duration: 60_000, // 1 分钟
-  max: 60, // 最多 60 次
-  id: (ctx) => ctx.ip,
-  // 限流时的响应体
-  errorMessage: { error: "Too Many Requests" },
-  // 限流时的响应头
-  headers: {
-    remaining: "RateLimit-Remaining",
-    reset: "RateLimit-Reset",
-    total: "RateLimit-Limit",
-  },
-});
-// 全局限流
-app.use(limiter);
-// 限流指定接口
-router.post("/login", limiter, (ctx) => {
-  ctx.body = { ok: true };
-});
-
-app.use(router.routes());
-app.use(router.allowedMethods());
-app.listen(3000, "0.0.0.0");
 ```
