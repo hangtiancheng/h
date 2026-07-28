@@ -2,7 +2,7 @@
 
 import type { Theme } from "vitepress";
 import DefaultTheme from "vitepress/theme-without-fonts";
-import Mermaid from "./Mermaid.vue";
+import Mermaid from "./mermaid";
 import "./style.css";
 
 const theme: Theme = {

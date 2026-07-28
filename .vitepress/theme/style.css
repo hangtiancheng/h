@@ -16,3 +16,11 @@
   --vp-font-family-base: var(--font-sans);
   --vp-font-family-mono: var(--font-mono);
 }
+
+.mermaid-block {
+  @apply my-4 flex justify-center;
+}
+
+.mermaid-block svg {
+  @apply h-auto max-w-full;
+}
