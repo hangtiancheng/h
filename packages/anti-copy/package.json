@@ -50,11 +50,13 @@
     "prepublishOnly": "pnpm typecheck && pnpm test && pnpm build"
   },
   "devDependencies": {
+    "@rollup/plugin-alias": "^6.0.0",
     "@rollup/plugin-terser": "^1.0.0",
     "@rollup/plugin-typescript": "^12.3.0",
     "jsdom": "^30.0.1",
     "oxfmt": "^0.61.0",
     "rollup": "^4.62.3",
+    "rollup-plugin-dts": "^6.4.1",
     "tslib": "^2.8.1",
     "typescript": "^6.0.3",
     "vitest": "^4.1.10"
