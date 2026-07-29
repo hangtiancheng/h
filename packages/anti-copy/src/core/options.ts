@@ -15,7 +15,10 @@ export function resolveOptions(options: AntiCopyOptions = {}): ResolvedOptions {
     copy: options.copy ?? true,
     keyboard: options.keyboard ?? true,
     contextmenu: options.contextmenu ?? true,
-    selectStyle: options.selectStyle ?? true,
+    // "replace" mode needs a live selection for the copy event to substitute,
+    // so selection blocking defaults off there.
+    selectStyle: options.selectStyle ?? options.mode !== "replace",
+    print: options.print ?? true,
     devtools:
       options.devtools === true
         ? {

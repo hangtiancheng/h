@@ -15,11 +15,20 @@ import type { Feature, ResolvedOptions } from "./types";
 export function createDevtoolsFeature(options: ResolvedOptions): Feature {
   const config = options.devtools;
   const view = options.target.defaultView;
+  if (config === false || !view) {
+    return {
+      attach() {
+        /** noop */
+      },
+      detach() {
+        /** noop */
+      },
+    };
+  }
   let timer: ReturnType<typeof setInterval> | null = null;
   let lastOpened = false;
 
   const check = () => {
-    if (!view || config === false) return;
     if (
       view.outerWidth < 800 ||
       view.matchMedia?.("(pointer: coarse)").matches
@@ -37,7 +46,7 @@ export function createDevtoolsFeature(options: ResolvedOptions): Feature {
 
   return {
     attach() {
-      if (!view || config === false || timer !== null) return;
+      if (timer !== null) return;
       timer = setInterval(check, config.intervalMs);
       view.addEventListener("resize", check);
     },
@@ -46,7 +55,7 @@ export function createDevtoolsFeature(options: ResolvedOptions): Feature {
         clearInterval(timer);
         timer = null;
       }
-      view?.removeEventListener("resize", check);
+      view.removeEventListener("resize", check);
       lastOpened = false;
     },
   };

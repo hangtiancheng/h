@@ -31,12 +31,37 @@ describe("keyboard", () => {
     expect(fireKey({ key: "a", ctrlKey: true }).defaultPrevented).toBe(true);
   });
 
-  it("lets Ctrl+C through in replace mode so the copy event fires", () => {
-    instance = createAntiCopy({ mode: "replace", selectStyle: false });
+  it("uses the physical key so non-Latin layouts cannot bypass", () => {
+    instance = createAntiCopy({ selectStyle: false });
+    instance.enable();
+    // Cyrillic layout: e.key is "с" but the physical key is KeyC.
+    expect(
+      fireKey({ key: "с", code: "KeyC", ctrlKey: true }).defaultPrevented,
+    ).toBe(true);
+    // macOS Option dead key: e.key is "Dead" but the physical key is KeyI.
+    expect(
+      fireKey({ key: "Dead", code: "KeyI", metaKey: true, altKey: true })
+        .defaultPrevented,
+    ).toBe(true);
+  });
+
+  it("lets Ctrl+C and Ctrl+Insert through in replace mode so the copy event fires", () => {
+    instance = createAntiCopy({ mode: "replace" });
     instance.enable();
     expect(fireKey({ key: "c", ctrlKey: true }).defaultPrevented).toBe(false);
+    expect(fireKey({ key: "Insert", ctrlKey: true }).defaultPrevented).toBe(
+      false,
+    );
     // Ctrl+X and Ctrl+A remain blocked in replace mode.
     expect(fireKey({ key: "x", ctrlKey: true }).defaultPrevented).toBe(true);
+  });
+
+  it("blocks Ctrl+Insert in block mode", () => {
+    instance = createAntiCopy({ selectStyle: false });
+    instance.enable();
+    expect(fireKey({ key: "Insert", ctrlKey: true }).defaultPrevented).toBe(
+      true,
+    );
   });
 
   it("blocks DevTools shortcuts and reports the combo", () => {
@@ -51,6 +76,38 @@ describe("keyboard", () => {
     expect(onViolation).toHaveBeenCalledWith(
       expect.objectContaining({ type: "keyboard", key: "Ctrl+Shift+I" }),
     );
+  });
+
+  it("blocks the macOS view-source shortcut Cmd+Opt+U", () => {
+    const onViolation = vi.fn();
+    instance = createAntiCopy({ selectStyle: false, onViolation });
+    instance.enable();
+    expect(
+      fireKey({ key: "u", metaKey: true, altKey: true }).defaultPrevented,
+    ).toBe(true);
+    expect(onViolation).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "keyboard", key: "Cmd+Opt+U" }),
+    );
+  });
+
+  it("blocks Ctrl+S and Ctrl+P even inside editable controls", () => {
+    document.body.innerHTML = "<input id='i' />";
+    instance = createAntiCopy({ selectStyle: false });
+    instance.enable();
+    const input = document.getElementById("i")!;
+    expect(fireKey({ key: "s", ctrlKey: true }, input).defaultPrevented).toBe(
+      true,
+    );
+    expect(fireKey({ key: "p", ctrlKey: true }, input).defaultPrevented).toBe(
+      true,
+    );
+  });
+
+  it("does not block Ctrl+P/Ctrl+S when print protection is off", () => {
+    instance = createAntiCopy({ selectStyle: false, print: false });
+    instance.enable();
+    expect(fireKey({ key: "p", ctrlKey: true }).defaultPrevented).toBe(false);
+    expect(fireKey({ key: "s", ctrlKey: true }).defaultPrevented).toBe(false);
   });
 
   it("allows Ctrl+A inside editable controls", () => {

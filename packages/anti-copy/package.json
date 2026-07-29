@@ -5,6 +5,11 @@
   "description": "Copy-protection SDK for browsers",
   "license": "MIT",
   "author": "https://github.com/hangtiancheng",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hangtiancheng/h.git",
+    "directory": "packages/anti-copy"
+  },
   "type": "module",
   "exports": {
     ".": {
@@ -26,7 +31,14 @@
   },
   "scripts": {
     "test": "vitest run",
+    "format": "oxfmt --write ./",
     "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "happy-dom": "^20.11.1",
+    "oxfmt": "^0.61.0",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.10"
   },
   "peerDependencies": {
     "@rspress/core": ">=2.0.0",

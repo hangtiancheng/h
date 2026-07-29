@@ -82,4 +82,28 @@ describe("devtools detector", () => {
     vi.advanceTimersByTime(1000);
     expect(onViolation).not.toHaveBeenCalled();
   });
+
+  it("update deep-merges nested devtools options", () => {
+    const onViolation = vi.fn();
+    instance = createAntiCopy({
+      copy: false,
+      keyboard: false,
+      contextmenu: false,
+      selectStyle: false,
+      print: false,
+      devtools: { intervalMs: 100, threshold: 400 },
+      onViolation,
+    });
+    instance.enable();
+    // Patch only intervalMs; a shallow merge would reset threshold to 170
+    // and the 300px delta below would then fire a false violation.
+    instance.update({ devtools: { intervalMs: 50 } });
+    setWindowMetrics(1200, 900);
+    vi.advanceTimersByTime(500);
+    expect(onViolation).not.toHaveBeenCalled();
+
+    setWindowMetrics(1200, 700);
+    vi.advanceTimersByTime(100);
+    expect(onViolation).toHaveBeenCalledWith({ type: "devtools" });
+  });
 });

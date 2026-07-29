@@ -1,7 +1,7 @@
 # @swifty.js/anti-copy
 
-Framework-agnostic copy-protection SDK for browsers, with an optional
-VitePress integration.
+Framework-agnostic copy-protection SDK for browsers, with VitePress,
+Rspress and @swifty.js/docs integrations.
 
 > **Disclaimer**: client-side copy protection is a _deterrent_, not a
 > security boundary. Content remains accessible via view-source, disabled
@@ -9,14 +9,22 @@ VitePress integration.
 
 ## Features
 
-- Intercepts `copy` / `cut` events (capture phase)
-- Blocks copy shortcuts (`Ctrl/Cmd + C/X/A`) and DevTools shortcuts
-  (`F12`, `Ctrl+Shift+I/J/C`, `Ctrl+U`)
-- Disables the context menu
-- Injects a `user-select: none` stylesheet
-- `replace` mode: swaps clipboard payload with a copyright notice instead of blocking
+- Intercepts `copy` / `cut` / `dragstart` events (capture phase, on `window`)
+- Blocks copy shortcuts by **physical key** (`e.code`), so non-Latin keyboard
+  layouts cannot bypass: `Ctrl/Cmd + C/X/A`, `Ctrl+Insert`, and DevTools /
+  view-source shortcuts (`F12`, `Ctrl+Shift+I/J/C`, `Cmd+Opt+I/J/C`, `Ctrl+U`,
+  `Cmd+Opt+U`)
+- Blocks export shortcuts (`Ctrl/Cmd + S/P`) and hides content in print
+  output via `@media print` (menu-initiated printing included)
+- Disables the context menu and `selectstart`
+- Injects a `user-select: none !important` stylesheet incl.
+  `-webkit-touch-callout: none` for iOS long-press
+- `replace` mode: swaps clipboard payload (text + escaped HTML flavor) with a
+  copyright notice instead of blocking
 - Heuristic DevTools-open detection (window size delta; deterrent only)
-- Region exemptions via CSS selectors; editable controls always stay functional
+- Region exemptions via CSS selectors, judged against the **whole selection**
+  (a selection spanning excluded and protected content stays blocked);
+  editable controls always keep native behavior, incl. inside open shadow roots
 
 ## Core usage (framework agnostic)
 
@@ -40,22 +48,31 @@ inert no-op instance.
 
 ### Options
 
-| Option             | Default   | Description                                        |
-| ------------------ | --------- | -------------------------------------------------- |
-| `mode`             | `"block"` | Cancel copying, or replace the clipboard payload   |
-| `replaceText`      | built-in  | String or `(selection) => string` for replace mode |
-| `excludeSelectors` | `[]`      | Regions where protection is bypassed               |
-| `copy`             | `true`    | Intercept `copy` / `cut` events                    |
-| `keyboard`         | `true`    | Intercept copy & DevTools shortcuts                |
-| `contextmenu`      | `true`    | Disable right-click menu                           |
-| `selectStyle`      | `true`    | Inject `user-select: none` stylesheet              |
-| `devtools`         | `false`   | `true` or `{ intervalMs, threshold }`              |
-| `onViolation`      | —         | Callback fired on every protection trigger         |
+| Option             | Default    | Description                                                                        |
+| ------------------ | ---------- | ---------------------------------------------------------------------------------- |
+| `mode`             | `"block"`  | Cancel copying, or replace the clipboard payload                                   |
+| `replaceText`      | built-in   | String or `(selection) => string` for replace mode                                 |
+| `excludeSelectors` | `[]`       | Regions where protection is bypassed (invalid selectors are dropped, never fatal)  |
+| `copy`             | `true`     | Intercept `copy` / `cut` / `dragstart` events                                      |
+| `keyboard`         | `true`     | Intercept copy, export & DevTools shortcuts                                        |
+| `contextmenu`      | `true`     | Disable right-click menu                                                           |
+| `selectStyle`      | mode-aware | `user-select: none` + `selectstart`; `true` in block mode, `false` in replace mode |
+| `print`            | `true`     | `@media print` hiding, `beforeprint` reporting, `Ctrl/Cmd+S/P` blocking            |
+| `devtools`         | `false`    | `true` or `{ intervalMs, threshold }`                                              |
+| `onViolation`      | —          | Callback fired on every protection trigger                                         |
+| `target`           | `document` | Document to protect; injectable for tests and iframes                              |
+
+Violation types: `copy`, `cut`, `drag`, `selection`, `keyboard`,
+`contextmenu`, `print`, `devtools`.
+
+`update(patch)` deep-merges the nested `devtools` object; other fields are
+replaced wholesale.
 
 ## VitePress integration
 
 ```ts
 // .vitepress/theme/index.ts
+import DefaultTheme from "vitepress/theme";
 import { applyAntiCopy } from "@swifty.js/anti-copy/vitepress";
 
 export default {
@@ -77,6 +94,8 @@ export default {
   ```
 
 - Toggles automatically across SPA navigations via the reactive route data.
+- Returns `{ instance, stop }` — call `stop()` to remove the watcher and all
+  listeners (useful in tests or HMR-heavy setups).
 
 When consuming the package as raw TypeScript sources inside a workspace,
 add to the VitePress `vite` config:
@@ -104,8 +123,9 @@ import { AntiCopy } from "@swifty.js/anti-copy/swifty-docs";
 
 - Code blocks (`.codeblock`), dialogs (`[role="dialog"]`, incl. the search
   palette) and editable controls are exempt (`SWIFTY_DOCS_DEFAULT_EXCLUDES`).
-- Opt out per route with `excludePaths` (string prefix or RegExp); protection
-  toggles automatically on client-side navigation.
+- Opt out per route with `excludePaths` (string prefix or RegExp; trailing
+  slashes are normalized on both sides); protection toggles automatically on
+  client-side navigation.
 
 ## Rspress integration
 
@@ -123,15 +143,33 @@ export default function GlobalAntiCopy() {
 
 ```ts
 // rspress.config.ts
+import { defineConfig } from "@rspress/core";
+import path from "node:path";
+
 export default defineConfig({
-  globalUIComponents: [path.join(__dirname, "theme/anti-copy.tsx")],
+  globalUIComponents: [path.join(import.meta.dirname, "theme/anti-copy.tsx")],
 });
 ```
 
+> Do **not** pass options through the `globalUIComponents: [[path, props]]`
+> tuple form: Rspress serializes those props with `JSON.stringify`, silently
+> dropping functions such as `replaceText` and `onViolation`. Always use a
+> wrapper component as shown above.
+
 - Code blocks (`.rp-codeblock`), the search panel/button and editable
   controls are exempt (`RSPRESS_DEFAULT_EXCLUDES`).
-- Opt out per page with frontmatter `copyable: false`; the toggle stays in
+- Opt out per page with frontmatter `copyable: true`; the toggle stays in
   sync across client-side navigation via `useFrontmatter()`.
+
+## Known limitations
+
+By design (client-side JS cannot prevent these):
+
+- View-source, `curl`, reader mode, disabled JavaScript.
+- Undocked DevTools windows are undetectable; browser zoom may cause
+  devtools-detector false positives.
+- Scripts registered on `window` before this plugin can pre-empt the
+  capture-phase listeners.
 
 ## Testing
 

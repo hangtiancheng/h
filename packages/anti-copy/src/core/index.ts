@@ -3,6 +3,7 @@ import { createContextmenuFeature } from "./contextmenu";
 import { createDevtoolsFeature } from "./devtools";
 import { createKeyboardFeature } from "./keyboard";
 import { resolveOptions } from "./options";
+import { createPrintFeature } from "./print";
 import { createStyleFeature } from "./style";
 import type {
   AntiCopyInstance,
@@ -24,6 +25,7 @@ export type {
   ViolationType,
 };
 export { DEFAULT_REPLACE_TEXT } from "./options";
+export { isBrowser } from "./utils";
 
 const NOOP_INSTANCE: AntiCopyInstance = {
   enable() {
@@ -48,8 +50,24 @@ function buildFeatures(options: AntiCopyOptions): Feature[] {
   if (resolved.copy) features.push(createClipboardFeature(resolved));
   if (resolved.keyboard) features.push(createKeyboardFeature(resolved));
   if (resolved.contextmenu) features.push(createContextmenuFeature(resolved));
+  if (resolved.print) features.push(createPrintFeature(resolved));
   if (resolved.devtools) features.push(createDevtoolsFeature(resolved));
   return features;
+}
+
+/** Merge an options patch, deep-merging the nested devtools object. */
+function mergeOptions(
+  current: AntiCopyOptions,
+  patch: Partial<AntiCopyOptions>,
+): AntiCopyOptions {
+  const merged: AntiCopyOptions = { ...current, ...patch };
+  if (
+    typeof current.devtools === "object" &&
+    typeof patch.devtools === "object"
+  ) {
+    merged.devtools = { ...current.devtools, ...patch.devtools };
+  }
+  return merged;
 }
 
 /**
@@ -85,13 +103,14 @@ export function createAntiCopy(
     destroy() {
       instance.disable();
       destroyed = true;
+      features = [];
     },
     isEnabled: () => enabled,
     update(patch) {
       if (destroyed) return;
       const wasEnabled = enabled;
       instance.disable();
-      currentOptions = { ...currentOptions, ...patch };
+      currentOptions = mergeOptions(currentOptions, patch);
       features = buildFeatures(currentOptions);
       if (wasEnabled) instance.enable();
     },

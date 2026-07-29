@@ -7,14 +7,27 @@ afterEach(() => {
   instance?.destroy();
   instance = null;
   document.body.innerHTML = "";
+  vi.restoreAllMocks();
 });
 
-function fireCopy(target: EventTarget = document.body) {
-  const event = new Event("copy", { bubbles: true, cancelable: true });
+function fireCopy(target: EventTarget = document.body, type = "copy") {
+  const event = new Event(type, { bubbles: true, cancelable: true });
   const setData = vi.fn();
   Object.defineProperty(event, "clipboardData", { value: { setData } });
   target.dispatchEvent(event);
   return { event, setData };
+}
+
+function stubSelection(text: string, container?: Node) {
+  const selection = {
+    toString: () => text,
+    isCollapsed: text.length === 0,
+    rangeCount: container ? 1 : 0,
+    getRangeAt: () => ({ commonAncestorContainer: container }),
+  };
+  vi.spyOn(window, "getSelection").mockReturnValue(
+    selection as unknown as Selection,
+  );
 }
 
 describe("clipboard", () => {
@@ -27,11 +40,7 @@ describe("clipboard", () => {
   });
 
   it("replace mode writes the replacement text and prevents default", () => {
-    instance = createAntiCopy({
-      mode: "replace",
-      replaceText: "© notice",
-      selectStyle: false,
-    });
+    instance = createAntiCopy({ mode: "replace", replaceText: "© notice" });
     instance.enable();
     const { event, setData } = fireCopy();
     expect(setData).toHaveBeenCalledWith("text/plain", "© notice");
@@ -39,16 +48,36 @@ describe("clipboard", () => {
     expect(event.defaultPrevented).toBe(true);
   });
 
-  it("replaceText function receives the current selection", () => {
-    const replaceText = vi.fn(() => "out");
-    instance = createAntiCopy({
-      mode: "replace",
-      replaceText,
-      selectStyle: false,
-    });
+  it("replaceText function receives the real selection and its result is written", () => {
+    stubSelection("secret paragraph");
+    const replaceText = vi.fn((sel: string) => `notice for ${sel}`);
+    instance = createAntiCopy({ mode: "replace", replaceText });
     instance.enable();
-    fireCopy();
-    expect(replaceText).toHaveBeenCalledWith(expect.any(String));
+    const { setData } = fireCopy();
+    expect(replaceText).toHaveBeenCalledWith("secret paragraph");
+    expect(setData).toHaveBeenCalledWith(
+      "text/plain",
+      "notice for secret paragraph",
+    );
+  });
+
+  it("escapes the html clipboard flavor", () => {
+    instance = createAntiCopy({ mode: "replace", replaceText: '<b>&"x"</b>' });
+    instance.enable();
+    const { setData } = fireCopy();
+    expect(setData).toHaveBeenCalledWith("text/plain", '<b>&"x"</b>');
+    expect(setData).toHaveBeenCalledWith(
+      "text/html",
+      "&lt;b&gt;&amp;&quot;x&quot;&lt;/b&gt;",
+    );
+  });
+
+  it("editable controls keep native copy behavior", () => {
+    document.body.innerHTML = "<input id='i' />";
+    instance = createAntiCopy({ selectStyle: false });
+    instance.enable();
+    const { event } = fireCopy(document.getElementById("i")!);
+    expect(event.defaultPrevented).toBe(false);
   });
 
   it("excluded regions are not intercepted", () => {
@@ -59,20 +88,75 @@ describe("clipboard", () => {
       selectStyle: false,
     });
     instance.enable();
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const { event } = fireCopy(document.getElementById("c")!);
     expect(event.defaultPrevented).toBe(false);
+  });
+
+  it("a selection fully inside an excluded region is allowed", () => {
+    document.body.innerHTML =
+      '<div class="allowed"><p id="a">x</p></div><p id="b">y</p>';
+    stubSelection("x", document.querySelector(".allowed")!);
+    instance = createAntiCopy({
+      excludeSelectors: [".allowed"],
+      selectStyle: false,
+    });
+    instance.enable();
+    const { event } = fireCopy(document.getElementById("a")!);
+    expect(event.defaultPrevented).toBe(false);
+  });
+
+  it("a selection spanning excluded and protected regions is blocked", () => {
+    document.body.innerHTML =
+      '<div class="allowed"><p id="a">x</p></div><p id="b">y</p>';
+    // Selection starts inside .allowed but extends past it: the common
+    // ancestor is <body>, so a target-only check would leak content.
+    stubSelection("xy", document.body);
+    instance = createAntiCopy({
+      excludeSelectors: [".allowed"],
+      selectStyle: false,
+    });
+    instance.enable();
+    const { event } = fireCopy(document.getElementById("a")!);
+    expect(event.defaultPrevented).toBe(true);
   });
 
   it("cut is intercepted and reported", () => {
     const onViolation = vi.fn();
     instance = createAntiCopy({ selectStyle: false, onViolation });
     instance.enable();
-    const event = new Event("cut", { bubbles: true, cancelable: true });
-    document.body.dispatchEvent(event);
+    const { event } = fireCopy(document.body, "cut");
     expect(event.defaultPrevented).toBe(true);
     expect(onViolation).toHaveBeenCalledWith(
       expect.objectContaining({ type: "cut" }),
     );
+  });
+
+  it("dragstart is blocked outside excluded regions and reported", () => {
+    document.body.innerHTML =
+      '<div class="allowed" id="ok">x</div><p id="p">y</p>';
+    const onViolation = vi.fn();
+    instance = createAntiCopy({
+      excludeSelectors: [".allowed"],
+      selectStyle: false,
+      onViolation,
+    });
+    instance.enable();
+
+    const blocked = new Event("dragstart", {
+      bubbles: true,
+      cancelable: true,
+    });
+    document.getElementById("p")!.dispatchEvent(blocked);
+    expect(blocked.defaultPrevented).toBe(true);
+    expect(onViolation).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "drag" }),
+    );
+
+    const allowed = new Event("dragstart", {
+      bubbles: true,
+      cancelable: true,
+    });
+    document.getElementById("ok")!.dispatchEvent(allowed);
+    expect(allowed.defaultPrevented).toBe(false);
   });
 });

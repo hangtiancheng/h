@@ -18,18 +18,28 @@ export const SWIFTY_DOCS_DEFAULT_EXCLUDES = [
 export interface SwiftyDocsAntiCopyProps extends AntiCopyOptions {
   /**
    * Route paths exempt from protection. A string matches when the current
-   * path equals it or starts with it followed by `/`; a RegExp is tested
-   * against the full path.
+   * path equals it or starts with it followed by `/` (trailing slashes on
+   * either side are ignored); a RegExp is tested against the full path.
    */
   excludePaths?: (string | RegExp)[];
 }
 
-function isPathExcluded(path: string, patterns: (string | RegExp)[]): boolean {
-  return patterns.some((pattern) =>
-    typeof pattern === "string"
-      ? path === pattern || path.startsWith(`${pattern.replace(/\/$/, "")}/`)
-      : pattern.test(path),
-  );
+function stripTrailingSlash(path: string): string {
+  const stripped = path.replace(/\/+$/, "");
+  return stripped === "" ? "/" : stripped;
+}
+
+/** Exported for testing. */
+export function isPathExcluded(
+  path: string,
+  patterns: (string | RegExp)[],
+): boolean {
+  const current = stripTrailingSlash(path);
+  return patterns.some((pattern) => {
+    if (typeof pattern !== "string") return pattern.test(path);
+    const prefix = stripTrailingSlash(pattern);
+    return current === prefix || current.startsWith(`${prefix}/`);
+  });
 }
 
 /**
@@ -39,7 +49,7 @@ function isPathExcluded(path: string, patterns: (string | RegExp)[]): boolean {
  *
  * ```tsx
  * <LocationProvider>
- *   <AntiCopy mode="replace" excludePaths={["/playground"]} />
+ *   <AntiCopy mode="replace" excludePaths={["/playground"]} devtools />
  *   <Router>...</Router>
  * </LocationProvider>
  * ```
@@ -61,12 +71,15 @@ export function AntiCopy(props: SwiftyDocsAntiCopyProps): null {
     [],
   );
 
+  // Serialized so changes to the excludePaths array retrigger the effect.
+  const excludeKey = excludePaths.map(String).join("\n");
+
   useEffect(() => {
     if (isPathExcluded(path, excludePaths)) instance.disable();
     else instance.enable();
-  }, [path]);
+  }, [path, excludeKey]);
 
-  useEffect(() => () => instance.destroy(), []);
+  useEffect(() => () => instance.disable(), []);
 
   return null;
 }

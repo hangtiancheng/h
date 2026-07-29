@@ -9,7 +9,14 @@ export type AntiCopyMode = "block" | "replace";
 
 /** Category of a protection trigger reported through `onViolation`. */
 export type ViolationType =
-  "copy" | "cut" | "keyboard" | "contextmenu" | "devtools";
+  | "copy"
+  | "cut"
+  | "drag"
+  | "selection"
+  | "keyboard"
+  | "contextmenu"
+  | "print"
+  | "devtools";
 
 /** Payload passed to the {@link AntiCopyOptions.onViolation} callback. */
 export interface ViolationEvent {
@@ -44,14 +51,20 @@ export interface AntiCopyOptions {
    * (event target is matched via `Element.closest`). @default []
    */
   excludeSelectors?: string[];
-  /** Intercept `copy` / `cut` events. @default true */
+  /** Intercept `copy` / `cut` events and text/image drag-out. @default true */
   copy?: boolean;
   /** Intercept copy-related and DevTools keyboard shortcuts. @default true */
   keyboard?: boolean;
   /** Disable the context menu. @default true */
   contextmenu?: boolean;
-  /** Inject a `user-select: none` stylesheet. @default true */
+  /**
+   * Inject a `user-select: none` stylesheet and block `selectstart`.
+   * @default true in "block" mode, false in "replace" mode (replacement
+   * requires a live selection)
+   */
   selectStyle?: boolean;
+  /** Hide content in print output and block Ctrl/Cmd+P / Ctrl/Cmd+S. @default true */
+  print?: boolean;
   /**
    * Enable the DevTools-open detector (window size delta heuristic).
    *
@@ -93,6 +106,7 @@ export interface ResolvedOptions {
   keyboard: boolean;
   contextmenu: boolean;
   selectStyle: boolean;
+  print: boolean;
   devtools: Required<DevtoolsOptions> | false;
   onViolation?: (event: ViolationEvent) => void;
   target: Document;
