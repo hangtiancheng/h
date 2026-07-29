@@ -4,7 +4,7 @@ import {
   isEditable,
   isExcluded,
   isSelectionExcluded,
-} from "../src/core/utils";
+} from "@/core/utils";
 
 afterEach(() => {
   document.body.innerHTML = "";

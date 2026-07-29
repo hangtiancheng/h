@@ -5,7 +5,7 @@ import {
   isBrowser,
   type AntiCopyInstance,
   type AntiCopyOptions,
-} from "../core/index";
+} from "../core";
 
 /**
  * Regions excluded from protection by default in a VitePress site:

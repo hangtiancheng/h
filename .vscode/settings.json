@@ -1,9 +1,11 @@
 {
   "cSpell.words": [
     "a2uiaction",
+    "AZERTY",
     "backoffs",
     "beforeprint",
     "beforeunload",
+    "bypassable",
     "chrs",
     "contenteditable",
     "Contentful",
@@ -34,6 +36,7 @@
     "oxfmt",
     "Println",
     "Renderless",
+    "retargeted",
     "rspress",
     "selectstart",
     "swifty",
@@ -41,6 +44,7 @@
     "turbopack",
     "uintptr",
     "Undocked",
+    "unstub",
     "vitepress",
     "worktree",
     "xlink",

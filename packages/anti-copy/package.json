@@ -43,7 +43,7 @@
     "access": "public"
   },
   "scripts": {
-    "build": "rollup -c",
+    "build": "rollup -c ./rollup.config.js",
     "test": "vitest run",
     "format": "oxfmt --write ./",
     "typecheck": "tsc -p tsconfig.json --noEmit",

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createAntiCopy, type AntiCopyInstance } from "../src/core/index";
+import { createAntiCopy, type AntiCopyInstance } from "@/core";
 
 let instance: AntiCopyInstance | null = null;
 
@@ -12,14 +12,12 @@ describe("print protection", () => {
   it("injects an @media print stylesheet and removes it on disable", () => {
     instance = createAntiCopy({ selectStyle: false });
     instance.enable();
-    const style = document.head.querySelector("style[data-anti-copy-print]");
+    const style = document.head.querySelector("style[swifty-anti-print]");
     expect(style).not.toBeNull();
     expect(style?.textContent).toContain("@media print");
     expect(style?.textContent).toContain("display: none !important");
     instance.disable();
-    expect(
-      document.head.querySelector("style[data-anti-copy-print]"),
-    ).toBeNull();
+    expect(document.head.querySelector("style[swifty-anti-print]")).toBeNull();
   });
 
   it("reports print attempts via beforeprint", () => {
@@ -38,9 +36,7 @@ describe("print protection", () => {
       onViolation,
     });
     instance.enable();
-    expect(
-      document.head.querySelector("style[data-anti-copy-print]"),
-    ).toBeNull();
+    expect(document.head.querySelector("style[swifty-anti-print]")).toBeNull();
     window.dispatchEvent(new Event("beforeprint"));
     expect(onViolation).not.toHaveBeenCalled();
   });

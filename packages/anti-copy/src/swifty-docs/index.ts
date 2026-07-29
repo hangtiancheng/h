@@ -1,6 +1,6 @@
 import { useLocation } from "preact-iso";
 import { useEffect, useMemo } from "preact/hooks";
-import { createAntiCopy, type AntiCopyOptions } from "../core/index";
+import { createAntiCopy, type AntiCopyOptions } from "../core";
 
 /**
  * Regions excluded from protection by default in a @swifty.js/docs site:

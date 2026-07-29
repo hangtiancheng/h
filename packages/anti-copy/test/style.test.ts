@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createAntiCopy, type AntiCopyInstance } from "../src/core/index";
+import { createAntiCopy, type AntiCopyInstance } from "@/core";
 
 let instance: AntiCopyInstance | null = null;
 let second: AntiCopyInstance | null = null;
@@ -26,7 +26,7 @@ describe("style injection", () => {
       excludeSelectors: ['div[class*="language-"]'],
     });
     instance.enable();
-    const style = document.head.querySelector("style[data-anti-copy]");
+    const style = document.head.querySelector("style[swifty-anti-copy]");
     expect(style).not.toBeNull();
     const css = style?.textContent;
     // Global disable resists page-level overrides and iOS long-press.
@@ -47,7 +47,7 @@ describe("style injection", () => {
     });
     instance.enable();
     const css = document.head.querySelector(
-      "style[data-anti-copy]",
+      "style[swifty-anti-copy]",
     )?.textContent;
     // Without :is(), ".a, .b" would expand to ".a, .b, .a, .b *" and the
     // descendants of .a would stay unselectable.
@@ -61,7 +61,7 @@ describe("style injection", () => {
     });
     instance.enable();
     const css = document.head.querySelector(
-      "style[data-anti-copy]",
+      "style[swifty-anti-copy]",
     )?.textContent;
     expect(css).not.toContain("::bad::");
     expect(css).toContain(".valid");
@@ -72,9 +72,9 @@ describe("style injection", () => {
     instance = createAntiCopy(STYLE_ONLY);
     instance.enable();
     instance.disable();
-    expect(document.head.querySelectorAll("style[data-anti-copy]").length).toBe(
-      0,
-    );
+    expect(
+      document.head.querySelectorAll("style[swifty-anti-copy]").length,
+    ).toBe(0);
   });
 
   it("two instances own separate style tags and detach independently", () => {
@@ -82,14 +82,14 @@ describe("style injection", () => {
     second = createAntiCopy(STYLE_ONLY);
     instance.enable();
     second.enable();
-    expect(document.head.querySelectorAll("style[data-anti-copy]").length).toBe(
-      2,
-    );
+    expect(
+      document.head.querySelectorAll("style[swifty-anti-copy]").length,
+    ).toBe(2);
     instance.disable();
     // The second instance's protection must survive the first's teardown.
-    expect(document.head.querySelectorAll("style[data-anti-copy]").length).toBe(
-      1,
-    );
+    expect(
+      document.head.querySelectorAll("style[swifty-anti-copy]").length,
+    ).toBe(1);
   });
 
   it("blocks selectstart outside editable and excluded regions", () => {
@@ -132,7 +132,7 @@ describe("style injection", () => {
     instance = createAntiCopy({ mode: "replace" });
     instance.enable();
     // selectStyle defaults off in replace mode: no user-select stylesheet…
-    expect(document.head.querySelector("style[data-anti-copy]")).toBeNull();
+    expect(document.head.querySelector("style[swifty-anti-copy]")).toBeNull();
     // …and selectstart is not intercepted.
     const event = new Event("selectstart", {
       bubbles: true,

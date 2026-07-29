@@ -1,7 +1,6 @@
 import type { AntiCopyOptions, ResolvedOptions } from "./types";
 
-export const DEFAULT_REPLACE_TEXT =
-  "Copying is disabled on this site. Please link to the original page instead.";
+export const DEFAULT_REPLACE_TEXT = "Copying is not allowed on this page.";
 
 const DEFAULT_DEVTOOLS_INTERVAL_MS = 1000;
 const DEFAULT_DEVTOOLS_THRESHOLD = 170;

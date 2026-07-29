@@ -1,7 +1,7 @@
 import type { Feature, ResolvedOptions } from "./types";
 import { eventElement, isEditable, isExcluded } from "./utils";
 
-const STYLE_ATTR = "data-anti-copy";
+const STYLE_ATTR = "swifty-anti-copy";
 
 /** Always keep editable controls selectable regardless of configuration. */
 const EDITABLE_SELECTORS = [

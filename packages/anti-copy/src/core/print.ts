@@ -1,6 +1,6 @@
 import type { Feature, ResolvedOptions } from "./types";
 
-const PRINT_STYLE_ATTR = "data-anti-copy-print";
+const PRINT_STYLE_ATTR = "swifty-anti-print";
 
 /**
  * Hides the page in print output (`Ctrl/Cmd+P` → save as PDF would otherwise

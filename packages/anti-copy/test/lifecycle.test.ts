@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createAntiCopy } from "../src/core/index";
+import { createAntiCopy } from "@/core";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -19,9 +19,9 @@ describe("lifecycle", () => {
     const callsAfterFirst = addSpy.mock.calls.length;
     instance.enable();
     expect(addSpy.mock.calls.length).toBe(callsAfterFirst);
-    expect(document.head.querySelectorAll("style[data-anti-copy]").length).toBe(
-      1,
-    );
+    expect(
+      document.head.querySelectorAll("style[swifty-anti-copy]").length,
+    ).toBe(1);
     instance.destroy();
     addSpy.mockRestore();
   });
@@ -30,10 +30,8 @@ describe("lifecycle", () => {
     const instance = createAntiCopy();
     instance.enable();
     instance.disable();
-    expect(document.head.querySelector("style[data-anti-copy]")).toBeNull();
-    expect(
-      document.head.querySelector("style[data-anti-copy-print]"),
-    ).toBeNull();
+    expect(document.head.querySelector("style[swifty-anti-copy]")).toBeNull();
+    expect(document.head.querySelector("style[swifty-anti-print]")).toBeNull();
     const event = dispatchCopy();
     expect(event.defaultPrevented).toBe(false);
     expect(instance.isEnabled()).toBe(false);
@@ -106,7 +104,7 @@ describe("lifecycle", () => {
     expect(() => instance.enable()).toThrow("attach failed");
     expect(instance.isEnabled()).toBe(false);
     // The half-attached stylesheet must have been rolled back.
-    expect(document.head.querySelector("style[data-anti-copy]")).toBeNull();
+    expect(document.head.querySelector("style[swifty-anti-copy]")).toBeNull();
     instance.destroy();
   });
 

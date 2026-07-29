@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_REPLACE_TEXT, resolveOptions } from "../src/core/options";
+import { DEFAULT_REPLACE_TEXT, resolveOptions } from "@/core/options";
 
 describe("resolveOptions", () => {
   it("fills defaults", () => {
