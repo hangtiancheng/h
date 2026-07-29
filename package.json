@@ -35,8 +35,8 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@rspress/core": "^2.0.18",
-    "@swifty.js/anti-copy": "workspace:*",
-    "@swifty.js/docs": "file:../swifty.js/packages/swifty-docs",
+    "@swifty.js/anti-copy": "workspace:^",
+    "@swifty.js/docs": "^0.0.6",
     "@tailwindcss/typography": "^0.5.20",
     "@tailwindcss/vite": "^4.3.3",
     "@types/node": "^25.9.5",

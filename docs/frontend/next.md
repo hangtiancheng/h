@@ -94,7 +94,7 @@ app/pages
 ├── index.tsx     # -> /
 ├── about
 │   ├── index.tsx # -> /about
-│   └── him.tsx   # -> /about/him
+│   └── swifty.tsx   # -> /about/swifty
 └── posts
     └── [id].tsx  # -> /posts/[id]
 ```
@@ -125,12 +125,12 @@ app/pages
 ```shell
 app/about
 ├── error.tsx
-├── him
+├── swifty
 │   └── page.tsx
 ├── layout.tsx
 ├── loading.tsx
 ├── page.tsx
-├── her
+├── larky
 │   └── page.tsx
 └── template.tsx
 ```
@@ -165,8 +165,8 @@ class AboutLayout extends Component<LayoutProps<"/about">, IState> {
         <button onClick={this.handleClick}>addCnt</button>
         <header>AboutLayout header</header>
         <Suspense fallback={<>loading...</>}>{children}</Suspense>
-        <Link href="/about/him">/about/him</Link>
-        <Link href="/about/her">/about/her</Link>
+        <Link href="/about/swifty">/about/swifty</Link>
+        <Link href="/about/larky">/about/larky</Link>
         <footer>AboutLayout footer</footer>
       </>
     );
@@ -205,7 +205,7 @@ const AboutTemplate = function (props: IProps) {
 export default AboutTemplate;
 ```
 
-```tsx [{him]
+```tsx [{swifty,larky}/page.tsx]
 // about/page.tsx
 "use server";
 
@@ -224,18 +224,18 @@ async function AboutPage() {
 
 export default AboutPage;
 
-// about/him/page.tsx
-export default function AboutHimPage() {
-  return <>About Him</>;
+// about/swifty/page.tsx
+export default function AboutSwiftyPage() {
+  return <>About Swifty</>;
 }
 
-// about/her/page.tsx
-export default function AboutHerPage() {
-  return <>About Her</>;
+// about/larky/page.tsx
+export default function AboutLarkyPage() {
+  return <>About Larky</>;
 }
 ```
 
-```tsx [her}/page.tsx]
+```tsx [loading.tsx]
 function LoadingComponent() {
   return <>loading...</>;
 }
@@ -243,7 +243,7 @@ function LoadingComponent() {
 export default LoadingComponent;
 ```
 
-```tsx [loading.tsx]
+```tsx [error.tsx]
 "use client"; // Error 组件必须是客户端组件
 
 function ErrorComponent(props: unknown) {
@@ -269,19 +269,19 @@ export default ErrorComponent;
 增强的 `<a />` 标签
 
 ```tsx
-<Link href={{ pathname: "/about/him", query: { name: "swifty", age: 24 } }}>
-  /about/him?name=swifty&age=24
+<Link href={{ pathname: "/about/swifty", query: { name: "swifty", age: 24 } }}>
+  /about/swifty?name=swifty&age=24
 </Link>
 
 <Link
-  href="/about/him"
+  href="/about/swifty"
   // prefetch 预获取目的页面, 默认 true
   prefetch
   // 禁止默认滚动行为: 滚动到顶部, 即保留滚动位置
   scroll={false}
   // history.replaceState()
   replace
->/about/him</Link>
+>/about/swifty</Link>
 ```
 
 ### useRouter hook
@@ -291,7 +291,7 @@ export default ErrorComponent;
 
 import { useRouter } from "next/navigation";
 
-export default function HimPage() {
+export default function SwiftyPage() {
   const router = useRouter();
   return (
     <>
@@ -301,9 +301,9 @@ export default function HimPage() {
       </button>
       <button onClick={() => router.back()}>history.back()</button>
       <button onClick={() => router.forward()}>history.forward()</button>
-      <button onClick={() => router.refresh()}>refresh /about/him</button>
-      <button onClick={() => router.prefetch("/about/her")}>
-        prefetch /about/her
+      <button onClick={() => router.refresh()}>refresh /about/swifty</button>
+      <button onClick={() => router.prefetch("/about/larky")}>
+        prefetch /about/larky
       </button>
     </>
   );
@@ -723,10 +723,10 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config: ProxyConfig = {
-  // matcher: '/home/:path*'
-  // matcher: ["/home/:path*", "/api/:path*"],
+  // matclarky: '/home/:path*'
+  // matclarky: ["/home/:path*", "/api/:path*"],
 
-  matcher: [
+  matclarky: [
     "/home/:path*",
     {
       source: "/api/login",
@@ -770,7 +770,7 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config: ProxyConfig = {
-  matcher: "/api/:path*",
+  matclarky: "/api/:path*",
 };
 ```
 
@@ -1426,7 +1426,7 @@ export default function Login() {
 - territory 地区: US, CN, JP, ...
 
 ```shell
-pnpm add negotiator @formatjs/intl-localematcher
+pnpm add negotiator @formatjs/intl-localematclarky
 pnpm add @types/negotiator -D
 ```
 
@@ -1486,7 +1486,7 @@ export async function getResource(locale: string): Promise<IResource> {
 import { NextRequest, NextResponse, ProxyConfig } from "next/server";
 import { defaultLocale, locales } from "./i18n";
 import Negotiator from "negotiator";
-import { match } from "@formatjs/intl-localematcher";
+import { match } from "@formatjs/intl-localematclarky";
 
 export async function proxy(req: NextRequest, res: NextResponse) {
   if (req.nextUrl.pathname === "/") {
@@ -1509,7 +1509,7 @@ export async function proxy(req: NextRequest, res: NextResponse) {
 export const config: ProxyConfig = {
   // (?!) 匹配的路径不包含 api, _next/static, _next/image, favicon.ico
   // .* 匹配任意字符 0 次, 1 次或多次
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
+  matclarky: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
 };
 ```
 
