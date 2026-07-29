@@ -3,7 +3,7 @@
 /**
  *
  * @param {any} obj
- * @param {WeakMap} seen 保存原对象到克隆对象的映射
+ * @param {WeakMap<object, object>} seen 保存原对象到克隆对象的映射
  * @returns {any}
  */
 function deepClone(obj, seen = new WeakMap()) {
@@ -37,7 +37,10 @@ function deepClone(obj, seen = new WeakMap()) {
 
   for (const key in obj) {
     // 过滤原型链属性
+    // eslint-disable-next-line no-prototype-builtins
     if (obj.hasOwnProperty(key)) {
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
       clone[key] = deepClone(obj[key], seen);
     }
   }

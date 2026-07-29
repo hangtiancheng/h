@@ -1,0 +1,35 @@
+{
+  "name": "@swifty.js/anti-copy",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Copy-protection SDK for browsers with a VitePress integration",
+  "license": "MIT",
+  "author": "https://github.com/hangtiancheng",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/core/index.ts",
+      "default": "./src/core/index.ts"
+    },
+    "./vitepress": {
+      "types": "./src/vitepress/index.ts",
+      "default": "./src/vitepress/index.ts"
+    }
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "peerDependencies": {
+    "vitepress": ">=1.0.0",
+    "vue": ">=3.0.0"
+  },
+  "peerDependenciesMeta": {
+    "vitepress": {
+      "optional": true
+    },
+    "vue": {
+      "optional": true
+    }
+  }
+}

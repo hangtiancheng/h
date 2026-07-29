@@ -2,8 +2,6 @@
   "compilerOptions": {
     "esModuleInterop": true,
     "isolatedModules": true,
-    "jsx": "preserve",
-    "jsxImportSource": "vue",
     "module": "ESNext",
     "moduleResolution": "bundler",
     "noEmit": true,
@@ -11,7 +9,8 @@
     "skipLibCheck": true,
     "strict": true,
     "target": "ESNext",
-    "verbatimModuleSyntax": true
+    "verbatimModuleSyntax": true,
+    "types": ["vite/client"]
   },
-  "include": ["./**/*.ts", "./**/*.tsx"]
+  "include": ["src", "test"]
 }
