@@ -26,11 +26,19 @@ export type {
 export { DEFAULT_REPLACE_TEXT } from "./options";
 
 const NOOP_INSTANCE: AntiCopyInstance = {
-  enable() {},
-  disable() {},
-  destroy() {},
+  enable() {
+    /** noop */
+  },
+  disable() {
+    /** noop */
+  },
+  destroy() {
+    /** noop */
+  },
   isEnabled: () => false,
-  update() {},
+  update() {
+    /** noop */
+  },
 };
 
 function buildFeatures(options: AntiCopyOptions): Feature[] {
