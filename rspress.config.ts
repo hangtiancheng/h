@@ -5,7 +5,7 @@ import rspressPluginMermaid from "rspress-plugin-mermaid";
 export default defineConfig({
   root: "docs",
   base: "/h/rspress/",
-  outDir: "doc_build",
+  outDir: "dist-rspress",
   globalStyles: path.join(import.meta.dirname, "rspress/main.css"),
   globalUIComponents: [path.join(import.meta.dirname, "rspress/anti-copy.tsx")],
   plugins: [rspressPluginMermaid()],
