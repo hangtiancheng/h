@@ -1,3 +1,7 @@
+---
+protected: true
+---
+
 # 上下文压缩
 
 > 开启新对话, 调用 LLM API 压缩上下文

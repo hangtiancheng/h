@@ -41,6 +41,8 @@ jobs:
         run: pnpm build
       - name: Build swifty-docs site
         run: pnpm build:docs
+        env:
+          DOCS_PASSWORD: ${{ secrets.DOCS_PASSWORD }}
       - name: Merge swifty-docs site into /h/swifty-docs/
         run: |
           mkdir -p ./.vitepress/dist/swifty-docs

@@ -1,3 +1,7 @@
+---
+protected: true
+---
+
 # MCP
 
 ## 背景

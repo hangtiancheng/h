@@ -1,3 +1,7 @@
+---
+protected: true
+---
+
 # System Prompt
 
 ## System Prompt
