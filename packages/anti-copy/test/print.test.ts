@@ -14,8 +14,8 @@ describe("print protection", () => {
     instance.enable();
     const style = document.head.querySelector("style[data-anti-copy-print]");
     expect(style).not.toBeNull();
-    expect(style!.textContent).toContain("@media print");
-    expect(style!.textContent).toContain("display: none !important");
+    expect(style?.textContent).toContain("@media print");
+    expect(style?.textContent).toContain("display: none !important");
     instance.disable();
     expect(
       document.head.querySelector("style[data-anti-copy-print]"),

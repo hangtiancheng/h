@@ -91,7 +91,9 @@ describe("lifecycle", () => {
       addEventListener: () => {
         throw new Error("attach failed");
       },
-      removeEventListener: () => {},
+      removeEventListener: () => {
+        /** noop */
+      },
     } as unknown as Document;
 
     const instance = createAntiCopy({

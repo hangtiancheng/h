@@ -9,6 +9,9 @@
     "url": "https://github.com/hangtiancheng/h.git",
     "directory": "packages/anti-copy"
   },
+  "files": [
+    "dist"
+  ],
   "type": "module",
   "sideEffects": false,
   "main": "./dist/core/index.cjs",
@@ -36,9 +39,6 @@
       "require": "./dist/rspress/index.cjs"
     }
   },
-  "files": [
-    "dist"
-  ],
   "publishConfig": {
     "access": "public"
   },

@@ -21,6 +21,7 @@ describe("isExcluded", () => {
 
   it("falls back to the parent element for text nodes", () => {
     document.body.innerHTML = '<div class="skip">text</div>';
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const textNode = document.querySelector(".skip")!.firstChild;
     expect(isExcluded(textNode, [".skip"])).toBe(true);
   });
@@ -43,6 +44,7 @@ describe("isExcluded", () => {
 
   it("walks up through open shadow roots to the host", () => {
     document.body.innerHTML = '<div class="skip" id="host"></div>';
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const host = document.getElementById("host")!;
     const root = host.attachShadow({ mode: "open" });
     const inner = document.createElement("span");
@@ -78,20 +80,20 @@ describe("isEditable", () => {
   it("recognizes inputs inside open shadow roots", () => {
     document.body.innerHTML = "<div id='host'></div>";
     const root = document
-      .getElementById("host")!
-      .attachShadow({ mode: "open" });
+      .getElementById("host")
+      ?.attachShadow({ mode: "open" });
     const input = document.createElement("input");
-    root.appendChild(input);
+    root?.appendChild(input);
     expect(isEditable(input)).toBe(true);
   });
 
   it("resolves text nodes directly under a shadow root to the host", () => {
     document.body.innerHTML = "<div class='skip' id='host'></div>";
     const root = document
-      .getElementById("host")!
-      .attachShadow({ mode: "open" });
+      .getElementById("host")
+      ?.attachShadow({ mode: "open" });
     const textNode = document.createTextNode("bare text");
-    root.appendChild(textNode);
+    root?.appendChild(textNode);
     expect(isExcluded(textNode, [".skip"])).toBe(true);
   });
 });

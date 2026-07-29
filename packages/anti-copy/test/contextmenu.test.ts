@@ -33,9 +33,11 @@ describe("contextmenu", () => {
     instance = createAntiCopy({ selectStyle: false });
     instance.enable();
     expect(
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       fireContextmenu(document.getElementById("i")!).defaultPrevented,
     ).toBe(false);
     expect(
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       fireContextmenu(document.getElementById("e")!).defaultPrevented,
     ).toBe(false);
   });
@@ -48,6 +50,7 @@ describe("contextmenu", () => {
     });
     instance.enable();
     expect(
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       fireContextmenu(document.getElementById("p")!).defaultPrevented,
     ).toBe(false);
   });

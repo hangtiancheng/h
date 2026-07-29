@@ -108,6 +108,7 @@ describe("keyboard", () => {
     document.body.innerHTML = "<input id='i' />";
     instance = createAntiCopy({ selectStyle: false });
     instance.enable();
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const input = document.getElementById("i")!;
     expect(fireKey({ key: "s", ctrlKey: true }, input).defaultPrevented).toBe(
       true,
@@ -128,6 +129,7 @@ describe("keyboard", () => {
     document.body.innerHTML = "<input id='i' />";
     instance = createAntiCopy({ selectStyle: false });
     instance.enable();
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const input = document.getElementById("i")!;
     expect(fireKey({ key: "a", ctrlKey: true }, input).defaultPrevented).toBe(
       false,

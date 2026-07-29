@@ -76,6 +76,7 @@ describe("clipboard", () => {
     document.body.innerHTML = "<input id='i' />";
     instance = createAntiCopy({ selectStyle: false });
     instance.enable();
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const { event } = fireCopy(document.getElementById("i")!);
     expect(event.defaultPrevented).toBe(false);
   });
@@ -88,6 +89,7 @@ describe("clipboard", () => {
       selectStyle: false,
     });
     instance.enable();
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const { event } = fireCopy(document.getElementById("c")!);
     expect(event.defaultPrevented).toBe(false);
   });
@@ -95,12 +97,14 @@ describe("clipboard", () => {
   it("a selection fully inside an excluded region is allowed", () => {
     document.body.innerHTML =
       '<div class="allowed"><p id="a">x</p></div><p id="b">y</p>';
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     stubSelection("x", document.querySelector(".allowed")!);
     instance = createAntiCopy({
       excludeSelectors: [".allowed"],
       selectStyle: false,
     });
     instance.enable();
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const { event } = fireCopy(document.getElementById("a")!);
     expect(event.defaultPrevented).toBe(false);
   });
@@ -116,6 +120,7 @@ describe("clipboard", () => {
       selectStyle: false,
     });
     instance.enable();
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const { event } = fireCopy(document.getElementById("a")!);
     expect(event.defaultPrevented).toBe(true);
   });
@@ -146,7 +151,7 @@ describe("clipboard", () => {
       bubbles: true,
       cancelable: true,
     });
-    document.getElementById("p")!.dispatchEvent(blocked);
+    document.getElementById("p")?.dispatchEvent(blocked);
     expect(blocked.defaultPrevented).toBe(true);
     expect(onViolation).toHaveBeenCalledWith(
       expect.objectContaining({ type: "drag" }),
@@ -156,7 +161,7 @@ describe("clipboard", () => {
       bubbles: true,
       cancelable: true,
     });
-    document.getElementById("ok")!.dispatchEvent(allowed);
+    document.getElementById("ok")?.dispatchEvent(allowed);
     expect(allowed.defaultPrevented).toBe(false);
   });
 
@@ -164,6 +169,7 @@ describe("clipboard", () => {
     document.body.innerHTML =
       '<div class="allowed" id="ok">code</div><img id="img" />';
     // Selection lives entirely inside the excluded region…
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     stubSelection("code", document.querySelector(".allowed")!);
     instance = createAntiCopy({
       excludeSelectors: [".allowed"],
@@ -172,7 +178,7 @@ describe("clipboard", () => {
     instance.enable();
     // …but the dragged node is protected content: must stay blocked.
     const event = new Event("dragstart", { bubbles: true, cancelable: true });
-    document.getElementById("img")!.dispatchEvent(event);
+    document.getElementById("img")?.dispatchEvent(event);
     expect(event.defaultPrevented).toBe(true);
   });
 });

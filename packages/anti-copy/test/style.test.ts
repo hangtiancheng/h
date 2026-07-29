@@ -28,7 +28,7 @@ describe("style injection", () => {
     instance.enable();
     const style = document.head.querySelector("style[data-anti-copy]");
     expect(style).not.toBeNull();
-    const css = style!.textContent!;
+    const css = style?.textContent;
     // Global disable resists page-level overrides and iOS long-press.
     expect(css).toContain("user-select: none !important");
     expect(css).toContain("-webkit-touch-callout: none");
@@ -48,7 +48,7 @@ describe("style injection", () => {
     instance.enable();
     const css = document.head.querySelector(
       "style[data-anti-copy]",
-    )!.textContent!;
+    )?.textContent;
     // Without :is(), ".a, .b" would expand to ".a, .b, .a, .b *" and the
     // descendants of .a would stay unselectable.
     expect(css).toContain(":is(.a, .b), :is(.a, .b) *");
@@ -62,7 +62,7 @@ describe("style injection", () => {
     instance.enable();
     const css = document.head.querySelector(
       "style[data-anti-copy]",
-    )!.textContent!;
+    )?.textContent;
     expect(css).not.toContain("::bad::");
     expect(css).toContain(".valid");
     expect(css).toContain("input");
@@ -107,7 +107,7 @@ describe("style injection", () => {
       bubbles: true,
       cancelable: true,
     });
-    document.getElementById("p")!.dispatchEvent(blocked);
+    document.getElementById("p")?.dispatchEvent(blocked);
     expect(blocked.defaultPrevented).toBe(true);
     expect(onViolation).toHaveBeenCalledWith(
       expect.objectContaining({ type: "selection" }),
@@ -117,14 +117,14 @@ describe("style injection", () => {
       bubbles: true,
       cancelable: true,
     });
-    document.getElementById("ok")!.dispatchEvent(excluded);
+    document.getElementById("ok")?.dispatchEvent(excluded);
     expect(excluded.defaultPrevented).toBe(false);
 
     const editable = new Event("selectstart", {
       bubbles: true,
       cancelable: true,
     });
-    document.getElementById("i")!.dispatchEvent(editable);
+    document.getElementById("i")?.dispatchEvent(editable);
     expect(editable.defaultPrevented).toBe(false);
   });
 
