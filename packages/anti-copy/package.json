@@ -14,6 +14,10 @@
     "./vitepress": {
       "types": "./src/vitepress/index.ts",
       "default": "./src/vitepress/index.ts"
+    },
+    "./swifty-docs": {
+      "types": "./src/swifty-docs/index.ts",
+      "default": "./src/swifty-docs/index.ts"
     }
   },
   "scripts": {
@@ -21,10 +25,18 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "peerDependencies": {
+    "preact": ">=10.20.0",
+    "preact-iso": ">=2.0.0",
     "vitepress": ">=1.0.0",
     "vue": ">=3.0.0"
   },
   "peerDependenciesMeta": {
+    "preact": {
+      "optional": true
+    },
+    "preact-iso": {
+      "optional": true
+    },
     "vitepress": {
       "optional": true
     },

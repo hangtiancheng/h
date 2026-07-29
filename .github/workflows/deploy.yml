@@ -39,6 +39,12 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Build with VitePress
         run: pnpm build
+      - name: Build with Rspress
+        run: pnpm build:rspress
+      - name: Merge Rspress site into /h/rspress/
+        run: |
+          mkdir -p ./.vitepress/dist/rspress
+          cp -r ./doc_build/* ./.vitepress/dist/rspress/
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:

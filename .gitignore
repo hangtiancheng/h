@@ -194,8 +194,14 @@ rules.ninja
 
 **/.vitepress/cache/
 
+# rspress 构建产物
+doc_build/
+
 tsconfig.tsbuildinfo
 **/tsconfig.tsbuildinfo
 .swifty/
 .swifty-docs/
 dist-swifty/
+
+.playwright-cli/
+**/.playwright-cli/

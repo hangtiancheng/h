@@ -256,8 +256,8 @@ interface Message {
 
 ## 格式转换: 内部消息到 LLM API 消息
 
-- [Anthropic](../src/llm/anthropic.ts)
-- [OpenAI](../src/llm/openai.ts)
+- Anthropic: `src/llm/anthropic.ts`
+- OpenAI: `src/llm/openai.ts`
 
 <!-- 源码: src/llm/anthropic.ts (buildAnthropicMessages) -->
 

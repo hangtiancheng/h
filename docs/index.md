@@ -1,13 +1,17 @@
 ---
 # https://vitepress.dev/reference/default-theme-home-page
 layout: home
+# https://rspress.rs/api/config/config-frontmatter#pagetype
+pageType: home
 protected: false
 
 hero:
   name: Swifty
   text: Homepage
   tagline: Swifty Homepage
-  image: ./favicon.svg
+  image:
+    src: /favicon.svg
+    alt: Swifty
   actions:
     - theme: brand
       text: Network

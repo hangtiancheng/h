@@ -1,6 +1,7 @@
 import { render } from "preact";
 import { LocationProvider, Router, Route } from "preact-iso";
 import { DocsProvider, DocsLayout } from "@swifty.js/docs";
+import { AntiCopy } from "@swifty.js/anti-copy/swifty-docs";
 import {
   docsConfig,
   loadContent,
@@ -15,6 +16,14 @@ render(
     getSearchIndex={getSearchIndex}
   >
     <LocationProvider>
+      <AntiCopy
+        mode="replace"
+        replaceText={(selection) =>
+          `${selection.slice(0, 60)}${selection.length > 60 ? "…" : ""}\n\n—— 内容来自 Swifty Homepage，转载请注明出处：https://hangtiancheng.github.io/h/`
+        }
+        devtools
+        onViolation={(e) => console.warn("[anti-copy]", e.type, e.key ?? "")}
+      />
       <Router>
         <Route path="/" component={DocsLayout} />
         <Route default component={DocsLayout} />

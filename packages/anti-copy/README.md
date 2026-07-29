@@ -88,6 +88,25 @@ vite: {
 }
 ```
 
+## @swifty.js/docs integration
+
+Mount the renderless `AntiCopy` component anywhere inside preact-iso's
+`<LocationProvider>`:
+
+```tsx
+import { AntiCopy } from "@swifty.js/anti-copy/swifty-docs";
+
+<LocationProvider>
+  <AntiCopy mode="replace" excludePaths={["/playground"]} devtools />
+  <Router>...</Router>
+</LocationProvider>;
+```
+
+- Code blocks (`.codeblock`), dialogs (`[role="dialog"]`, incl. the search
+  palette) and editable controls are exempt (`SWIFTY_DOCS_DEFAULT_EXCLUDES`).
+- Opt out per route with `excludePaths` (string prefix or RegExp); protection
+  toggles automatically on client-side navigation.
+
 ## Testing
 
 ```sh
