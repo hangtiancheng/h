@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from "react";
 import { useFrontmatter } from "@rspress/core/runtime";
-import { createAntiCopy, type AntiCopyOptions } from "../core";
+import { createAntiCopy, type AntiCopyOptions } from "@/core";
 
 /**
  * Regions excluded from protection by default in an Rspress site:
