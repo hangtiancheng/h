@@ -84,6 +84,16 @@ describe("isEditable", () => {
     root.appendChild(input);
     expect(isEditable(input)).toBe(true);
   });
+
+  it("resolves text nodes directly under a shadow root to the host", () => {
+    document.body.innerHTML = "<div class='skip' id='host'></div>";
+    const root = document
+      .getElementById("host")!
+      .attachShadow({ mode: "open" });
+    const textNode = document.createTextNode("bare text");
+    root.appendChild(textNode);
+    expect(isExcluded(textNode, [".skip"])).toBe(true);
+  });
 });
 
 describe("isSelectionExcluded", () => {
@@ -98,6 +108,34 @@ describe("isSelectionExcluded", () => {
 
   it("returns null without selectors or without a usable selection", () => {
     expect(isSelectionExcluded(document, [])).toBe(null);
+    // Collapsed selection: no payload to judge, caller falls back to target.
+    const collapsed = {
+      defaultView: {
+        getSelection: () =>
+          ({
+            toString: () => "",
+            isCollapsed: true,
+            rangeCount: 1,
+            getRangeAt: () => ({ commonAncestorContainer: document.body }),
+          }) as unknown as Selection,
+      },
+    } as unknown as Document;
+    expect(isSelectionExcluded(collapsed, [".skip"])).toBe(null);
+    // Zero ranges.
+    const empty = {
+      defaultView: {
+        getSelection: () =>
+          ({
+            toString: () => "",
+            isCollapsed: false,
+            rangeCount: 0,
+            getRangeAt: () => {
+              throw new Error("unreachable");
+            },
+          }) as unknown as Selection,
+      },
+    } as unknown as Document;
+    expect(isSelectionExcluded(empty, [".skip"])).toBe(null);
   });
 
   it("judges the selection by its common ancestor", () => {

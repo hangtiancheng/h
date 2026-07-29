@@ -20,22 +20,19 @@ export function createClipboardFeature(options: ResolvedOptions): Feature {
   const doc = options.target;
   const listenTarget: EventTarget = doc.defaultView ?? doc;
 
-  const isExempt = (event: Event): boolean => {
+  const clipboardHandler = (e: Event) => {
+    const event = e as ClipboardEvent;
     const el = eventElement(event);
     // Editable controls keep native clipboard behavior, matching the
     // keyboard / contextmenu / style features.
-    if (isEditable(el)) return true;
-    // Prefer selection-based judgment: a selection spanning excluded and
-    // protected regions must not leak through a target-only check.
-    return (
+    if (isEditable(el)) return;
+    // Prefer selection-based judgment: the copy payload IS the selection,
+    // and a selection spanning excluded and protected regions must not
+    // leak through a target-only check.
+    const exempt =
       isSelectionExcluded(doc, options.excludeSelectors) ??
-      isExcluded(el, options.excludeSelectors)
-    );
-  };
-
-  const clipboardHandler = (e: Event) => {
-    const event = e as ClipboardEvent;
-    if (isExempt(event)) return;
+      isExcluded(el, options.excludeSelectors);
+    if (exempt) return;
 
     if (options.mode === "replace" && event.clipboardData) {
       const selection = doc.defaultView?.getSelection()?.toString() ?? "";
@@ -55,9 +52,13 @@ export function createClipboardFeature(options: ResolvedOptions): Feature {
   };
 
   // Dragging a selection or image out of the window copies it without ever
-  // firing a copy event, so drag-out is blocked alongside the clipboard.
+  // firing a copy event. Judged by the drag TARGET only: the drag payload is
+  // the dragged node, so a leftover selection inside an excluded region must
+  // not exempt dragging protected content.
   const dragHandler = (e: Event) => {
-    if (isExempt(e)) return;
+    const el = eventElement(e);
+    if (isEditable(el)) return;
+    if (isExcluded(el, options.excludeSelectors)) return;
     e.preventDefault();
     options.onViolation?.({ type: "drag", originalEvent: e });
   };

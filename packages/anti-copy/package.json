@@ -35,7 +35,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {
-    "happy-dom": "^20.11.1",
+    "jsdom": "^30.0.1",
     "oxfmt": "^0.61.0",
     "typescript": "^6.0.3",
     "vitest": "^4.1.10"

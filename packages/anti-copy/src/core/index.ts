@@ -92,13 +92,40 @@ export function createAntiCopy(
   const instance: AntiCopyInstance = {
     enable() {
       if (destroyed || enabled) return;
-      for (const feature of features) feature.attach();
+      const attached: Feature[] = [];
+      try {
+        for (const feature of features) {
+          // Pushed before attach so a mid-attach failure is also rolled
+          // back (detach implementations are idempotent).
+          attached.push(feature);
+          feature.attach();
+        }
+      } catch (error) {
+        // Roll back so a partial failure never leaks unremovable listeners.
+        for (const feature of attached) {
+          try {
+            feature.detach();
+          } catch {
+            /* best effort */
+          }
+        }
+        throw error;
+      }
       enabled = true;
     },
     disable() {
       if (!enabled) return;
-      for (const feature of features) feature.detach();
+      // Detach every feature even if one throws.
+      let firstError: unknown;
+      for (const feature of features) {
+        try {
+          feature.detach();
+        } catch (error) {
+          firstError ??= error;
+        }
+      }
       enabled = false;
+      if (firstError !== undefined) throw firstError;
     },
     destroy() {
       instance.disable();

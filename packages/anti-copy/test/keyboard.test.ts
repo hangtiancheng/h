@@ -45,6 +45,20 @@ describe("keyboard", () => {
     ).toBe(true);
   });
 
+  it("matches e.key too, so remapped Latin layouts cannot bypass either", () => {
+    instance = createAntiCopy({ selectStyle: false });
+    instance.enable();
+    // AZERTY: pressing the "A" keycap reports e.key "a" on physical KeyQ.
+    expect(
+      fireKey({ key: "a", code: "KeyQ", ctrlKey: true }).defaultPrevented,
+    ).toBe(true);
+    // Dvorak: pressing "I" for DevTools reports e.key "i" on physical KeyG.
+    expect(
+      fireKey({ key: "i", code: "KeyG", ctrlKey: true, shiftKey: true })
+        .defaultPrevented,
+    ).toBe(true);
+  });
+
   it("lets Ctrl+C and Ctrl+Insert through in replace mode so the copy event fires", () => {
     instance = createAntiCopy({ mode: "replace" });
     instance.enable();

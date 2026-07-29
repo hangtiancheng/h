@@ -80,6 +80,34 @@ describe("lifecycle", () => {
     instance.destroy();
   });
 
+  it("rolls back partially-attached features when enable fails", () => {
+    // A document whose event registration always fails: the style feature
+    // appends its stylesheet, then throws on the selectstart listener.
+    const fakeDoc = {
+      defaultView: null,
+      head: document.head,
+      createElement: (tag: string) => document.createElement(tag),
+      querySelector: (selector: string) => document.querySelector(selector),
+      addEventListener: () => {
+        throw new Error("attach failed");
+      },
+      removeEventListener: () => {},
+    } as unknown as Document;
+
+    const instance = createAntiCopy({
+      target: fakeDoc,
+      copy: false,
+      keyboard: false,
+      contextmenu: false,
+      print: false,
+    });
+    expect(() => instance.enable()).toThrow("attach failed");
+    expect(instance.isEnabled()).toBe(false);
+    // The half-attached stylesheet must have been rolled back.
+    expect(document.head.querySelector("style[data-anti-copy]")).toBeNull();
+    instance.destroy();
+  });
+
   it("returns an inert no-op instance outside the browser", () => {
     vi.stubGlobal("document", undefined);
     const instance = createAntiCopy();

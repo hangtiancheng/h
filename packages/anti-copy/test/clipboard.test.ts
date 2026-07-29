@@ -159,4 +159,20 @@ describe("clipboard", () => {
     document.getElementById("ok")!.dispatchEvent(allowed);
     expect(allowed.defaultPrevented).toBe(false);
   });
+
+  it("a leftover selection in an excluded region does not exempt dragging protected content", () => {
+    document.body.innerHTML =
+      '<div class="allowed" id="ok">code</div><img id="img" />';
+    // Selection lives entirely inside the excluded region…
+    stubSelection("code", document.querySelector(".allowed")!);
+    instance = createAntiCopy({
+      excludeSelectors: [".allowed"],
+      selectStyle: false,
+    });
+    instance.enable();
+    // …but the dragged node is protected content: must stay blocked.
+    const event = new Event("dragstart", { bubbles: true, cancelable: true });
+    document.getElementById("img")!.dispatchEvent(event);
+    expect(event.defaultPrevented).toBe(true);
+  });
 });

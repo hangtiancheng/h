@@ -8,14 +8,18 @@ const ELEMENT_NODE = 1;
 /**
  * Converts an event target to an element via duck typing instead of
  * `instanceof`, so nodes from other realms (iframes, injected documents)
- * still resolve. Text nodes fall back to their parent element.
+ * still resolve. Text nodes fall back to their parent element, crossing
+ * a shadow-root boundary to its host when needed.
  */
 function toElement(target: EventTarget | null): Element | null {
   if (!target || typeof (target as Node).nodeType !== "number") return null;
   const node = target as Node;
-  return node.nodeType === ELEMENT_NODE
-    ? (node as Element)
-    : node.parentElement;
+  if (node.nodeType === ELEMENT_NODE) return node as Element;
+  if (node.parentElement) return node.parentElement;
+  // A text node directly under a ShadowRoot has no parentElement.
+  const parent = node.parentNode;
+  const host = parent && (parent as ShadowRoot).host;
+  return host ?? null;
 }
 
 /** Shadow host of the element's root, used to continue ancestor walks upward. */

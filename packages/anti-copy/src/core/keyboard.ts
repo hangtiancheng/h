@@ -4,33 +4,39 @@ import { eventElement, isEditable, isExcluded } from "./utils";
 const COPY_KEYS = new Set(["c", "x", "a"]);
 // Ctrl/Cmd+S (save page) and Ctrl/Cmd+P (print) leak the full document.
 const EXPORT_KEYS = new Set(["s", "p"]);
+const DEVTOOLS_KEYS = new Set(["i", "j", "c"]);
+const VIEW_SOURCE_KEYS = new Set(["u"]);
 
 /**
- * Resolves the physical key, layout-independent. `e.key` varies with the
- * active keyboard layout (Cyrillic, Greek, …) and macOS Option dead keys,
- * which would let shortcuts through; `e.code` names the physical key.
- * Falls back to `e.key` for synthetic events without a `code`.
+ * Matches a shortcut against both the layout character (`e.key`) and the
+ * physical key (`e.code`), returning the matched character or null.
+ *
+ * Either alone is bypassable: `e.key` misses non-Latin layouts (Cyrillic
+ * "с") and macOS Option dead keys, while `e.code` alone would miss remapped
+ * Latin layouts (AZERTY/Dvorak, where the browser acts on `e.key`). The
+ * union may over-block (e.g. AZERTY Ctrl+Q on physical KeyA), which is the
+ * safe direction for copy protection.
  */
-function physicalKey(e: KeyboardEvent): string {
+function matchKey(e: KeyboardEvent, keys: Set<string>): string | null {
+  const key = e.key.toLowerCase();
+  if (keys.has(key)) return key;
   if (e.code && e.code.startsWith("Key") && e.code.length === 4) {
-    return e.code.slice(3).toLowerCase();
+    const code = e.code.slice(3).toLowerCase();
+    if (keys.has(code)) return code;
   }
-  return e.key.toLowerCase();
+  return null;
 }
 
 /** Returns a shortcut description like "Ctrl+Shift+I" when the combo targets DevTools. */
 function devtoolsShortcut(e: KeyboardEvent): string | null {
   if (e.key === "F12" || e.code === "F12") return "F12";
-  const key = physicalKey(e);
+  const key = matchKey(e, DEVTOOLS_KEYS);
   // Windows/Linux: Ctrl+Shift+I/J/C — macOS: Cmd+Opt+I/J/C
-  if (
-    (e.ctrlKey && e.shiftKey && ["i", "j", "c"].includes(key)) ||
-    (e.metaKey && e.altKey && ["i", "j", "c"].includes(key))
-  ) {
+  if (key && ((e.ctrlKey && e.shiftKey) || (e.metaKey && e.altKey))) {
     return `${e.metaKey ? "Cmd+Opt" : "Ctrl+Shift"}+${key.toUpperCase()}`;
   }
   // View-source: Ctrl+U on Windows/Linux, Cmd+Opt+U on macOS.
-  if (key === "u" && !e.shiftKey) {
+  if (!e.shiftKey && matchKey(e, VIEW_SOURCE_KEYS)) {
     if (e.ctrlKey && !e.altKey) return "Ctrl+U";
     if (e.metaKey && e.altKey) return "Cmd+Opt+U";
   }
@@ -64,25 +70,29 @@ export function createKeyboardFeature(options: ResolvedOptions): Feature {
     }
 
     if (!(event.ctrlKey || event.metaKey)) return;
-    const key = physicalKey(event);
+    const copyKey = matchKey(event, COPY_KEYS);
     const isInsertCopy =
       event.ctrlKey && !event.shiftKey && event.key === "Insert";
-    const isExport = options.print && EXPORT_KEYS.has(key);
-    if (!COPY_KEYS.has(key) && !isInsertCopy && !isExport) return;
+    const exportKey = options.print ? matchKey(event, EXPORT_KEYS) : null;
+    if (!copyKey && !isInsertCopy && !exportKey) return;
 
     // Save/print leak the whole page regardless of focus, so they are
     // blocked even inside editable or excluded regions.
-    if (!isExport) {
+    if (!exportKey) {
       const el = eventElement(event);
       // Editable controls (inputs, search boxes) keep native shortcut behavior.
       if (isEditable(el)) return;
       if (isExcluded(el, options.excludeSelectors)) return;
       // Let copy combos reach the copy event where the payload gets replaced.
-      if (options.mode === "replace" && (key === "c" || isInsertCopy)) return;
+      if (options.mode === "replace" && (copyKey === "c" || isInsertCopy)) {
+        return;
+      }
     }
 
     event.preventDefault();
-    const label = isInsertCopy ? "Insert" : key.toUpperCase();
+    const label = isInsertCopy
+      ? "Insert"
+      : (exportKey ?? copyKey ?? "").toUpperCase();
     options.onViolation?.({
       type: "keyboard",
       originalEvent: event,

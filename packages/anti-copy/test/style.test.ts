@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createAntiCopy, type AntiCopyInstance } from "../src/core/index";
 
 let instance: AntiCopyInstance | null = null;
@@ -34,10 +34,24 @@ describe("style injection", () => {
     expect(css).toContain("-webkit-touch-callout: none");
     // Exclusions re-enable selection for the region AND its descendants
     // (user-select does not inherit past an explicit none).
-    expect(css).toContain('div[class*="language-"] *');
+    expect(css).toContain(':is(div[class*="language-"]) *');
     expect(css).toContain("user-select: text !important");
-    expect(css).toContain("input, input *");
-    expect(css).toContain("textarea, textarea *");
+    expect(css).toContain(":is(input), :is(input) *");
+    expect(css).toContain(":is(textarea), :is(textarea) *");
+  });
+
+  it("keeps selector-list exclusions grouped via :is()", () => {
+    instance = createAntiCopy({
+      ...STYLE_ONLY,
+      excludeSelectors: [".a, .b"],
+    });
+    instance.enable();
+    const css = document.head.querySelector(
+      "style[data-anti-copy]",
+    )!.textContent!;
+    // Without :is(), ".a, .b" would expand to ".a, .b, .a, .b *" and the
+    // descendants of .a would stay unselectable.
+    expect(css).toContain(":is(.a, .b), :is(.a, .b) *");
   });
 
   it("drops invalid selectors instead of invalidating the whole rule", () => {
@@ -81,9 +95,11 @@ describe("style injection", () => {
   it("blocks selectstart outside editable and excluded regions", () => {
     document.body.innerHTML =
       '<div class="allowed" id="ok">x</div><p id="p">y</p><input id="i" />';
+    const onViolation = vi.fn();
     instance = createAntiCopy({
       ...STYLE_ONLY,
       excludeSelectors: [".allowed"],
+      onViolation,
     });
     instance.enable();
 
@@ -93,6 +109,9 @@ describe("style injection", () => {
     });
     document.getElementById("p")!.dispatchEvent(blocked);
     expect(blocked.defaultPrevented).toBe(true);
+    expect(onViolation).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "selection" }),
+    );
 
     const excluded = new Event("selectstart", {
       bubbles: true,

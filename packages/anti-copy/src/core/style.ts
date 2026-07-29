@@ -36,7 +36,8 @@ function buildCss(doc: Document, excludeSelectors: string[]): string {
   // Re-enable selection inside excluded regions and their descendants:
   // `user-select` does not inherit past an explicit `none`, so descendants
   // must be targeted explicitly. `!important` resists page-level overrides.
-  const allowRules = allowed.map((s) => `${s}, ${s} *`).join(",\n");
+  // `:is()` keeps selector-list entries (e.g. ".a, .b") grouped correctly.
+  const allowRules = allowed.map((s) => `:is(${s}), :is(${s}) *`).join(",\n");
   return [
     // -webkit-touch-callout suppresses the iOS long-press menu, which never
     // fires a contextmenu event and would bypass protection entirely.
