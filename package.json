@@ -21,7 +21,7 @@
     "dev:docs": "DOCS_PASSWORD=pass vite",
     "build:docs": "vite build",
     "preview:docs": "vite preview",
-    "prepare": "husky",
+    "prepare": "husky && pnpm --filter @swifty.js/anti-copy build",
     "lint": "eslint --fix ./src",
     "format": "prettier -w ./",
     "typecheck": "tsc -p tsconfig.json --noEmit",
