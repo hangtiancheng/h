@@ -22,7 +22,7 @@ export const RSPRESS_DEFAULT_EXCLUDES = [
  * a default export) so it mounts on every page.
  *
  * Protection is enabled site-wide by default; individual pages opt out with
- * `protected: false` in their frontmatter. The reactive frontmatter from
+ * `copyable: false` in their frontmatter. The reactive frontmatter from
  * `useFrontmatter()` keeps the toggle in sync across client-side navigation.
  * SSG-safe: the underlying instance is a no-op outside the browser.
  */
@@ -43,7 +43,7 @@ export function AntiCopy(props: AntiCopyOptions): null {
   );
 
   useEffect(() => {
-    if (frontmatter?.protected === false) instance.disable();
+    if (frontmatter?.copyable) instance.disable();
     else instance.enable();
   }, [frontmatter]);
 

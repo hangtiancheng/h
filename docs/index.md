@@ -3,7 +3,7 @@
 layout: home
 # https://rspress.rs/api/config/config-frontmatter#pagetype
 pageType: home
-protected: false
+copyable: true
 
 hero:
   name: Swifty
@@ -31,3 +31,5 @@ features:
   - title: backend
     details: Go, MySQL, Redis, Kafka
 ---
+
+<!-- Welcome to Swifty Homepage -->

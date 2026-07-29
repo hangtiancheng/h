@@ -21,7 +21,7 @@ export const VITEPRESS_DEFAULT_EXCLUDES = [
  * `enhanceApp(ctx)` hook.
  *
  * Protection is enabled site-wide by default; individual pages opt out with
- * `protected: false` in their frontmatter. The router's reactive route data
+ * `copyable: false` in their frontmatter. The router's reactive route data
  * is watched so protection toggles correctly across SPA navigations.
  */
 export function applyAntiCopy(
@@ -39,9 +39,9 @@ export function applyAntiCopy(
   });
 
   watch(
-    () => ctx.router.route.data?.frontmatter?.protected,
+    () => ctx.router.route.data?.frontmatter?.copyable,
     (value) => {
-      if (value === false) instance.disable();
+      if (value) instance.disable();
       else instance.enable();
     },
     { immediate: true },

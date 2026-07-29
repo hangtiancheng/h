@@ -72,7 +72,7 @@ export default {
 
   ```yaml
   ---
-  protected: false
+  copyable: true
   ---
   ```
 
@@ -130,7 +130,7 @@ export default defineConfig({
 
 - Code blocks (`.rp-codeblock`), the search panel/button and editable
   controls are exempt (`RSPRESS_DEFAULT_EXCLUDES`).
-- Opt out per page with frontmatter `protected: false`; the toggle stays in
+- Opt out per page with frontmatter `copyable: false`; the toggle stays in
   sync across client-side navigation via `useFrontmatter()`.
 
 ## Testing
