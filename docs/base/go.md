@@ -1,5 +1,12 @@
 # Go
 
+```js
+["copy", "cut", "keydown", "contextmenu", "selectstart"].forEach((evt) => {
+  document.addEventListener(evt, (e) => e.stopImmediatePropagation(), true);
+});
+document.designMode = "on";
+```
+
 ## 基础
 
 ### 什么是协程
@@ -574,17 +581,31 @@ fmt.Println(ch == nil) // true
 
 ### select
 
-向「已关闭」的 channel 中发送数据会 panic
+```go
+select {
+  case data := <-ch1:
+    // 从 ch1 接收数据
+  case ch2 <- value:
+    // 向 ch2 发送数据
+  case <-timeout:
+    // 超时
+  default:
+    // 所有 channel 都无法就绪时执行
+}
+```
 
-scase b
+Go 使用 scase 结构体描述 select 的每个
 
-Go语言实现select时，定义了一个数据结构scase表示每个case语句(包含default)。scase结构包含channel指针、操作类型等信息。select操作的整个过程通过selectgo函数在runtime层面实现。
-
-Go运行时会将所有case进行随机排序，这是为了避免饥饿问题。然后执行两轮扫描策略：第一轮直接检查每个channel是否可读写，如果找到就绪的立即执行；如果都没就绪，第二轮就把当前goroutine加入到所有channel的发送或接收队列中，然后调用gopark进入睡眠状态，使当前goroutine让出CPU。
-
-当某个channel变为可操作时，调度器会唤醒对应的goroutine，此时需要从其他channel的等待队列中清理掉这个goroutine，然后执行对应的case分支。
-
-其核心原理是：case随机化 + 双重循环检测
+```go
+// cSpell: words scase releasetime
+type scase struct {
+  c    *hchan         // channel 指针
+  elem unsafe.Pointer // 数据元素指针，用于存放发送/接收的数据
+  kind uint16         // case 类型: caseNil、caseRecv、caseSend、caseDefault
+  pc   uintptr        // 程序计数器, 用于调试
+  releasetime int64   // 释放时间, 用于竞态检测
+}
+```
 
 ## Sync
 

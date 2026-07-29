@@ -2,7 +2,7 @@
   "name": "@swifty.js/anti-copy",
   "version": "0.0.1",
   "private": true,
-  "description": "Copy-protection SDK for browsers with a VitePress integration",
+  "description": "Copy-protection SDK for browsers",
   "license": "MIT",
   "author": "https://github.com/hangtiancheng",
   "type": "module",
