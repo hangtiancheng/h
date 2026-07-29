@@ -201,7 +201,7 @@ tsconfig.tsbuildinfo
 **/tsconfig.tsbuildinfo
 .swifty/
 .swifty-docs/
-dist-swifty/
+dist-docs/
 
 .playwright-cli/
 **/.playwright-cli/

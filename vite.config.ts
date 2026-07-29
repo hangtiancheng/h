@@ -2,7 +2,7 @@ import { resolve } from "node:path";
 import { defineConfig } from "vite";
 import tailwindcss from "@tailwindcss/vite";
 import { VitePWA } from "vite-plugin-pwa";
-import { swiftyDocsPlugin } from "@swifty.js/docs/vite";
+import { swiftyDocsPlugin, docsGuardPlugin } from "@swifty.js/docs/vite";
 import docsConfig from "./swifty-docs.config";
 
 export default defineConfig({
@@ -10,6 +10,7 @@ export default defineConfig({
   base: "/h/swifty-docs/",
   plugins: [
     swiftyDocsPlugin({ config: docsConfig }),
+    docsGuardPlugin(),
     tailwindcss(),
     VitePWA({
       registerType: "autoUpdate",
@@ -75,7 +76,7 @@ export default defineConfig({
     },
   },
   build: {
-    outDir: resolve(import.meta.dirname, "dist-swifty"),
+    outDir: resolve(import.meta.dirname, "dist-docs"),
     emptyOutDir: true,
   },
 });
