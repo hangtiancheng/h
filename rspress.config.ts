@@ -1,4 +1,4 @@
-import path from "node:path";
+import { join } from "node:path";
 import { defineConfig } from "@rspress/core";
 import rspressPluginMermaid from "rspress-plugin-mermaid";
 
@@ -6,8 +6,8 @@ export default defineConfig({
   root: "docs",
   base: "/h/rspress/",
   outDir: "dist-rspress",
-  globalStyles: path.join(import.meta.dirname, "rspress/main.css"),
-  globalUIComponents: [path.join(import.meta.dirname, "rspress/anti-copy.tsx")],
+  globalStyles: join(import.meta.dirname, "rspress/main.css"),
+  globalUIComponents: [join(import.meta.dirname, "rspress/anti-copy.tsx")],
   plugins: [rspressPluginMermaid()],
   lang: "zh",
   title: "Swifty Homepage",
