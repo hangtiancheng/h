@@ -18,6 +18,10 @@
     "./swifty-docs": {
       "types": "./src/swifty-docs/index.ts",
       "default": "./src/swifty-docs/index.ts"
+    },
+    "./rspress": {
+      "types": "./src/rspress/index.ts",
+      "default": "./src/rspress/index.ts"
     }
   },
   "scripts": {
@@ -25,16 +29,24 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "peerDependencies": {
+    "@rspress/core": ">=2.0.0",
     "preact": ">=10.20.0",
     "preact-iso": ">=2.0.0",
+    "react": ">=18.0.0",
     "vitepress": ">=1.0.0",
     "vue": ">=3.0.0"
   },
   "peerDependenciesMeta": {
+    "@rspress/core": {
+      "optional": true
+    },
     "preact": {
       "optional": true
     },
     "preact-iso": {
+      "optional": true
+    },
+    "react": {
       "optional": true
     },
     "vitepress": {

@@ -107,6 +107,32 @@ import { AntiCopy } from "@swifty.js/anti-copy/swifty-docs";
 - Opt out per route with `excludePaths` (string prefix or RegExp); protection
   toggles automatically on client-side navigation.
 
+## Rspress integration
+
+Create a small wrapper with a default export and register it through
+`globalUIComponents`:
+
+```tsx
+// theme/anti-copy.tsx
+import { AntiCopy } from "@swifty.js/anti-copy/rspress";
+
+export default function GlobalAntiCopy() {
+  return <AntiCopy mode="replace" devtools />;
+}
+```
+
+```ts
+// rspress.config.ts
+export default defineConfig({
+  globalUIComponents: [path.join(__dirname, "theme/anti-copy.tsx")],
+});
+```
+
+- Code blocks (`.rp-codeblock`), the search panel/button and editable
+  controls are exempt (`RSPRESS_DEFAULT_EXCLUDES`).
+- Opt out per page with frontmatter `protected: false`; the toggle stays in
+  sync across client-side navigation via `useFrontmatter()`.
+
 ## Testing
 
 ```sh

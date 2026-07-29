@@ -387,7 +387,7 @@ func main() {
 
 桶数: 2^B
 
-- 负载因子超过阈值 6.5 (kv 键值对数 > 6.5 * 桶数): 触发 2x 双倍扩容, B += 1
+- 负载因子超过阈值 6.5 (kv 键值对数 > 6.5 \* 桶数): 触发 2x 双倍扩容, B += 1
 - 溢出的桶数量过多: 触发等量扩容, 将稀疏的 kv 键值对排列紧凑
   - B < 15, 桶数 2^B < 2 ^ 15, 溢出的桶数量 >= 2^B 时, 触发等量扩容
   - B >= 15, 即桶数 2^B >= 2 ^ 15, 溢出的桶数量 >= 2^15 时, 触发等量扩容
@@ -455,7 +455,7 @@ type table struct {
 }
 ```
 
-- map 改为 directory 目录 + 多个子 table 的结构, 每个子 table 最多 1024 个 kv 键值对 (128 groups * 8 slots): table 是 <=128 个 groups 的集合, group 是 8 个 slots 的集合
+- map 改为 directory 目录 + 多个子 table 的结构, 每个子 table 最多 1024 个 kv 键值对 (128 groups \* 8 slots): table 是 <=128 个 groups 的集合, group 是 8 个 slots 的集合
 - 某个 table 长度超过 7/8 时, 该 table 单独扩容/分裂
 - table 满 1024 后分裂为 2 个 table
 - 单个 table 的搬迁一次性完成, 不再需要渐进式搬迁

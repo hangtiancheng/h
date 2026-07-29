@@ -7,7 +7,7 @@ import docsConfig from "./swifty-docs.config";
 
 export default defineConfig({
   root: resolve(import.meta.dirname, "app"),
-  base: "/h/",
+  base: "/h/swifty-docs/",
   plugins: [
     swiftyDocsPlugin({ config: docsConfig }),
     tailwindcss(),
@@ -20,15 +20,15 @@ export default defineConfig({
         "apple-touch-icon-180x180.png",
       ],
       manifest: {
-        id: "/h/",
+        id: "/h/swifty-docs/",
         name: "homepage",
         short_name: "homepage",
         description: "homepage",
         theme_color: "#f05138",
         background_color: "#f05138",
         display: "standalone",
-        scope: "/h/",
-        start_url: "/h/",
+        scope: "/h/swifty-docs/",
+        start_url: "/h/swifty-docs/",
         icons: [
           { src: "pwa-64x64.png", sizes: "64x64", type: "image/png" },
           { src: "pwa-192x192.png", sizes: "192x192", type: "image/png" },

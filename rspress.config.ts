@@ -1,10 +1,15 @@
+import path from "node:path";
 import { defineConfig } from "@rspress/core";
+import rspressPluginMermaid from "rspress-plugin-mermaid";
 
 export default defineConfig({
   root: "docs",
   base: "/h/rspress/",
   outDir: "doc_build",
-  lang: "zh-CN",
+  globalStyles: path.join(import.meta.dirname, "rspress/main.css"),
+  globalUIComponents: [path.join(import.meta.dirname, "rspress/anti-copy.tsx")],
+  plugins: [rspressPluginMermaid()],
+  lang: "zh",
   title: "Swifty Homepage",
   description: "Swifty Homepage",
   icon: "/favicon.ico",
@@ -15,7 +20,6 @@ export default defineConfig({
   themeConfig: {
     lastUpdated: true,
     enableScrollToTop: true,
-    outline: true,
     socialLinks: [
       {
         icon: "github",
@@ -25,7 +29,6 @@ export default defineConfig({
     ],
     editLink: {
       docRepoBaseUrl: "https://github.com/hangtiancheng/h/tree/main/docs",
-      text: "Edit this page on GitHub",
     },
   },
 });

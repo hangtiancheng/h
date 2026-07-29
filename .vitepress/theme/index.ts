@@ -4,7 +4,7 @@ import type { Theme } from "vitepress";
 import DefaultTheme from "vitepress/theme-without-fonts";
 import { applyAntiCopy } from "@swifty.js/anti-copy/vitepress";
 import Mermaid from "./mermaid";
-import "./style.css";
+import "./main.css";
 
 const theme: Theme = {
   extends: DefaultTheme,
@@ -13,7 +13,7 @@ const theme: Theme = {
     applyAntiCopy(ctx, {
       mode: "replace",
       replaceText: (selection) =>
-        `${selection.slice(0, 60)}${selection.length > 60 ? "…" : ""}\n\n—— 内容来自 Swifty Homepage，转载请注明出处：https://hangtiancheng.github.io/h/`,
+        `${selection.slice(0, 60)}${selection.length > 60 ? "…" : ""}\n\n— Source: Swifty Homepage (https://hangtiancheng.github.io/h/). Please attribute when sharing.`,
       devtools: true,
       onViolation: (e) => console.warn("[anti-copy]", e.type, e.key ?? ""),
     });

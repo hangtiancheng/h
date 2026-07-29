@@ -39,6 +39,12 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Build with VitePress
         run: pnpm build
+      - name: Build swifty-docs site
+        run: pnpm build:docs
+      - name: Merge swifty-docs site into /h/swifty-docs/
+        run: |
+          mkdir -p ./.vitepress/dist/swifty-docs
+          cp -r ./dist-swifty/* ./.vitepress/dist/swifty-docs/
       - name: Build with Rspress
         run: pnpm build:rspress
       - name: Merge Rspress site into /h/rspress/

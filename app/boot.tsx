@@ -19,7 +19,7 @@ render(
       <AntiCopy
         mode="replace"
         replaceText={(selection) =>
-          `${selection.slice(0, 60)}${selection.length > 60 ? "…" : ""}\n\n—— 内容来自 Swifty Homepage，转载请注明出处：https://hangtiancheng.github.io/h/`
+          `${selection.slice(0, 60)}${selection.length > 60 ? "…" : ""}\n\n— Source: Swifty Homepage (https://hangtiancheng.github.io/h/). Please attribute when sharing.`
         }
         devtools
         onViolation={(e) => console.warn("[anti-copy]", e.type, e.key ?? "")}
