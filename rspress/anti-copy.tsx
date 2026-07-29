@@ -6,7 +6,8 @@ export default function GlobalAntiCopy() {
     <AntiCopy
       mode="replace"
       replaceText={(selection) =>
-        `${selection.slice(0, 60)}${selection.length > 60 ? "…" : ""}\n\n— Source: Swifty Homepage (https://hangtiancheng.github.io/h/). Please attribute when sharing.`
+        `${selection}\n\n— Copyright © ${new Date().getFullYear()} hangtiancheng. All rights reserved.
+Unauthorized reproduction or distribution of this content is prohibited without prior written permission.`
       }
       devtools
       onViolation={(e) => console.warn("[anti-copy]", e.type, e.key ?? "")}

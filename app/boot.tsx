@@ -1,6 +1,6 @@
 import { render } from "preact";
 import { LocationProvider, Router, Route } from "preact-iso";
-import { DocsProvider, DocsLayout } from "@swifty.js/docs";
+import { createContentGuard, DocsProvider, DocsLayout } from "@swifty.js/docs";
 import { AntiCopy } from "@swifty.js/anti-copy/swifty-docs";
 import {
   docsConfig,
@@ -9,26 +9,34 @@ import {
 } from "@swifty-docs/generated";
 import "./main.css";
 
+// Pages encrypted by docsGuardPlugin (frontmatter `protected: true` +
+// DOCS_PASSWORD env) prompt for a password; everything else passes through.
+const guard = createContentGuard(loadContent);
+
 render(
-  <DocsProvider
-    config={docsConfig}
-    loadContent={loadContent}
-    getSearchIndex={getSearchIndex}
-  >
-    <LocationProvider>
-      <AntiCopy
-        mode="replace"
-        replaceText={(selection) =>
-          `${selection.slice(0, 60)}${selection.length > 60 ? "…" : ""}\n\n— Source: Swifty Homepage (https://hangtiancheng.github.io/h/). Please attribute when sharing.`
-        }
-        devtools
-        onViolation={(e) => console.warn("[anti-copy]", e.type, e.key ?? "")}
-      />
-      <Router>
-        <Route path="/" component={DocsLayout} />
-        <Route default component={DocsLayout} />
-      </Router>
-    </LocationProvider>
-  </DocsProvider>,
+  <>
+    <guard.ContentGuard />
+    <DocsProvider
+      config={docsConfig}
+      loadContent={guard.loadContent}
+      getSearchIndex={getSearchIndex}
+    >
+      <LocationProvider>
+        <AntiCopy
+          mode="replace"
+          replaceText={(selection) =>
+            `${selection}\n\n— Copyright © ${new Date().getFullYear()} hangtiancheng. All rights reserved.
+Unauthorized reproduction or distribution of this content is prohibited without prior written permission.`
+          }
+          devtools
+          onViolation={(e) => console.warn("[anti-copy]", e.type, e.key ?? "")}
+        />
+        <Router>
+          <Route path="/" component={DocsLayout} />
+          <Route default component={DocsLayout} />
+        </Router>
+      </LocationProvider>
+    </DocsProvider>
+  </>,
   document.getElementById("app") ?? document.body,
 );
