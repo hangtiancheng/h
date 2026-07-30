@@ -594,14 +594,19 @@ select {
 }
 ```
 
-Go 使用 scase 结构体描述 select 的每个
+Go 使用 scase 结构体描述 select 的每个 case 语句 (包括 default)
+
+Go 先对所有 case 语句 (包括 default) 进行随机排序, 以避免饥饿; 再执行两轮扫描
+
+- 第一轮扫描检查每个 channel 是否可读写, 如果找到就绪的 case 则立即执行
+-
 
 ```go
 // cSpell: words scase releasetime
 type scase struct {
   c    *hchan         // channel 指针
   elem unsafe.Pointer // 数据元素指针，用于存放发送/接收的数据
-  kind uint16         // case 类型: caseNil、caseRecv、caseSend、caseDefault
+  kind uint16         // 操作类型: caseNil、caseRecv、caseSend、caseDefault
   pc   uintptr        // 程序计数器, 用于调试
   releasetime int64   // 释放时间, 用于竞态检测
 }
