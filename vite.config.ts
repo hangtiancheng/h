@@ -13,6 +13,8 @@ import {
 import swiftyDocsConfig from "./swifty-docs.config";
 import larkDocsConfig from "./lark-docs.config";
 
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
 export default defineConfig(({ mode }) => {
   if (mode === "swifty") {
     return {
