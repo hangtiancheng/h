@@ -1,0 +1,3 @@
+- [user-language](../../../../.larky/memory/user-language.md) — User communicates primarily in Chinese and shares problems via screenshots
+- [user-leetcode-practice](../../../../.larky/memory/user-leetcode-practice.md) — User practices LeetCode / algorithm problems
+- [user-magix-framework](../../../../.larky/memory/user-magix-framework.md) — User works with the Magix MVC SPA frontend framework
