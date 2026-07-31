@@ -1,3 +1,4 @@
+/// <reference types="vite/client" />
 /**
  * Copyright (c) 2026 hangtiancheng
  *
