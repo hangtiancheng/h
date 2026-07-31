@@ -4,7 +4,6 @@ export default defineConfig({
   docs: "docs",
   baseUrl: "/h/swifty-docs/",
   title: "Swifty Homepage",
-  description: "Swifty Homepage",
   nav: [
     { text: "Base", link: "/h/swifty-docs/base/" },
     { text: "Frontend", link: "/h/swifty-docs/frontend/" },
