@@ -18,17 +18,16 @@
     "dev:rspress": "rspress dev",
     "build:rspress": "rspress build",
     "preview:rspress": "rspress preview",
-    "dev:swifty": "DOCS_PASSWORD=pass vite --mode=swifty",
-    "build:swifty": "vite build --mode=swifty",
-    "preview:swifty": "vite preview --mode=swifty",
     "dev:lark": "DOCS_PASSWORD=pass vite --mode=lark",
     "build:lark": "vite build --mode=lark",
     "preview:lark": "vite preview --mode=lark",
+    "dev:swifty": "DOCS_PASSWORD=pass vite --mode=swifty",
+    "build:swifty": "vite build --mode=swifty",
+    "preview:swifty": "vite preview --mode=swifty",
     "prepare": "husky && pnpm --filter @swifty.js/anti-copy build",
     "lint": "eslint --fix ./src",
     "format": "prettier -w ./",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run --config packages/anti-copy/vitest.config.ts",
     "git:commit": "git add -A && git commit -m \"feat: Introduce new features\"",
     "git:commit:ci": "git add -A && git commit -m \"ci: Deploy homepage\"",
     "git:push": "pnpm git:commit && git push origin main",
@@ -70,8 +69,5 @@
       "pnpm format"
     ]
   },
-  "packageManager": "pnpm@10.33.0",
-  "dependencies": {
-    "@lark.js/docs": "0.0.13"
-  }
+  "packageManager": "pnpm@10.33.0"
 }

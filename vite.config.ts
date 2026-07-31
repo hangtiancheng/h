@@ -10,19 +10,19 @@ import {
   larkDocsPlugin,
   docsGuardPlugin as larkDocsGuardPlugin,
 } from "@lark.js/docs/vite";
-import swiftyDocsConfig from "./swifty-docs.config";
-import larkDocsConfig from "./lark-docs.config";
+import swiftyDocsConfig from "./swifty-docs.config.js";
+import larkDocsConfig from "./lark-docs.config.js";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 export default defineConfig(({ mode }) => {
-  if (mode === "swifty") {
+  if (mode === "lark") {
     return {
-      root: resolve(import.meta.dirname, "swifty"),
-      base: "/h/swifty-docs/",
+      root: resolve(import.meta.dirname, "lark"),
+      base: "/h/lark-docs/",
       plugins: [
-        swiftyDocsPlugin({ config: swiftyDocsConfig }),
-        swiftyDocsGuardPlugin(),
+        larkDocsPlugin({ config: larkDocsConfig }),
+        larkDocsGuardPlugin(),
         tailwindcss(),
         VitePWA({
           registerType: "autoUpdate",
@@ -33,15 +33,15 @@ export default defineConfig(({ mode }) => {
             "apple-touch-icon-180x180.png",
           ],
           manifest: {
-            id: "/h/swifty-docs/",
+            id: "/h/lark-docs/",
             name: "homepage",
             short_name: "homepage",
             description: "homepage",
             theme_color: "#f05138",
             background_color: "#f05138",
             display: "standalone",
-            scope: "/h/swifty-docs/",
-            start_url: "/h/swifty-docs/",
+            scope: "/h/lark-docs/",
+            start_url: "/h/lark-docs/",
             icons: [
               { src: "pwa-64x64.png", sizes: "64x64", type: "image/png" },
               { src: "pwa-192x192.png", sizes: "192x192", type: "image/png" },
@@ -87,25 +87,25 @@ export default defineConfig(({ mode }) => {
       ],
       resolve: {
         alias: {
-          "@swifty-docs/generated": resolve(
+          "@lark-docs/generated": resolve(
             import.meta.dirname,
-            ".swifty-docs/generated",
+            ".lark-docs/generated",
           ),
         },
       },
       build: {
-        outDir: resolve(import.meta.dirname, "dist-swifty"),
+        outDir: resolve(import.meta.dirname, "dist-lark"),
         emptyOutDir: true,
       },
     };
   }
 
   return {
-    root: resolve(import.meta.dirname, "lark"),
-    base: "/h/lark-docs/",
+    root: resolve(import.meta.dirname, "swifty"),
+    base: "/h/swifty-docs/",
     plugins: [
-      larkDocsPlugin({ config: larkDocsConfig }),
-      larkDocsGuardPlugin(),
+      swiftyDocsPlugin({ config: swiftyDocsConfig }),
+      swiftyDocsGuardPlugin(),
       tailwindcss(),
       VitePWA({
         registerType: "autoUpdate",
@@ -116,15 +116,15 @@ export default defineConfig(({ mode }) => {
           "apple-touch-icon-180x180.png",
         ],
         manifest: {
-          id: "/h/lark-docs/",
+          id: "/h/swifty-docs/",
           name: "homepage",
           short_name: "homepage",
           description: "homepage",
           theme_color: "#f05138",
           background_color: "#f05138",
           display: "standalone",
-          scope: "/h/lark-docs/",
-          start_url: "/h/lark-docs/",
+          scope: "/h/swifty-docs/",
+          start_url: "/h/swifty-docs/",
           icons: [
             { src: "pwa-64x64.png", sizes: "64x64", type: "image/png" },
             { src: "pwa-192x192.png", sizes: "192x192", type: "image/png" },
@@ -170,14 +170,14 @@ export default defineConfig(({ mode }) => {
     ],
     resolve: {
       alias: {
-        "@lark-docs/generated": resolve(
+        "@swifty-docs/generated": resolve(
           import.meta.dirname,
-          ".lark-docs/generated",
+          ".swifty-docs/generated",
         ),
       },
     },
     build: {
-      outDir: resolve(import.meta.dirname, "dist-lark"),
+      outDir: resolve(import.meta.dirname, "dist-swifty"),
       emptyOutDir: true,
     },
   };

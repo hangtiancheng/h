@@ -7,14 +7,13 @@ settings:
 importers:
 
   .:
-    dependencies:
-      '@lark.js/docs':
-        specifier: 0.0.13
-        version: 0.0.13(@tailwindcss/typography@0.5.20(tailwindcss@4.3.3))(tailwindcss@4.3.3)(vite@8.2.0(@types/node@25.9.5)(jiti@2.7.0)(terser@5.49.0)(yaml@2.9.0))
     devDependencies:
       '@eslint/js':
         specifier: ^10.0.1
         version: 10.0.1(eslint@10.8.0(jiti@2.7.0))
+      '@lark.js/docs':
+        specifier: ^0.0.13
+        version: 0.0.13(@tailwindcss/typography@0.5.20(tailwindcss@4.3.3))(tailwindcss@4.3.3)(vite@8.2.0(@types/node@25.9.5)(jiti@2.7.0)(terser@5.49.0)(yaml@2.9.0))
       '@rspress/core':
         specifier: ^2.0.19
         version: 2.0.19(@rspack/core@2.1.7(@swc/helpers@0.5.23))(micromark-util-types@2.0.2)(micromark@4.0.2)

@@ -32,4 +32,8 @@ features:
     details: Go, MySQL, Redis, Kafka
 ---
 
-<!-- Welcome to Swifty Homepage -->
+> Welcome to Swifty Homepage
+
+- [rspress](https://hangtiancheng.github.io/h/rspress)
+- [lark-docs](https://hangtiancheng.github.io/h/lark-docs)
+- [swifty-docs](https://hangtiancheng.github.io/h/swifty-docs)
