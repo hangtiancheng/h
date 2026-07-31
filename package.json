@@ -36,7 +36,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@lark.js/docs": "^0.0.13",
+    "@lark.js/docs": "^0.0.14",
     "@rspress/core": "^2.0.19",
     "@swifty.js/anti-copy": "workspace:^",
     "@swifty.js/docs": "^0.0.7",

@@ -41,10 +41,10 @@ jobs:
         run: pnpm build
       - name: Build with swifty-docs
         run: pnpm build:swifty
-      - name: Build with lark-docs
-        run: pnpm build:lark
         env:
           DOCS_PASSWORD: ${{ secrets.DOCS_PASSWORD }}
+      - name: Build with lark-docs
+        run: pnpm build:lark
       - name: Merge swifty-docs site into /h/swifty-docs/
         run: |
           mkdir -p ./.vitepress/dist/swifty-docs
