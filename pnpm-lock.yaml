@@ -22,8 +22,8 @@ importers:
         specifier: workspace:^
         version: link:packages/anti-copy
       '@swifty.js/docs':
-        specifier: ^0.0.6
-        version: 0.0.6(@babel/core@7.29.7)(preact@10.29.7)(rollup@4.62.3)(tailwindcss@4.3.3)(vite@8.1.5(@types/node@25.9.5)(jiti@2.7.0)(terser@5.49.0)(yaml@2.9.0))
+        specifier: ^0.0.7
+        version: 0.0.7(@babel/core@7.29.7)(preact@10.29.7)(rollup@4.62.3)(tailwindcss@4.3.3)(vite@8.1.5(@types/node@25.9.5)(jiti@2.7.0)(terser@5.49.0)(yaml@2.9.0))
       '@tailwindcss/typography':
         specifier: ^0.5.20
         version: 0.5.20(tailwindcss@4.3.3)
@@ -96,6 +96,9 @@ importers:
 
   packages/anti-copy:
     dependencies:
+      '@lark.js/mvc':
+        specifier: '>=0.0.23'
+        version: 0.0.23(vite@8.1.5(@types/node@25.9.5)(jiti@2.7.0)(terser@5.49.0)(yaml@2.9.0))
       '@rspress/core':
         specifier: '>=2.0.0'
         version: 2.0.18(@rspack/core@2.1.6(@swc/helpers@0.5.23))(@types/mdast@4.0.4)(@types/react@19.2.17)(micromark-util-types@2.0.2)(micromark@4.0.2)
@@ -1758,8 +1761,8 @@ packages:
   '@swc/helpers@0.5.23':
     resolution: {integrity: sha512-5lSsMOTXURePglDfvuAQUqkGek9Hg2kksOYay2m0+XR++b2NWYL/4sWyuvVBIs8oKnJaxkdi9whaL/sqN13afw==}
 
-  '@swifty.js/docs@0.0.6':
-    resolution: {integrity: sha512-d9ojkuiSvOBFKmZfW584x0XHoawbBJd05ag/aOIEeoMmAhPeJO901itd1W5wHmKWR8UszIs4eoEjchjGFzUnHQ==}
+  '@swifty.js/docs@0.0.7':
+    resolution: {integrity: sha512-mLv0jAZsWC3vJCy3jgG0iZa4jWsFvn4rN3pTMnYuQTe8713z91aB+KVxTRYVsoCSYgXwFzYDOceacFzy+dr+LQ==}
     engines: {node: '>=20'}
     peerDependencies:
       preact: ^10.20.0
@@ -6881,7 +6884,7 @@ snapshots:
     dependencies:
       tslib: 2.8.1
 
-  '@swifty.js/docs@0.0.6(@babel/core@7.29.7)(preact@10.29.7)(rollup@4.62.3)(tailwindcss@4.3.3)(vite@8.1.5(@types/node@25.9.5)(jiti@2.7.0)(terser@5.49.0)(yaml@2.9.0))':
+  '@swifty.js/docs@0.0.7(@babel/core@7.29.7)(preact@10.29.7)(rollup@4.62.3)(tailwindcss@4.3.3)(vite@8.1.5(@types/node@25.9.5)(jiti@2.7.0)(terser@5.49.0)(yaml@2.9.0))':
     dependencies:
       '@preact/preset-vite': 2.10.6(@babel/core@7.29.7)(preact@10.29.7)(rollup@4.62.3)(vite@8.1.5(@types/node@25.9.5)(jiti@2.7.0)(terser@5.49.0)(yaml@2.9.0))
       '@tailwindcss/typography': 0.5.20(tailwindcss@4.3.3)

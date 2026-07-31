@@ -2,8 +2,14 @@ import { resolve } from "node:path";
 import { defineConfig } from "vite";
 import tailwindcss from "@tailwindcss/vite";
 import { VitePWA } from "vite-plugin-pwa";
-import { swiftyDocsPlugin, docsGuardPlugin } from "@swifty.js/docs/vite";
-import { larkDocsPlugin } from "@lark.js/docs/vite";
+import {
+  swiftyDocsPlugin,
+  docsGuardPlugin as swiftyDocsGuardPlugin,
+} from "@swifty.js/docs/vite";
+import {
+  larkDocsPlugin,
+  docsGuardPlugin as larkDocsGuardPlugin,
+} from "@lark.js/docs/vite";
 import swiftyDocsConfig from "./swifty-docs.config";
 import larkDocsConfig from "./lark-docs.config";
 
@@ -14,7 +20,7 @@ export default defineConfig(({ mode }) => {
       base: "/h/swifty-docs/",
       plugins: [
         swiftyDocsPlugin({ config: swiftyDocsConfig }),
-        docsGuardPlugin(),
+        swiftyDocsGuardPlugin(),
         tailwindcss(),
         VitePWA({
           registerType: "autoUpdate",
@@ -97,7 +103,7 @@ export default defineConfig(({ mode }) => {
     base: "/h/lark-docs/",
     plugins: [
       larkDocsPlugin({ config: larkDocsConfig }),
-      docsGuardPlugin(),
+      larkDocsGuardPlugin(),
       tailwindcss(),
       VitePWA({
         registerType: "autoUpdate",
