@@ -1,3 +1,6 @@
+/// <reference types="@swifty.js/docs/client" />
+/// <reference types="vite/client" />
+
 import { render } from "preact";
 import { LocationProvider, Router, Route } from "preact-iso";
 import { createContentGuard, DocsProvider, DocsLayout } from "@swifty.js/docs";
