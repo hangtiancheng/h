@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@lark.js/docs':
-        specifier: 0.0.10
-        version: 0.0.10(@tailwindcss/typography@0.5.20(tailwindcss@4.3.3))(tailwindcss@4.3.3)(vite@8.1.5(@types/node@25.9.5)(jiti@2.7.0)(terser@5.49.0)(yaml@2.9.0))
+        specifier: 0.0.13
+        version: 0.0.13(@tailwindcss/typography@0.5.20(tailwindcss@4.3.3))(tailwindcss@4.3.3)(vite@8.1.5(@types/node@25.9.5)(jiti@2.7.0)(terser@5.49.0)(yaml@2.9.0))
     devDependencies:
       '@eslint/js':
         specifier: ^10.0.1
@@ -1088,8 +1088,8 @@ packages:
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
 
-  '@lark.js/docs@0.0.10':
-    resolution: {integrity: sha512-IrZK7PXElaMSpTejF0mMScHBhxHGxQabAkgrpTiKBQwQhVMm8E91g3ehGfSdwk2RTJ+4j2irFTKJF21sHUQZBA==}
+  '@lark.js/docs@0.0.13':
+    resolution: {integrity: sha512-5I7cPMBP4x3b8qWQzE1eHtzJsl9oBFtrcwuKJ8MAfNcJFEDaZ1LWR7v6JMdSZKeu4xz4eBj9pKEhGWHcgBFBrw==}
     engines: {node: '>=20'}
     peerDependencies:
       '@tailwindcss/typography': ^0.5.0
@@ -6287,7 +6287,7 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
 
-  '@lark.js/docs@0.0.10(@tailwindcss/typography@0.5.20(tailwindcss@4.3.3))(tailwindcss@4.3.3)(vite@8.1.5(@types/node@25.9.5)(jiti@2.7.0)(terser@5.49.0)(yaml@2.9.0))':
+  '@lark.js/docs@0.0.13(@tailwindcss/typography@0.5.20(tailwindcss@4.3.3))(tailwindcss@4.3.3)(vite@8.1.5(@types/node@25.9.5)(jiti@2.7.0)(terser@5.49.0)(yaml@2.9.0))':
     dependencies:
       '@lark.js/mvc': 0.0.23(vite@8.1.5(@types/node@25.9.5)(jiti@2.7.0)(terser@5.49.0)(yaml@2.9.0))
       '@tailwindcss/typography': 0.5.20(tailwindcss@4.3.3)

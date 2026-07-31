@@ -1,4 +1,5 @@
 /// <reference types="vite/client" />
+/// <reference types="@lark.js/docs/client" />
 /**
  * Copyright (c) 2026 hangtiancheng
  *

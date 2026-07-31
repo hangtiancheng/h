@@ -37,10 +37,10 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@lark.js/docs": "^0.0.13",
     "@rspress/core": "^2.0.18",
     "@swifty.js/anti-copy": "workspace:^",
     "@swifty.js/docs": "^0.0.7",
-    "@lark.js/docs": "^0.0.11",
     "@tailwindcss/typography": "^0.5.20",
     "@tailwindcss/vite": "^4.3.3",
     "@types/node": "^25.9.5",
@@ -72,6 +72,6 @@
   },
   "packageManager": "pnpm@10.33.0",
   "dependencies": {
-    "@lark.js/docs": "0.0.10"
+    "@lark.js/docs": "0.0.13"
   }
 }
