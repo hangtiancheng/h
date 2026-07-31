@@ -608,8 +608,15 @@ Go 先对所有 case 语句进行随机排序, 以避免饥饿; 再执行两轮�
   - 如果没有 default 则进入第二轮
 - 第二轮将当前 goroutine 加入到「所有」channel 的 sendq 和 recvq 等待队列中, 调用 gopark 阻塞当前 goroutine 进入睡眠, 使得当前 goroutine 让出 cpu; 某个 channel 就绪时, 调度器唤醒对应的 goroutine, 从其他 channel 的 sendq 和 recvq 等待队列中移除该 goroutine, 执行对应的 case 分支
 
+编译阶段
+
+1. 将所有的 case 分支转换为包含 channel 指针、操作类型等信息的 scase 结构体
+2. 调用 runtime 函数 selectgo 获取被选择的 scase 结构体索引
+   - 如果当前 scase 结构体的操作类型是 caseRecv 接收数据, 则会返回一个代表当前 case 分支是否为接收的布尔值
+3. 通过 for 循环生成一组 if 语句, if 语句中判断自己是不是被选中的 case
+
 ```go
-// cSpell: words scase releasetime
+// cSpell: words scase releasetime selectgo
 type scase struct {
   c    *hchan         // channel 指针
   elem unsafe.Pointer // 数据元素指针，用于存放发送/接收的数据
