@@ -549,8 +549,8 @@ type hchan struct {
 
 ```go
 func leak() {
-  in := make(chan int)   // 无缓冲、无生产者发送数据、未关闭
-  out := make(chan int)  // 无缓冲、无消费者接收数据
+  in := make(chan int)  // 无缓冲、无生产者发送数据、未关闭
+  out := make(chan int) // 无缓冲、无消费者接收数据
 
   go func() {
     // 没有 default 分支, 两个 case 都无法就绪
@@ -594,12 +594,19 @@ select {
 }
 ```
 
-Go 使用 scase 结构体描述 select 的每个 case 语句 (包括 default)
+### select 实现原理
 
-Go 先对所有 case 语句 (包括 default) 进行随机排序, 以避免饥饿; 再执行两轮扫描
+> 要么第一轮命中、要么执行 default、要么第二轮 gopark 等待调度器唤醒
 
-- 第一轮扫描检查每个 channel 是否可读写, 如果找到就绪的 case 则立即执行
--
+Go 使用 scase 结构体描述 select 的每个 case 语句
+
+Go 先对所有 case 语句进行随机排序, 以避免饥饿; 再执行两轮扫描
+
+- 第一轮检查每个 channel 是否可读写, 如果找到就绪的 case 则立即执行 (第一轮命中)
+- 如果第一轮发现没有就绪的 case (第一轮未命中):
+  - 如果有 default 则执行 default
+  - 如果没有 default 则进入第二轮
+- 第二轮将当前 goroutine 加入到「所有」channel 的 sendq 和 recvq 等待队列中, 调用 gopark 阻塞当前 goroutine 进入睡眠, 使得当前 goroutine 让出 cpu; 某个 channel 就绪时, 调度器唤醒对应的 goroutine, 从其他 channel 的 sendq 和 recvq 等待队列中移除该 goroutine, 执行对应的 case 分支
 
 ```go
 // cSpell: words scase releasetime

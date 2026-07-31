@@ -1,0 +1,30 @@
+@import "tailwindcss";
+@import "@lark.js/docs/client.css";
+@source "@lark.js/docs/theme.js";
+
+/* Align brand palette & fonts with the VitePress theme (.vitepress/theme/main.css) */
+@theme {
+  --font-sans:
+    "Iosevka", "Maple Mono", Menlo, "Cascadia Code", "PingFang SC",
+    "Microsoft YaHei";
+  --font-display:
+    "Iosevka", "Maple Mono", Menlo, "Cascadia Code", "PingFang SC",
+    "Microsoft YaHei";
+  --font-mono:
+    "Iosevka", "Maple Mono", Menlo, "Cascadia Code", "PingFang SC",
+    "Microsoft YaHei";
+}
+
+:root {
+  /* VitePress --vp-c-brand-1 */
+  --primary: #f05138cc;
+  --ring: #f05138cc;
+  --accent: rgba(240, 81, 56, 0.12);
+}
+
+.dark {
+  /* VitePress --vp-c-brand-2 (lighter variant for dark surfaces) */
+  --primary: #f26550cc;
+  --ring: #f26550cc;
+  --accent: rgba(240, 81, 56, 0.18);
+}

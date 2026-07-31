@@ -3,80 +3,174 @@ import { defineConfig } from "vite";
 import tailwindcss from "@tailwindcss/vite";
 import { VitePWA } from "vite-plugin-pwa";
 import { swiftyDocsPlugin, docsGuardPlugin } from "@swifty.js/docs/vite";
-import docsConfig from "./swifty-docs.config";
+import { larkDocsPlugin } from "@lark.js/docs/vite";
+import swiftyDocsConfig from "./swifty-docs.config";
+import larkDocsConfig from "./lark-docs.config";
 
-export default defineConfig({
-  root: resolve(import.meta.dirname, "app"),
-  base: "/h/swifty-docs/",
-  plugins: [
-    swiftyDocsPlugin({ config: docsConfig }),
-    docsGuardPlugin(),
-    tailwindcss(),
-    VitePWA({
-      registerType: "autoUpdate",
-      injectRegister: "script",
-      includeAssets: [
-        "favicon.svg",
-        "favicon.ico",
-        "apple-touch-icon-180x180.png",
+export default defineConfig(({ mode }) => {
+  if (mode === "swifty") {
+    return {
+      root: resolve(import.meta.dirname, "swifty"),
+      base: "/h/swifty-docs/",
+      plugins: [
+        swiftyDocsPlugin({ config: swiftyDocsConfig }),
+        docsGuardPlugin(),
+        tailwindcss(),
+        VitePWA({
+          registerType: "autoUpdate",
+          injectRegister: "script",
+          includeAssets: [
+            "favicon.svg",
+            "favicon.ico",
+            "apple-touch-icon-180x180.png",
+          ],
+          manifest: {
+            id: "/h/swifty-docs/",
+            name: "homepage",
+            short_name: "homepage",
+            description: "homepage",
+            theme_color: "#f05138",
+            background_color: "#f05138",
+            display: "standalone",
+            scope: "/h/swifty-docs/",
+            start_url: "/h/swifty-docs/",
+            icons: [
+              { src: "pwa-64x64.png", sizes: "64x64", type: "image/png" },
+              { src: "pwa-192x192.png", sizes: "192x192", type: "image/png" },
+              { src: "pwa-512x512.png", sizes: "512x512", type: "image/png" },
+              {
+                src: "maskable-icon-512x512.png",
+                sizes: "512x512",
+                type: "image/png",
+                purpose: "maskable",
+              },
+            ],
+          },
+          workbox: {
+            globPatterns: ["**/*.{js,css,html,svg,png,woff2}"],
+            runtimeCaching: [
+              {
+                urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
+                handler: "CacheFirst",
+                options: {
+                  cacheName: "google-fonts-cache",
+                  expiration: {
+                    maxEntries: 10,
+                    maxAgeSeconds: 60 * 60 * 24 * 365,
+                  },
+                  cacheableResponse: { statuses: [0, 200] },
+                },
+              },
+              {
+                urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
+                handler: "CacheFirst",
+                options: {
+                  cacheName: "gstatic-fonts-cache",
+                  expiration: {
+                    maxEntries: 10,
+                    maxAgeSeconds: 60 * 60 * 24 * 365,
+                  },
+                  cacheableResponse: { statuses: [0, 200] },
+                },
+              },
+            ],
+          },
+        }),
       ],
-      manifest: {
-        id: "/h/swifty-docs/",
-        name: "homepage",
-        short_name: "homepage",
-        description: "homepage",
-        theme_color: "#f05138",
-        background_color: "#f05138",
-        display: "standalone",
-        scope: "/h/swifty-docs/",
-        start_url: "/h/swifty-docs/",
-        icons: [
-          { src: "pwa-64x64.png", sizes: "64x64", type: "image/png" },
-          { src: "pwa-192x192.png", sizes: "192x192", type: "image/png" },
-          { src: "pwa-512x512.png", sizes: "512x512", type: "image/png" },
-          {
-            src: "maskable-icon-512x512.png",
-            sizes: "512x512",
-            type: "image/png",
-            purpose: "maskable",
-          },
-        ],
+      resolve: {
+        alias: {
+          "@swifty-docs/generated": resolve(
+            import.meta.dirname,
+            ".swifty-docs/generated",
+          ),
+        },
       },
-      workbox: {
-        globPatterns: ["**/*.{js,css,html,svg,png,woff2}"],
-        runtimeCaching: [
-          {
-            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
-            handler: "CacheFirst",
-            options: {
-              cacheName: "google-fonts-cache",
-              expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 365 },
-              cacheableResponse: { statuses: [0, 200] },
-            },
-          },
-          {
-            urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
-            handler: "CacheFirst",
-            options: {
-              cacheName: "gstatic-fonts-cache",
-              expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 365 },
-              cacheableResponse: { statuses: [0, 200] },
-            },
-          },
-        ],
+      build: {
+        outDir: resolve(import.meta.dirname, "dist-swifty"),
+        emptyOutDir: true,
       },
-    }),
-  ],
-  resolve: {
-    alias: {
-      "@swifty-docs/generated": resolve(
-        import.meta.dirname,
-        ".swifty-docs/generated",
-      ),
+    };
+  }
+
+  return {
+    root: resolve(import.meta.dirname, "lark"),
+    base: "/h/lark-docs/",
+    plugins: [
+      larkDocsPlugin({ config: larkDocsConfig }),
+      docsGuardPlugin(),
+      tailwindcss(),
+      VitePWA({
+        registerType: "autoUpdate",
+        injectRegister: "script",
+        includeAssets: [
+          "favicon.svg",
+          "favicon.ico",
+          "apple-touch-icon-180x180.png",
+        ],
+        manifest: {
+          id: "/h/lark-docs/",
+          name: "homepage",
+          short_name: "homepage",
+          description: "homepage",
+          theme_color: "#f05138",
+          background_color: "#f05138",
+          display: "standalone",
+          scope: "/h/lark-docs/",
+          start_url: "/h/lark-docs/",
+          icons: [
+            { src: "pwa-64x64.png", sizes: "64x64", type: "image/png" },
+            { src: "pwa-192x192.png", sizes: "192x192", type: "image/png" },
+            { src: "pwa-512x512.png", sizes: "512x512", type: "image/png" },
+            {
+              src: "maskable-icon-512x512.png",
+              sizes: "512x512",
+              type: "image/png",
+              purpose: "maskable",
+            },
+          ],
+        },
+        workbox: {
+          globPatterns: ["**/*.{js,css,html,svg,png,woff2}"],
+          runtimeCaching: [
+            {
+              urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
+              handler: "CacheFirst",
+              options: {
+                cacheName: "google-fonts-cache",
+                expiration: {
+                  maxEntries: 10,
+                  maxAgeSeconds: 60 * 60 * 24 * 365,
+                },
+                cacheableResponse: { statuses: [0, 200] },
+              },
+            },
+            {
+              urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
+              handler: "CacheFirst",
+              options: {
+                cacheName: "gstatic-fonts-cache",
+                expiration: {
+                  maxEntries: 10,
+                  maxAgeSeconds: 60 * 60 * 24 * 365,
+                },
+                cacheableResponse: { statuses: [0, 200] },
+              },
+            },
+          ],
+        },
+      }),
+    ],
+    resolve: {
+      alias: {
+        "@lark-docs/generated": resolve(
+          import.meta.dirname,
+          ".lark-docs/generated",
+        ),
+      },
     },
-  },
-  build: {
-    outDir: resolve(import.meta.dirname, "dist-docs"),
-    emptyOutDir: true,
-  },
+    build: {
+      outDir: resolve(import.meta.dirname, "dist-lark"),
+      emptyOutDir: true,
+    },
+  };
 });

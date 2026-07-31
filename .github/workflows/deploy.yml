@@ -40,13 +40,19 @@ jobs:
       - name: Build with vitepress
         run: pnpm build
       - name: Build with swifty-docs
-        run: pnpm build:docs
+        run: pnpm build:swifty
         env:
           DOCS_PASSWORD: ${{ secrets.DOCS_PASSWORD }}
+      - name: Build with lark-docs
+        run: pnpm build:lark
       - name: Merge swifty-docs site into /h/swifty-docs/
         run: |
           mkdir -p ./.vitepress/dist/swifty-docs
-          cp -r ./dist-docs/* ./.vitepress/dist/swifty-docs/
+          cp -r ./dist-swifty/* ./.vitepress/dist/swifty-docs/
+      - name: Merge lark-docs site into /h/lark-docs/
+        run: |
+          mkdir -p ./.vitepress/dist/lark-docs
+          cp -r ./dist-lark/* ./.vitepress/dist/lark-docs/
       - name: Build with rspress
         run: pnpm build:rspress
       - name: Merge rspress site into /h/rspress/
