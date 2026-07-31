@@ -1,19 +1,16 @@
 import { useLocation } from "preact-iso";
 import { useEffect, useMemo } from "preact/hooks";
 import { createAntiCopy, type AntiCopyOptions } from "@/core";
+import { DOCS_DEFAULT_EXCLUDES, isPathExcluded } from "./common";
 
 /**
  * Regions excluded from protection by default in a @swifty.js/docs site:
  * code blocks (`.codeblock` chrome incl. the copy button), dialogs such as
  * the search palette, and editable controls.
  */
-export const SWIFTY_DOCS_DEFAULT_EXCLUDES = [
-  ".codeblock",
-  "[role='dialog']",
-  "input",
-  "textarea",
-  "[contenteditable='true']",
-];
+export const SWIFTY_DOCS_DEFAULT_EXCLUDES = DOCS_DEFAULT_EXCLUDES;
+
+export { isPathExcluded };
 
 export interface SwiftyDocsAntiCopyProps extends AntiCopyOptions {
   /**
@@ -22,24 +19,6 @@ export interface SwiftyDocsAntiCopyProps extends AntiCopyOptions {
    * either side are ignored); a RegExp is tested against the full path.
    */
   excludePaths?: (string | RegExp)[];
-}
-
-function stripTrailingSlash(path: string): string {
-  const stripped = path.replace(/\/+$/, "");
-  return stripped === "" ? "/" : stripped;
-}
-
-/** Exported for testing. */
-export function isPathExcluded(
-  path: string,
-  patterns: (string | RegExp)[],
-): boolean {
-  const current = stripTrailingSlash(path);
-  return patterns.some((pattern) => {
-    if (typeof pattern !== "string") return pattern.test(path);
-    const prefix = stripTrailingSlash(pattern);
-    return current === prefix || current.startsWith(`${prefix}/`);
-  });
 }
 
 /**

@@ -12,7 +12,8 @@ const srcDir = fileURLToPath(new URL("src", import.meta.url));
 const input = {
   "core/index": "src/core/index.ts",
   "vitepress/index": "src/vitepress/index.ts",
-  "swifty-docs/index": "src/swifty-docs/index.ts",
+  "docs/swifty": "src/docs/swifty.ts",
+  "docs/lark": "src/docs/lark.ts",
   "rspress/index": "src/rspress/index.ts",
 };
 
@@ -24,6 +25,7 @@ const external = [
   /^vue(\/|$)/,
   /^vitepress(\/|$)/,
   /^@rspress\//,
+  /^@lark\.js\//,
 ];
 
 /** @type {import("rollup").RollupOptions[]} */

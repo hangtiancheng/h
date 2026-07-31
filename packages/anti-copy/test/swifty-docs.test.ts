@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isPathExcluded } from "@/swifty-docs";
+import { isPathExcluded } from "@/docs/swifty";
 
 describe("isPathExcluded", () => {
   it("matches exact paths", () => {

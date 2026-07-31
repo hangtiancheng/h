@@ -29,9 +29,14 @@
       "require": "./dist/vitepress/index.cjs"
     },
     "./swifty-docs": {
-      "types": "./dist/swifty-docs/index.d.ts",
-      "import": "./dist/swifty-docs/index.js",
-      "require": "./dist/swifty-docs/index.cjs"
+      "types": "./dist/docs/swifty.d.ts",
+      "import": "./dist/docs/swifty.js",
+      "require": "./dist/docs/swifty.cjs"
+    },
+    "./lark-docs": {
+      "types": "./dist/docs/lark.d.ts",
+      "import": "./dist/docs/lark.js",
+      "require": "./dist/docs/lark.cjs"
     },
     "./rspress": {
       "types": "./dist/rspress/index.d.ts",
@@ -63,7 +68,6 @@
   },
   "peerDependencies": {
     "@lark.js/docs": ">=0.0.13",
-    "@lark.js/mvc": "0.0.23",
     "@rspress/core": ">=2.0.0",
     "preact": ">=10.20.0",
     "preact-iso": ">=2.0.0",
@@ -82,9 +86,6 @@
       "optional": true
     },
     "react": {
-      "optional": true
-    },
-    "@lark.js/mvc": {
       "optional": true
     },
     "@lark.js/docs": {
