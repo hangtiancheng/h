@@ -1,35 +1,26 @@
 package main
 
 import (
-	"slices"
-	"strings"
+	"context"
+	"fmt"
+	"sync"
+	"time"
+
+	"golang.org/x/sync/semaphore"
 )
 
-func smallestPalindrome(s string) string {
-	cnt := [26]int{}
-	for _, r := range s {
-		cnt[r-'a']++
+func main() {
+	sem := semaphore.NewWeighted(3) // 最多 3 个并发
+	var wg sync.WaitGroup
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func(id int) {
+			defer wg.Done()
+			sem.Acquire(context.Background(), 1)
+			defer sem.Release(1)
+			fmt.Println(id)
+			time.Sleep(3 * time.Second)
+		}(i)
 	}
-	odd := ""
-	for i, c := range cnt {
-		if c%2 == 1 {
-			odd = string(i + 'a')
-			cnt[i]--
-			break
-		}
-	}
-	sb := strings.Builder{}
-	for i, c := range cnt {
-		chr := i + 'a'
-		sb.WriteString(strings.Repeat(string(chr), c/2))
-	}
-	half := sb.String()
-	return half + odd + Reverse(half)
+	wg.Wait()
 }
-
-func Reverse(s string) string {
-	r := []rune(s)
-	slices.Reverse(r)
-	return string(r)
-}
-

@@ -1,5 +1,17 @@
 # Go
 
+<!-- cSpell: words notesleep notewakeup _Gwaiting -->
+
+| 术语             | 适用场景                                                         |
+| ---------------- | ---------------------------------------------------------------- |
+| 睡眠 (sleep)     | Machine OS 线程调用 `notesleep` 进入睡眠, 等待 `notewakeup` 唤醒 |
+| 阻塞 (blocked)   | Goroutine 主动进入 `_Gwaiting` 状态, 等待 channel、mutex、I/O    |
+| 挂起 (suspended) | Goroutine 被外部强制暂停执行 (例如 `suspendG` GC 栈扫描)         |
+
+### 阻塞 gopark/goready
+
+- gopark(): 让当前运行的 Goroutine 让出 CPU, 状态变为 _Gwaiting, M
+
 ```js
 ["copy", "cut", "keydown", "contextmenu", "selectstart"].forEach((evt) => {
   document.addEventListener(evt, (e) => e.stopImmediatePropagation(), true);
@@ -657,84 +669,95 @@ type scase struct {
 
 ```go [channel]
 func main() {
-    ch := make(chan int)
-    go func() {
-        ch <- 42 // 发送方转移数据所有权
-    }()
-    fmt.Println(<-ch) // 42
+  ch := make(chan int)
+  go func() {
+    ch <- 42 // 发送方转移数据所有权
+  }()
+  fmt.Println(<-ch) // 42
 }
 ```
 
 ```go [mutex]
 func main() {
-    var mu sync.Mutex
-    var count int
-    var wg sync.WaitGroup
-    for i := 0; i < 1000; i++ {
-        wg.Add(1)
-        go func() {
-            defer wg.Done()
-            mu.Lock()
-            count++
-            mu.Unlock()
-        }()
-    }
-    wg.Wait()
-    fmt.Println(count) // 1000
+  var mu sync.Mutex
+  var count int
+  var wg sync.WaitGroup
+  for i := 0; i < 1000; i++ {
+    wg.Add(1)
+    go func() {
+      defer wg.Done()
+      mu.Lock()
+      count++
+      mu.Unlock()
+    }()
+  }
+  wg.Wait()
+  fmt.Println(count) // 1000
 }
 ```
 
 ```go [原子操作]
 func main() {
-    var count atomic.Int64
-    var wg sync.WaitGroup
-    for i := 0; i < 1000; i++ {
-        wg.Add(1)
-        go func() {
-            defer wg.Done()
-            count.Add(1)
-        }()
-    }
-    wg.Wait()
-    fmt.Println(count.Load()) // 1000
+  var count atomic.Int64
+  var wg sync.WaitGroup
+  for i := 0; i < 1000; i++ {
+    wg.Add(1)
+    go func() {
+      defer wg.Done()
+      count.Add(1)
+    }()
+  }
+  wg.Wait()
+  fmt.Println(count.Load()) // 1000
 }
 ```
 
 ```go [信号量 channel]
 func main() {
-    sem := make(chan struct{}, 3) // 最多 3 个并发
-    var wg sync.WaitGroup
-    for i := 0; i < 10; i++ {
-        wg.Add(1)
-        go func(id int) {
-            defer wg.Done()
-            sem <- struct{}{}        // 获取
-            defer func() { <-sem }() // 释放
-            fmt.Println(id)
-        }(i)
-    }
-    wg.Wait()
+	sem := make(chan struct{}, 3) // 最多 3 个并发
+	var wg sync.WaitGroup
+	for i := range 10 {
+		wg.Add(1)
+		go func(id int) {
+			defer wg.Done()
+			sem <- struct{}{}        // 获取
+			defer func() { <-sem }() // 释放
+			fmt.Println(id)
+      time.Sleep(3 * time.Second)
+		}(i)
+	}
+	wg.Wait()
 }
 ```
 
 ```go [信号量 semaphore]
 func main() {
-    sem := semaphore.NewWeighted(3) // 最多 3 个并发
-    var wg sync.WaitGroup
-    for i := 0; i < 10; i++ {
-        wg.Add(1)
-        go func(id int) {
-            defer wg.Done()
-            sem.Acquire(context.Background(), 1)
-            defer sem.Release(1)
-            fmt.Println(id)
-        }(i)
-    }
-    wg.Wait()
+	sem := semaphore.NewWeighted(3) // 最多 3 个并发
+	var wg sync.WaitGroup
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func(id int) {
+			defer wg.Done()
+			sem.Acquire(context.Background(), 1)
+			defer sem.Release(1)
+			fmt.Println(id)
+			time.Sleep(3 * time.Second)
+		}(i)
+	}
+	wg.Wait()
 }
 ```
 
 :::
+
+### 如何实现原子操作
+
+Go "sync/atomic" 包中的函数, 编译期转换为目标架构 (x86/arm) 的原子机器指令; 例如在 x86 架构上, `atomic.AddInt64` 会转换为 `LOCK ADD` 指令, LOCK 前缀锁缓存行 (cache line), 保证当前 CPU 对该缓存行的读、改、写 (read-modify-write) 都是独占的, 其他 CPU 在该指令完成前, 不能读写该缓存行 (缓存一致性协议 MESI)
+
+### 锁对比原子操作
+
+- 锁是操作系统或编程语言提供的, 获取锁失败时, goroutine 自旋 4 次后睡眠，而不是 CPU 空转, 锁的开销远大于原子操作, 但是可以保护一段代码块 (临界区)
+- 原子操作是 CPU 提供的原子机器指令, 保证对单个数据的单次读、改、写操作是不可分割的, 性能极高, 不涉及操作系统内核和 goroutine 的挂起
 
 ## Interface
 
