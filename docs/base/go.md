@@ -1,6 +1,6 @@
 # Go
 
-<!-- cSpell: words notesleep notewakeup _Gwaiting -->
+<!-- cSpell: words notesleep notewakeup _Gwaiting _Grunnable -->
 
 | 术语             | 适用场景                                                         |
 | ---------------- | ---------------------------------------------------------------- |
@@ -10,7 +10,8 @@
 
 ### 阻塞 gopark/goready
 
-- gopark(): 让当前运行的 Goroutine 让出 CPU, 状态变为 _Gwaiting, M
+- gopark(): 当前运行的 Goroutine 让出 CPU, 状态变为 _Gwaiting, Machine (OS 线程) 继续执行其他 Goroutine
+- goready(): 将某个 Goroutine 的状态变为 _Grunnable, 加入 Processor 的 goroutine 队列等待调度
 
 ```js
 ["copy", "cut", "keydown", "contextmenu", "selectstart"].forEach((evt) => {
@@ -756,8 +757,102 @@ Go "sync/atomic" 包中的函数, 编译期转换为目标架构 (x86/arm) 的�
 
 ### 锁对比原子操作
 
-- 锁是操作系统或编程语言提供的, 获取锁失败时, goroutine 自旋 4 次后睡眠，而不是 CPU 空转, 锁的开销远大于原子操作, 但是可以保护一段代码块 (临界区)
-- 原子操作是 CPU 提供的原子机器指令, 保证对单个数据的单次读、改、写操作是不可分割的, 性能极高, 不涉及操作系统内核和 goroutine 的挂起
+- 锁是操作系统或编程语言提供的, 获取锁失败时, goroutine 自旋 4 次后阻塞，而不是 CPU 空转, 锁的开销远大于原子操作, 但是可以保护一段代码块 (临界区)
+- 原子操作是 CPU 提供的原子机器指令, 保证对单个数据的单次读、改、写操作是不可分割的, 性能极高, 不涉及操作系统和 goroutine 的阻塞
+
+阻塞: gopark() 当前运行的 Goroutine 让出 CPU, 状态变为 _Gwaiting, Machine (OS 线程) 继续执行其他 Goroutine
+
+### 互斥锁 mutex 的底层实现
+
+```go
+// cSpell: words sema
+type Mutex struct {
+  state int32
+  sema uint32 // 信号量
+}
+```
+
+state 的结构
+
+```txt
+31                 3               2            1             0
++------------------+---------------+------------+-------------+
+| mutexWaiterShift | mutexStarving | mutexWoken | mutexLocked |
+|    (29 bit)      |   (1 bit)     |  (1 bit)   |  (1 bit)    |
++------------------+---------------+------------+-------------+
+        |               |                  |                 |
+        v               v                  v                 v
+阻塞等待锁的 G 数量  该 mutex 是否饥饿  是否有 G          该 mutex 是否已被锁定
+G 解锁时根据该值     0: 未饥饿          已被唤醒          0: 没有锁定
+判断是否需要释放     1: 饥饿            0: 没有 G 被唤醒  1: 已被锁定
+sema 信号量                             1: 已有 G 被唤醒
+```
+
+<!-- cSpell: words Semacquire Semrelease semtable semroot -->
+
+```mermaid
+%%{init: {'themeVariables': {'fontFamily': 'Swifty'}}}%%
+flowchart TD
+  Lock["Lock (阻塞 goroutine)"] --> Semacquire["runtime_Semacquire"]
+  UnLock["UnLock (唤醒 goroutine)"] --> Semrelease["runtime_Semrelease"]
+
+  Semacquire --> HashLookup["通过 sema 变量地址的 hash 值从 semtable 中找到 semroot"]
+  Semrelease --> HashLookup
+
+  HashLookup --> SudogLookup["通过 sema 变量地址从 semroot 中找到 sudog"]
+
+  SudogLookup --> BlockG["将 g 加入 sudog 等待队列并阻塞 g"]
+  SudogLookup --> WakeG["从 sudog 等待队列中取出 g 并唤醒"]
+
+  classDef green fill:#dcfce7,stroke:#16a34a,color:#000
+  classDef orange fill:#fef3c7,stroke:#d97706,color:#000
+  classDef purple fill:#f3e8ff,stroke:#9333ea,color:#000
+  classDef blue fill:#dbeafe,stroke:#2563eb,color:#000
+
+  class Lock green
+  class UnLock orange
+  class Semacquire purple
+  class Semrelease blue
+  class HashLookup orange
+  class SudogLookup green
+  class BlockG purple
+  class WakeG blue
+```
+
+### Mutex 的两种模式
+
+1. 正常模式 Normal Mode: 乐观的自旋锁, 新来的 goroutine 最多自旋 4 次后, 如果没有竞争到锁, 则加入 goroutine 等待队列
+2. 饥饿模式 Starvation Mode: goroutine 在等待队列中等到超过 1ms 后, mutex 切换到饥饿模式; 饥饿模式下, 新来的 goroutine 不会自旋, 直接加入 goroutine 等待队列
+
+### 自旋的目的
+
+自旋的目的: 以极小的 CPU 空转开销为代价, 避免一次 goroutine 阻塞/唤醒的上下文切换，锁竞争不激烈、锁占用时间 (临界区) 极短的场景下节约资源
+
+### mutex 已被一个 goroutine G1 占有, 其他等待中的 goroutine 得到 G1 释放 mutex 后, 哪个等待中的可以优先获取 mutex?
+
+1. 正常模式 Normal Mode 下, 锁被释放时, 等待队列中的第一个 goroutine 会被唤醒, 但是需要和新来的、自旋中的 goroutine 竞争锁
+2. 饥饿模式 Starvation Mode 下, 锁被释放时, 等待队列中的第一个 goroutine 会被唤醒并占有锁, 新来的 goroutine 不会自旋, 直接加入 goroutine 等待队列
+
+```go
+// cSpell: words getg runq runqempty
+const active_spin = 4
+
+func sync_runtime_canSpin(i int) bool {
+  if nproc() <= 1 { // 单个 CPU
+    return false
+  }
+  if i >= active_spin { // 最多自旋 4 次
+    return false
+  }
+  if !runqempty() { // runq 非空
+    // runq: Processor 环形 goroutine 等待队列
+    // 存放已就绪、等待被 Machine 执行的 goroutine
+    return false
+  }
+  // ...
+  return true
+}
+```
 
 ## Interface
 

@@ -509,6 +509,7 @@ redis 使用的过期删除策略是: 惰性删除 + 定期删除
 以下场景出现的概率极低, 因为写缓存的速度远快于写数据库的速度
 
 ```mermaid
+%%{init: {'themeVariables': {'fontFamily': 'Swifty'}}}%%
 sequenceDiagram
   participant A as 请求 A
   participant B as 请求 B
@@ -525,6 +526,7 @@ sequenceDiagram
 写策略如果先删除缓存中的数据, 后更新数据库中的数据, 会导致数据不一致
 
 ```mermaid
+%%{init: {'themeVariables': {'fontFamily': 'Swifty'}}}%%
 sequenceDiagram
   participant A as 请求 A
   participant B as 请求 B
