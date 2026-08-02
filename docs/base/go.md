@@ -828,7 +828,7 @@ flowchart TD
 
 自旋的目的: 以极小的 CPU 空转开销为代价, 避免一次 goroutine 阻塞/唤醒的上下文切换，锁竞争不激烈、锁占用时间 (临界区) 极短的场景下节约资源
 
-### mutex 已被一个 goroutine G1 占有, 其他等待中的 goroutine 得到 G1 释放 mutex 后, 哪个等待中的可以优先获取 mutex?
+### mutex 被一个 goroutine G1 占有, 其他 goroutine 等待 G1 释放 mutex, G1 释放 mutex 后, 哪个等待中的 goroutine 可以优先占有 mutex
 
 1. 正常模式 Normal Mode 下, 锁被释放时, 等待队列中的第一个 goroutine 会被唤醒, 但是需要和新来的、自旋中的 goroutine 竞争锁
 2. 饥饿模式 Starvation Mode 下, 锁被释放时, 等待队列中的第一个 goroutine 会被唤醒并直接占有锁, 新来的 goroutine 不会自旋, 直接加入 goroutine 等待队列
@@ -865,14 +865,16 @@ type Once struct {
 }
 ```
 
-`once.Do(fn)` 被首次调用时:
+`once.Do(fn)` 被调用时:
 
-1. 通过原子操作 `atomic.LoadUint32` 快速检查 done 标志位, 如果标志位为 1, 则不是第一次调用, 直接返回 (无锁、开销极小)
-2. 如果标志位 done 为 1, 说明可能是第一次调用, 进入慢路径 (doSlow)
+1. 通过原子操作 `atomic.LoadUint32` 快速检查 done 标志位, 如果标志位为 1, 则表示 fn 已执行, 直接返回 (无锁、开销极小)
+2. 如果标志位 done 为 1, 则表示 fn 可能未执行, 进入慢路径 (doSlow)
 3. 慢路径中, 先加锁, 再重新检查 done 标志位; 双重检查的目的: 防止多个 goroutine 进入慢路径, 导致 fn 被重复执行
 4. 如果重新检查 done 标志位仍然为 1, 则当前 goroutine 执行传递的函数 fn, 执行结束后通过原子操作 `atomic.StoreUint32` 将 done 标志位设置为 1, 最后释放锁
 
 ### WaitGroup
+
+WaitGroup 实现等待，本质上是一个原子计数器和一个信号量
 
 ## Interface
 

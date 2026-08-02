@@ -9,6 +9,7 @@ import {
   docsConfig,
   loadContent,
   getSearchIndex,
+  onContentUpdate,
 } from "@swifty-docs/generated";
 import "./main.css";
 
@@ -23,6 +24,7 @@ render(
       config={docsConfig}
       loadContent={guard.loadContent}
       getSearchIndex={getSearchIndex}
+      onContentUpdate={onContentUpdate}
     >
       <LocationProvider>
         <AntiCopy

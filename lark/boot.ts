@@ -37,6 +37,7 @@ import {
   docsConfig,
   loadContent,
   getSearchIndex,
+  onContentUpdate,
 } from "@lark-docs/generated";
 
 // CSS
@@ -73,7 +74,12 @@ registerThemeViews({ vdom: config.vdom });
 // password; everything else passes through untouched.
 const guard = createContentGuard(loadContent);
 
-State.set({ docsConfig, loadContent: guard.loadContent, getSearchIndex });
+State.set({
+  docsConfig,
+  loadContent: guard.loadContent,
+  getSearchIndex,
+  onContentUpdate,
+});
 
 // === Copy protection ===
 
