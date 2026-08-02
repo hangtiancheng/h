@@ -83,14 +83,16 @@ State.set({
 
 // === Copy protection ===
 
-applyAntiCopy({
-  mode: "replace",
-  replaceText: (selection) =>
-    `${selection}\n\n— Copyright © ${new Date().getFullYear()} hangtiancheng. All rights reserved.
+if (import.meta.env.PROD) {
+  applyAntiCopy({
+    mode: "replace",
+    replaceText: (selection) =>
+      `${selection}\n\n— Copyright © ${new Date().getFullYear()} hangtiancheng. All rights reserved.
 Unauthorized reproduction or distribution of this content is prohibited without prior written permission.`,
-  devtools: true,
-  onViolation: (e) => console.warn("[anti-copy]", e.type, e.key ?? ""),
-});
+    devtools: true,
+    onViolation: (e) => console.warn("[anti-copy]", e.type, e.key ?? ""),
+  });
+}
 
 // === Boot ===
 

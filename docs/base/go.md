@@ -874,7 +874,118 @@ type Once struct {
 
 ### WaitGroup
 
-WaitGroup 实现等待，本质上是一个原子计数器和一个信号量
+WaitGroup 等待组，本质是一个原子计数器 state (counter32 + waiter32) 和一个信号量 (sema)
+
+```go
+type WaitGroup struct {
+  // 用于静态分析工具 go vet 编译时检查 WaitGroup 实例是否被复制
+  noCopy noCopy
+  // 高 32 位 counter: 被等待的 goroutine 数量
+  //   wg.Add(n) 时, counter += n
+  //   wg.Done() 时, counter -= 1
+  //   wg.Wait() 阻塞直到 counter == 0
+  // 低 32 位 waiter: 等待的 goroutine 数量
+  state atomic.Uint64
+  // 用于阻塞 waiter 等待者的信号量
+  sema uint32
+}
+```
+
+```go
+func main() {
+	var wg sync.WaitGroup
+	for i := 1; i <= 3; i++ {
+		wg.Add(1) // counter++
+		go func(id int) {
+			defer wg.Done() // counter--
+			time.Sleep(time.Millisecond)
+			fmt.Printf("worker %d done\n", id)
+		}(i)
+	}
+
+	wg.Wait() // waiter == 1, 等待者是主 goroutine
+  // 最后一个 worker 调用 wg.Done() 时: counter == 0, waiter == 1
+  // 使用 wg 的 sema 信号量唤醒主 goroutine: counter == 0, waiter == 0
+	fmt.Println("all done")
+}
+```
+
+### sync.Map 底层原理
+
+#### Go <=1.23: read/dirty 读写分离
+
+空间换时间: 使用两个 map (只读的 read.m 和可读写的 dirty) 实现读写分离, read 可以无锁的并发读取
+
+- 读 sync.Map: 读 read.m
+  - key 命中 read.m: 无锁的并发读取
+  - key 未命中 read.m:
+    - read.amended == false: 返回 nil + false
+    - read.amended == true: 加 mu 互斥锁读 dirty
+- 写 sync.Map
+  - 如果 read.m 中有 key, 并且 entry 未 expunged: (CAS, Compare And Swap) 无锁的原子更新 entry
+  - 如果 read.m 中有 key, 并且 entry expunged: 加 mu 互斥锁写 dirty
+  - read.m 中没有 key
+    - dirty == nil
+      1. 加 mu 互斥锁
+      2. 使用 read 中非 expunged 的 entries 初始化 dirty
+      3. 替换 read: read.amended = true
+      4. 加 mu 互斥锁写 dirty
+      5. 解 mu 互斥锁
+    - dirty != nil: 加 mu 互斥锁加 mu 互斥锁写 dirty
+
+```go
+type Map struct {
+	mu Mutex // 保护 dirty 的读写和 read 的替换 (read = newMap)
+	read atomic.Pointer[readOnly] // 只读, 可以无锁的并发读取; 替换时需要加 mu 互斥锁
+	dirty map[any]*entry // 读写时需要加 mu 互斥锁, 包含 read.m 中除 expunged (被删除) 外的全部 kv + 新写入的 kv
+	misses int // 上次提升后, 读 read.m 未命中、需要加锁读 dirty 的读操作次数
+
+  // 当 misses 的值 >= dirty 长度时, dirty 提升为 read
+}
+
+type readOnly struct {
+  m       map[any]*entry   // key extends comparable
+  // amended: false
+  //   dirty == nil, read 有全部 key, read.m 未命中时不需要查 dirty
+  // amended: true
+  //   dirty != nil, dirty 可能有 read 没有的 key, read.m 未命中时需要查 dirty
+  amended bool
+}
+
+type entry struct {
+	p atomic.Pointer[any]
+}
+```
+
+#### Go >=1.24: HashTrieMap 并发哈希字典树
+
+<!-- TODO -->
+
+| 对比     | Go ≤ 1.23                                                     | Go ≥ 1.24              |
+| -------- | ------------------------------------------------------------- | ---------------------- |
+| 数据结构 | 两个 map: read/dirty                                          | 哈希字典树 HashTrieMap |
+| 读       | read 命中无锁, 未命中如果 read.amended == true 则需要加互斥锁 | 无锁                   |
+| 写       | 写写互斥                                                      | 不同 key 可以并发写    |
+
+#### Go <=1.23: read 和 dirty 的关系
+
+1. misses 的值 >= dirty 长度时, dirty 提升为 read
+2. dirty != nil 时, read 是 dirty 的一个可能过期的只读快照, dirty 包含全部最新数据, read 中少了上次提升后新增的 key, 多了 expunged 已被删除的 kv
+
+#### 为什么要区分 nil 和 expunged 两种状态
+
+- nil: entry.p = nil 删除 read.m 中的 key 时, (CAS, Compare And Swap) 无锁的原子更新 entry.p = nil
+- expunged: 写 sync.Map 时, read.m 中没有 key 并且 dirty == nil 时, 重建 dirty: 将 read 中 entry.p == nil 的 entry 升级为 entry.p = expunged, 使用 read 中非 expunged 的 entries 初始化 dirty
+
+总结
+
+- nil: 软删除, dirty != nil 时 entry 在 read 和 dirty 中
+- expunged: 软删除, entry 只在 read 中
+- 硬删除: misses 的值 >= dirty 长度时, dirty 提升为 read
+
+sync.Map 适合读多写少的场景
+
+## Context
 
 ## Interface
 

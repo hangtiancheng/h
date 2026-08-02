@@ -27,15 +27,19 @@ render(
       onContentUpdate={onContentUpdate}
     >
       <LocationProvider>
-        <AntiCopy
-          mode="replace"
-          replaceText={(selection) =>
-            `${selection}\n\n— Copyright © ${new Date().getFullYear()} hangtiancheng. All rights reserved.
+        {import.meta.env.PROD && (
+          <AntiCopy
+            mode="replace"
+            replaceText={(selection) =>
+              `${selection}\n\n— Copyright © ${new Date().getFullYear()} hangtiancheng. All rights reserved.
 Unauthorized reproduction or distribution of this content is prohibited without prior written permission.`
-          }
-          devtools
-          onViolation={(e) => console.warn("[anti-copy]", e.type, e.key ?? "")}
-        />
+            }
+            devtools
+            onViolation={(e) =>
+              console.warn("[anti-copy]", e.type, e.key ?? "")
+            }
+          />
+        )}
         <Router>
           <Route path="/" component={DocsLayout} />
           <Route default component={DocsLayout} />

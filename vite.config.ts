@@ -15,14 +15,14 @@ import larkDocsConfig from "./lark-docs.config.js";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
-export default defineConfig(({ mode }) => {
+export default defineConfig(({ mode, command }) => {
   if (mode === "lark") {
     return {
       root: resolve(import.meta.dirname, "lark"),
       base: "/h/lark-docs/",
       plugins: [
         larkDocsPlugin({ config: larkDocsConfig }),
-        larkDocsGuardPlugin(),
+        ...(command === "build" ? [larkDocsGuardPlugin()] : []),
         tailwindcss(),
         VitePWA({
           registerType: "autoUpdate",
@@ -105,7 +105,7 @@ export default defineConfig(({ mode }) => {
     base: "/h/swifty-docs/",
     plugins: [
       swiftyDocsPlugin({ config: swiftyDocsConfig }),
-      swiftyDocsGuardPlugin(),
+      ...(command === "build" ? [swiftyDocsGuardPlugin()] : []),
       tailwindcss(),
       VitePWA({
         registerType: "autoUpdate",
