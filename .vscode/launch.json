@@ -1,6 +1,13 @@
 {
   "configurations": [
     {
+      "name": "Go",
+      "type": "go",
+      "request": "launch",
+      "mode": "debug",
+      "program": "${file}"
+    },
+    {
       "command": "pnpm main:js",
       "name": "pnpm main:js",
       "request": "launch",

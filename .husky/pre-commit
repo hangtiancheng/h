@@ -1,1 +1,6 @@
+: > src/main.js
+: > src/index.ts
+echo 'package main' > src/main.go
+git add src/main.js src/index.ts src/main.go
+
 pnpm exec lint-staged
