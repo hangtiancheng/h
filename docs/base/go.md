@@ -987,6 +987,31 @@ sync.Map 适合读多写少的场景
 
 ## Context
 
+在 goroutine 树中优雅的传递取消信号 (cancellation), 超时截止 (timeout/deadline) 和上下文变量 (value)
+
+```go
+type Context interface {
+  // deadline 截止时间, ok 该 ctx 是否设置了截止时间
+	Deadline() (deadline time.Time, ok bool)
+  // 该 ctx 被取消或超时时, 返回的 channel 会被关闭
+	Done() <-chan struct{}
+  // 返回一个错误, 表示该 ctx 被取消的时间
+  // 是主动取消 errors.New("context canceled")
+  // 还是超时 var DeadlineExceeded error = deadlineExceededError{}
+	Err() error
+  // 可以携带 kv
+	Value(key any) any
+}
+```
+
+Go的Context主要解决三个核心问题：超时控制、取消信号传播和请求级数据传递
+
+在实际项目中，我们最常用的是超时控制。比如一个HTTP请求需要调用多个下游服务，我们通过context.WithTimeout设置整体超时时间，当超时发生时，所有子操作都会收到取消信号并立即退出，避免资源浪费。取消信号的传播是通过Context的层级结构实现的，父Context取消时，所有子Context都会自动取消。
+
+```mermaid
+
+```
+
 ## Interface
 
 ## 反射
