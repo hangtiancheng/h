@@ -44,6 +44,7 @@
     "@tailwindcss/vite": "^4.3.3",
     "@types/node": "^25.9.5",
     "@types/react": "^19.2.18",
+    "@vitejs/plugin-vue-jsx": "^5.1.6",
     "concurrently": "^9.2.4",
     "eslint": "^10.8.0",
     "globals": "^17.8.0",

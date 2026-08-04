@@ -1012,7 +1012,7 @@ Context 主要解决 3 个问题
 
 ### context.Value 的查找过程
 
-调用 `ctx.Value(key)` 时, 先检查当前 context 是否有 key, 如果当前 context 没有, 则调用 parent.Value(key) 向上查找, 直到找到对应的 key 返回对应的 value, 或者到达根 context 返回 nil
+context 树: 调用 `ctx.Value(key)` 时, 先检查当前 context 是否有 key, 如果当前 context 没有, 则调用 parent.Value(key) 向上查找, 直到找到对应的 key 返回对应的 value, 或者到达根 context 返回 nil
 
 ### context 取消
 
@@ -1020,6 +1020,7 @@ context 的 3 种取消方式
 
 1. 主动取消: 使用 `context.WithCancel()` 创建的 context 返回 ctx 和 cancel 函数, 调用该 cancel 函数可以关闭 ctx 的 done channel, 所有等待该 ctx 的 goroutine 都可以通过 `ctx.Done()` 收到取消信号
 2. 超时取消: 使用 `context.WithTimeout()` 和 `context.WithDeadline` 创建的 context 调用 `time.AfterFunc` 启动定时器, 超时 timeout 或截止 deadline 时自动调用 cancel 函数关闭 ctx 的 done channel, 所有等待该 ctx 的 goroutine 都可以通过 `ctx.Done()` 收到取消信号
+3. 级联取消: 父 context 取消时, 所有子 context 会自动取消
 
 ::: code-group
 

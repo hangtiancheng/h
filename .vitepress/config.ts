@@ -3,6 +3,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig, type DefaultTheme } from "vitepress";
 import tailwindcss from "@tailwindcss/vite";
+import vueJsx from "@vitejs/plugin-vue-jsx";
 import { VitePWA } from "vite-plugin-pwa";
 import type { PluginOption } from "vite";
 
@@ -84,6 +85,7 @@ function buildNav(): DefaultTheme.NavItem[] {
 }
 
 const plugins: PluginOption[] = [
+  vueJsx(),
   tailwindcss(),
   VitePWA({
     registerType: "autoUpdate",
