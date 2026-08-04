@@ -987,7 +987,7 @@ sync.Map 适合读多写少的场景
 
 ## Context
 
-在 goroutine 树中优雅的传递取消信号 (cancellation), 超时截止 (timeout/deadline) 和上下文变量 (value)
+在 goroutine 树中优雅的传递取消信号 (cancellation), 超时控制 (deadline) 和上下文数据 (value)
 
 ```go
 type Context interface {
@@ -1004,13 +1004,73 @@ type Context interface {
 }
 ```
 
-Go的Context主要解决三个核心问题：超时控制、取消信号传播和请求级数据传递
+Context 主要解决 3 个问题
 
-在实际项目中，我们最常用的是超时控制。比如一个HTTP请求需要调用多个下游服务，我们通过context.WithTimeout设置整体超时时间，当超时发生时，所有子操作都会收到取消信号并立即退出，避免资源浪费。取消信号的传播是通过Context的层级结构实现的，父Context取消时，所有子Context都会自动取消。
+- 取消信号传递
+- 超时控制: 例如一个 HTTP 请求调用多个下游服务, 可以通过 context.WithTimeout 设置统一超时时间: 超时时, 所有子操作都可以收到取消信号并退出; 父 context 取消时, 所有子 context 都会自动取消
+- 上下文数据传递: 例如一个 HTTP 请求中, context.Value 可以传递 userId, requestId, traceId (OpenTelemetry)
 
-```mermaid
+### context.Value 的查找过程
 
+调用 `ctx.Value(key)` 时, 先检查当前 context 是否有 key, 如果当前 context 没有, 则调用 parent.Value(key) 向上查找, 直到找到对应的 key 返回对应的 value, 或者到达根 context 返回 nil
+
+### context 取消
+
+context 的 3 种取消方式
+
+1. 主动取消: 使用 `context.WithCancel()` 创建的 context 返回 ctx 和 cancel 函数, 调用该 cancel 函数可以关闭 ctx 的 done channel, 所有等待该 ctx 的 goroutine 都可以通过 `ctx.Done()` 收到取消信号
+2. 超时取消: 使用 `context.WithTimeout()` 和 `context.WithDeadline` 创建的 context 调用 `time.AfterFunc` 启动定时器, 超时 timeout 或截止 deadline 时自动调用 cancel 函数关闭 ctx 的 done channel, 所有等待该 ctx 的 goroutine 都可以通过 `ctx.Done()` 收到取消信号
+
+::: code-group
+
+```go [context.WithCancel]
+ctx, cancel := context.WithCancel(context.Background())
+
+go func() {
+	for {
+		select {
+		case <-ctx.Done():
+			fmt.Println("receive cancel signal", ctx.Err()) // context canceled
+			return
+		default:
+			fmt.Println("executing...")
+			time.Sleep(time.Second)
+		}
+	}
+}()
+
+time.Sleep(3 * time.Second)
+cancel() // close done channel
+time.Sleep(time.Second)
 ```
+
+```go [context.WithDeadline, context.WithTimeout]
+ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+defer cancel()
+
+// 5s 耗时操作
+result := make(chan string, 1)
+go func() {
+	time.Sleep(5 * time.Second)
+	result <- "done"
+}()
+
+select {
+case res := <-result:
+	fmt.Println("fulfilled:", res)
+case <-ctx.Done():
+	fmt.Println("timeout:", ctx.Err()) // context deadline exceeded
+}
+
+deadline := time.Now().Add(5 * time.Second)
+ctx2, cancel2 := context.WithDeadline(context.Background(), deadline)
+defer cancel2()
+
+<-ctx2.Done() // 阻塞, 直到 deadline 截止
+fmt.Println(ctx2.Err()) // context deadline exceeded
+```
+
+:::
 
 ## Interface
 
