@@ -32,7 +32,7 @@
     "git:commit:ci": "git add -A && git commit -m \"ci: Deploy homepage\"",
     "git:push": "pnpm git:commit && git push origin main",
     "git:push:ci": "pnpm git:commit:ci && git push origin main",
-    "pwa": "pnpm dlx @vite-pwa/assets-generator --preset minimal docs/public/favicon.svg"
+    "pwa": "pnpm dlx @vite-pwa/assets-generator --preset minimal public/favicon.svg"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

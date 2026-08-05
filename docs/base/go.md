@@ -1073,11 +1073,50 @@ fmt.Println(ctx2.Err()) // context deadline exceeded
 
 :::
 
+## GMP
+
+GMP 调度模型
+
+- G: Goroutine, 协程: (async task)
+- M: Machine 线程 (executor of async task)
+- P: Processor 逻辑 CPU (async task queue)
+
+GOMAXPROCS: Processor 处理器数量, 默认 GOMAXPROCS == CPU 数量 `runtime.NumCPU()`
+
+每个 Processor 维护一个就绪本地 goroutine 队列 (runq), 是一个容量 256 goroutines 的环形缓冲区
+
+```txt
+  全局 goroutine 队列 (global runq)
+    │
+┌────Processor ──────────────────────┐
+│  本地 goroutine 队列 (local runq)  │
+│  [G0][G1][G2]...[G255]             │
+└────────────────────────────────────┘
+    │
+  Machine (线程) 取出 Goroutine 执行
+```
+
+- Machine 线程必须绑定 Processor 逻辑 CPU 才能执行 Goroutine
+- 每个 Processor 维护一个本地 goroutine 队列
+- 入队: Goroutine 优先加入 Processor 的本地 goroutine 队列
+- 出队: 绑定到该 Processor 的 Machine 从本地 goroutine 队列头取出 Goroutine 执行
+- 本地 goroutine 队列满: 本地 goroutine 队列满 256 个时, 转移 1/2 的 goroutines 到全局队列
+- 本地 goroutine 队列空: Processor 先尝试从全局 goroutine 队列中取「一批」goroutine, 再尝试从 netpoll、其他 Processor 中偷「一半」的 goroutine (work stealing)
+
+数量: Goroutine >> Machine ≈ Processor
+
+为什么需要 Processor
+
+- 如果没有 Processor (的本地 goroutine 队列), 则所有的 Machine 都去全局队列取任务 -> 需要加互斥锁
+- 有 Processor (的本地 goroutine 队列):
+  - 一个 Processor 的本地 goroutine 队列通常只有一个 Machine 在消费 -> 不需要加锁
+  - 只有当本地 goroutine 队列空时
+    - Processor 先尝试从全局 goroutine 队列中取「一批」goroutines -> 加互斥锁
+    - Processor 再尝试从其他 Processor 中偷「一半」的 goroutines (work stealing) -> CAS + 自旋
+
 ## Interface
 
 ## 反射
-
-## GMP
 
 ## 内存管理
 

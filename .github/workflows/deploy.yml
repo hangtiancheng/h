@@ -45,6 +45,8 @@ jobs:
           DOCS_PASSWORD: ${{ secrets.DOCS_PASSWORD }}
       - name: Build with lark-docs
         run: pnpm build:lark
+        env:
+          DOCS_PASSWORD: ${{ secrets.DOCS_PASSWORD }}
       - name: Merge swifty-docs site into /h/swifty-docs/
         run: |
           mkdir -p ./.vitepress/dist/swifty-docs
@@ -63,9 +65,8 @@ jobs:
         uses: actions/upload-pages-artifact@v3
         with:
           path: ./.vitepress/dist
-
   deploy:
-    if: "${{ github.event_name == 'workflow_dispatch' || github.event.head_commit.message == 'ci: Deploy homepage' }}"
+    if: "${{ github.event_name == 'workflow_dispatch' }}"
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

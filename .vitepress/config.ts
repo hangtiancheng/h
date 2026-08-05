@@ -12,19 +12,14 @@ const docsDir = join(rootDir, "../docs");
 
 function getShallowDirs() {
   return readdirSync(docsDir, { withFileTypes: true })
-    .filter(
-      (entry) =>
-        entry.isDirectory() &&
-        !entry.name.startsWith(".") &&
-        entry.name !== "public",
-    )
+    .filter((entry) => entry.isDirectory() && !entry.name.startsWith("."))
     .map((entry) => entry.name)
     .sort((a, b) => a.localeCompare(b));
 }
 
 function buildItems(dir: string): DefaultTheme.SidebarItem[] {
   return readdirSync(join(docsDir, dir), { withFileTypes: true })
-    .filter((entry) => !entry.name.startsWith(".") && entry.name !== "public")
+    .filter((entry) => !entry.name.startsWith("."))
     .sort((a, b) => a.name.localeCompare(b.name, "en", { numeric: true }))
     .flatMap((entry): DefaultTheme.SidebarItem[] => {
       if (entry.isDirectory()) {
@@ -107,22 +102,22 @@ const plugins: PluginOption[] = [
       start_url: "/h/",
       icons: [
         {
-          src: "pwa-64x64.png",
+          src: "/h/pwa-64x64.png",
           sizes: "64x64",
           type: "image/png",
         },
         {
-          src: "pwa-192x192.png",
+          src: "/h/pwa-192x192.png",
           sizes: "192x192",
           type: "image/png",
         },
         {
-          src: "pwa-512x512.png",
+          src: "/h/pwa-512x512.png",
           sizes: "512x512",
           type: "image/png",
         },
         {
-          src: "maskable-icon-512x512.png",
+          src: "/h/maskable-icon-512x512.png",
           sizes: "512x512",
           type: "image/png",
           purpose: "maskable",
