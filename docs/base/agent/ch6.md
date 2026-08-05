@@ -197,7 +197,7 @@ bwrap \
 bash -C "用户命令"
 ```
 
-seccomp 在系统调用入口过滤: 可以禁止 ptrace 防止调试注入、禁止 mount 防止重新挂载文件系统以逃逸命名空间
+seccomp 在 System Call 入口过滤: 可以禁止 ptrace 防止调试注入、禁止 mount 防止重新挂载文件系统以逃逸命名空间
 
 ### 禁止写项目目录内的敏感路径
 

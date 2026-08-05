@@ -846,7 +846,7 @@ func sync_runtime_canSpin(i int) bool {
   }
   if !runqempty() { // runq 非空
     // runq: Processor 环形 goroutine 等待队列
-    // 存放已就绪、等待被 Machine 执行的 goroutine
+    // 存放可运行、等待被 Machine 执行的 goroutine
     return false
   }
   // ...
@@ -1083,7 +1083,7 @@ GMP 调度模型
 
 GOMAXPROCS: Processor 处理器数量, 默认 GOMAXPROCS == CPU 数量 `runtime.NumCPU()`
 
-每个 Processor 维护一个就绪本地 goroutine 队列 (runq), 是一个容量 256 goroutines 的环形缓冲区
+每个 Processor 维护一个可运行的本地 goroutine 队列 (runq), 是一个容量 256 goroutines 的环形缓冲区
 
 ```txt
   全局 goroutine 队列 (global runq)
@@ -1101,37 +1101,58 @@ GOMAXPROCS: Processor 处理器数量, 默认 GOMAXPROCS == CPU 数量 `runtime.
 - 入队: Goroutine 优先加入 Processor 的本地 goroutine 队列
 - 出队: 绑定到该 Processor 的 Machine 从本地 goroutine 队列头取出 Goroutine 执行
 - 本地 goroutine 队列满: 本地 goroutine 队列满 256 个时, 转移 1/2 的 goroutines 到全局队列
-- 本地 goroutine 队列空: Processor 先尝试从全局 goroutine 队列中取「一批」goroutine, 再尝试从 netpoll、其他 Processor 中偷「一半」的 goroutine (work stealing)
+- 本地 goroutine 队列空: Processor 先尝试从全局 goroutine 队列中取「一批」goroutines, 再尝试从 netpoll 中取「一批」goroutines、其他 Processor 中偷「一半」的 goroutines (work stealing)
 
 数量: Goroutine >> Machine ≈ Processor
 
 ### Go scheduler
 
-Go scheduler 是 Go runtime 的 goroutine 调度器, 负责将 goroutine 调度到 OS 线程 (Machine) 上执行, 决定哪个 goroutine 在哪个 Machine 上执行, 调度的时机; 调度器的 schedule() 函数, 无限循环的从 Processor 的本地 goroutine 队列、netpoll 或全局 goroutine 队列中找到就绪的 goroutine, 通过 execute() 调度该 goroutine 执行; 当该 goroutine 主动让出 CPU (例如 channel 阻塞, runtime.Gosched) 或者被抢占时, schedule() 开始下一轮调度
+Go scheduler 是 Go runtime 的 goroutine 调度器, 负责将 goroutine 调度到 OS 线程 (Machine) 上执行, 决定哪个 goroutine 在哪个 Machine 上执行, 调度的时机; 调度器的 schedule() 函数, 无限循环的从 Processor 的本地 goroutine 队列、netpoll 或全局 goroutine 队列中找到可运行的 goroutine, 通过 execute() 调度该 goroutine 执行; 当该 goroutine 主动让出 CPU (例如 channel 阻塞, runtime.Gosched) 或者被抢占时, schedule() 开始下一轮调度
 
 Go 使用抢占式调度
 
 - sysmon 监控线程运行在 Machine 上, 并且不需要绑定 Processor; sysmon 每隔一段时间检查所有的 Processor, 发现某个 goroutine 在 Machine 上运行超过 10ms 时, 判定需要抢占
-- sysmon 向运行该 goroutine 的 Machine 发送 SIGURG 信号; 信号处理代码在 Machine 的 gsignal 栈上运行, 修改被中断的上下文, 该 goroutine 被放回 Processor 的本地队列, Machine 重新执行 schedule() 调度
+- sysmon 向运行该 goroutine 的 Machine 发送 SIGURG 信号; 信号处理代码在 Machine 的 gsignal 栈上运行, 修改被中断的上下文, 该 goroutine 被放回 Processor 的本地队列尾部, Machine 重新执行 schedule() 调度循环
 
 ### 调度的时机
 
-1. 等待读取无缓冲、无发送者的 channel, 或者带缓冲、缓冲区全空的 channel
-2. 等待写入无缓冲、无接收者的 channel, 或者带缓冲、缓冲区全满的 channel
-3. `time.Sleep()`
-4. 等待互斥锁 (mutex) 释放
-5. 系统调用
+1. 等待互斥锁 (mutex) 释放
+2. 等待读取无缓冲、无发送者的 channel, 或者带缓冲、缓冲区全空的 channel
+3. 等待写入无缓冲、无接收者的 channel, 或者带缓冲、缓冲区全满的 channel
+4. `time.Sleep()`: 阻塞 goroutine
+5. `runtime.Gosched()`: 主动让出 CPU, 该 goroutine 被放回全局 goroutine 队列尾部
+6. System Call: 阻塞 Machine OS 线程
 
-### 为什么需要 Processor
+### Machine 查找可运行的 goroutine 的过程
 
-- 如果没有 Processor (的本地 goroutine 队列), 则所有的 Machine 都去全局队列取任务 -> 需要加互斥锁
-- 有 Processor (的本地 goroutine 队列):
-  - 一个 Processor 的本地 goroutine 队列通常只有一个 Machine 在消费 -> 不需要加锁
-  - 只有当本地 goroutine 队列空时
-    - Processor 先尝试从全局 goroutine 队列中取「一批」goroutines -> 加互斥锁
-    - Processor 再尝试从其他 Processor 中偷「一半」的 goroutines (work stealing) -> CAS + 自旋
+1. Machine 先尝试从本地 goroutine 队列中取一个 goroutine, 一个 Processor 的本地 goroutine 队列通常只有一个 Machine 在消费 -> 不需要加锁
+2. Machine 再尝试从全局 goroutine 队列中取一批 goroutines -> 加互斥锁
+3. Machine 再尝试从 netpoll 网络轮询器中取一批 goroutines -> epoll 非阻塞
+4. Machine 尝试从其他 Processor 中偷被偷者一半的 goroutines (work stealing) -> CAS + 自旋
 
-等待读取
+### GMP 为什么需要 Processor
+
+- 如果没有 Processor (的本地 goroutine 队列), 则所有的 Machine 都去全局队列取任务 -> 需要加互斥锁; 高并发场景下锁竞争激烈
+- 一个 Processor 的本地 goroutine 队列通常只有一个 Machine 在消费 -> 不需要加锁
+
+### Processor 和 Machine 的创建时机
+
+<!-- cSpell: words sched maxmcount newm newosproc mstart -->
+
+- Processor 创建时机: 调度器初始化时, 一次性创建 GOMAXPROCS 个 Processor 对象, 存储到全局数组中; 只有调用 `runtime.GOMAXPROCS(n)`,并且 n > 当前 Processor 数量时, 才会创建新的 Processor
+- Machine 创建时机: Machine 按需创建, 初始化时只有 m0 (Go 启动时创建的第一个 Machine), 以下情况会创建新的 Machine
+  - 所有 Machine 都在执行阻塞的 system call, 但是有可运行的 goroutine 等待执行
+  - 没有空闲的 Machine 可以绑定 Processor 执行 goroutine
+- Machine 的数量受到 runtime 的 sched.maxmcount 限制 (默认 10_000), 可以调用 runtime 的 `debug.SetMaxThreads()` 调整
+- 新的 Machine 由 runtime 调用 `newm()` 创建: `newm()` 先为该 Machine 分配独立的 g0, 再调用 `newosproc()` 创建新的 OS 线程; Machine 创建完成后, 新的 Machine 进入 mstart() 开始调度循环
+
+```go
+
+```
+
+### m0 是什么?
+
+m0 是 Go 启动时创建的第一个 Machine
 
 ## Interface
 
