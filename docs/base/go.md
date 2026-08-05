@@ -1105,7 +1105,24 @@ GOMAXPROCS: Processor 处理器数量, 默认 GOMAXPROCS == CPU 数量 `runtime.
 
 数量: Goroutine >> Machine ≈ Processor
 
-为什么需要 Processor
+### Go scheduler
+
+Go scheduler 是 Go runtime 的 goroutine 调度器, 负责将 goroutine 调度到 OS 线程 (Machine) 上执行, 决定哪个 goroutine 在哪个 Machine 上执行, 调度的时机; 调度器的 schedule() 函数, 无限循环的从 Processor 的本地 goroutine 队列、netpoll 或全局 goroutine 队列中找到就绪的 goroutine, 通过 execute() 调度该 goroutine 执行; 当该 goroutine 主动让出 CPU (例如 channel 阻塞, runtime.Gosched) 或者被抢占时, schedule() 开始下一轮调度
+
+Go 使用抢占式调度
+
+- sysmon 监控线程运行在 Machine 上, 并且不需要绑定 Processor; sysmon 每隔一段时间检查所有的 Processor, 发现某个 goroutine 在 Machine 上运行超过 10ms 时, 判定需要抢占
+- sysmon 向运行该 goroutine 的 Machine 发送 SIGURG 信号; 信号处理代码在 Machine 的 gsignal 栈上运行, 修改被中断的上下文, 该 goroutine 被放回 Processor 的本地队列, Machine 重新执行 schedule() 调度
+
+### 调度的时机
+
+1. 等待读取无缓冲、无发送者的 channel, 或者带缓冲、缓冲区全空的 channel
+2. 等待写入无缓冲、无接收者的 channel, 或者带缓冲、缓冲区全满的 channel
+3. `time.Sleep()`
+4. 等待互斥锁 (mutex) 释放
+5. 系统调用
+
+### 为什么需要 Processor
 
 - 如果没有 Processor (的本地 goroutine 队列), 则所有的 Machine 都去全局队列取任务 -> 需要加互斥锁
 - 有 Processor (的本地 goroutine 队列):
@@ -1113,6 +1130,8 @@ GOMAXPROCS: Processor 处理器数量, 默认 GOMAXPROCS == CPU 数量 `runtime.
   - 只有当本地 goroutine 队列空时
     - Processor 先尝试从全局 goroutine 队列中取「一批」goroutines -> 加互斥锁
     - Processor 再尝试从其他 Processor 中偷「一半」的 goroutines (work stealing) -> CAS + 自旋
+
+等待读取
 
 ## Interface
 
