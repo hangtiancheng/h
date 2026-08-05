@@ -215,3 +215,6 @@ dist-lark/
 
 .playwright-cli/
 **/.playwright-cli/
+
+.qoder/
+**/.qoder/

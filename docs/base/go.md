@@ -1121,7 +1121,7 @@ Go 使用抢占式调度
 3. 等待写入无缓冲、无接收者的 channel, 或者带缓冲、缓冲区全满的 channel
 4. `time.Sleep()`: 阻塞 goroutine
 5. `runtime.Gosched()`: 主动让出 CPU, 该 goroutine 被放回全局 goroutine 队列尾部
-6. System Call: 阻塞 Machine OS 线程
+6. 系统调用: 阻塞 Machine OS 线程
 
 ### Machine 查找可运行的 goroutine 的过程
 
@@ -1137,17 +1137,65 @@ Go 使用抢占式调度
 
 ### Processor 和 Machine 的创建时机
 
-<!-- cSpell: words sched maxmcount newm newosproc mstart -->
+<!-- cSpell: words sched maxmcount newm newosproc mstart Flock LOCK_EX -->
 
 - Processor 创建时机: 调度器初始化时, 一次性创建 GOMAXPROCS 个 Processor 对象, 存储到全局数组中; 只有调用 `runtime.GOMAXPROCS(n)`,并且 n > 当前 Processor 数量时, 才会创建新的 Processor
 - Machine 创建时机: Machine 按需创建, 初始化时只有 m0 (Go 启动时创建的第一个 Machine), 以下情况会创建新的 Machine
-  - 所有 Machine 都在执行阻塞的 system call, 但是有可运行的 goroutine 等待执行
+  - 所有 Machine 都在执行阻塞的系统调用, 但是有可运行的 goroutine 等待执行
   - 没有空闲的 Machine 可以绑定 Processor 执行 goroutine
-- Machine 的数量受到 runtime 的 sched.maxmcount 限制 (默认 10_000), 可以调用 runtime 的 `debug.SetMaxThreads()` 调整
+- Machine 的数量受到 runtime 的 sched.maxmcount 限制 (默认 10_000), 可以调用 `debug.SetMaxThreads()` 调整
 - 新的 Machine 由 runtime 调用 `newm()` 创建: `newm()` 先为该 Machine 分配独立的 g0, 再调用 `newosproc()` 创建新的 OS 线程; Machine 创建完成后, 新的 Machine 进入 mstart() 开始调度循环
 
 ```go
+package main
 
+import (
+	"fmt"
+	"os"
+	"runtime"
+	"runtime/debug"
+	"syscall"
+	"time"
+)
+
+func main() {
+	// Processor 数量 2
+	runtime.GOMAXPROCS(2)
+	// Machine 数量上限: sched.maxmcount
+	// 可以调用 debug.SetMaxThreads() 调整 sched.maxmcount
+	debug.SetMaxThreads(100)
+
+	path := os.TempDir() + "/flock-demo"
+	os.WriteFile(path, nil, 0o644)
+	defer os.Remove(path)
+
+	// goroutine 0 先占有文件锁 3s
+	go func() {
+		f, _ := os.OpenFile(path, os.O_RDONLY, 0)
+		syscall.Flock(int(f.Fd()), syscall.LOCK_EX)
+		time.Sleep(3 * time.Second)
+		f.Close()
+	}()
+	time.Sleep(100 * time.Millisecond)
+
+	// 5 个 goroutine 全部阻塞在 flock 系统调用上等待锁
+	// 所有 Machine 都在执行阻塞的系统调用, 没有空闲的 Machine 可以绑定 Processor
+	// 但是有可运行的 goroutine 等待执行
+	// runtime 调用 newm() 创建新的 Machine, Machine 数量超过 GOMAXPROCS (2)
+	for i := 1; i <= 5; i++ {
+		go func(id int) {
+			f, _ := os.OpenFile(path, os.O_RDONLY, 0)
+			syscall.Flock(int(f.Fd()), syscall.LOCK_EX) // 阻塞的系统调用
+			fmt.Println("goroutine", id, "acquired the lock")
+			f.Close()
+		}(i)
+	}
+
+	// 验证 Machine (threads) 数量
+  // go build -o ./main ./src/main.go
+	// GODEBUG=schedtrace=1000 ./main
+	time.Sleep(5 * time.Second)
+}
 ```
 
 ### m0 是什么?
