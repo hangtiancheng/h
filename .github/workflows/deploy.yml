@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   build:
-    if: "${{ github.event_name == 'workflow_dispatch' || github.event.head_commit.message == 'ci: Deploy homepage' }}"
+    if: "${{ github.event_name == 'workflow_dispatch' }}"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

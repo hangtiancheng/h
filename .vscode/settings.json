@@ -46,6 +46,7 @@
     "nums",
     "oxfmt",
     "Println",
+    "processlist",
     "RDONLY",
     "Renderless",
     "retargeted",
@@ -67,6 +68,5 @@
     "worktree",
     "xlink",
     "zerobase"
-  ],
-  "livePreview.defaultPreviewPath": "/src/css/index.html"
+  ]
 }
