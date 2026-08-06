@@ -474,7 +474,7 @@ MVCC: 使用版本链, 控制并发事务读写同一条记录时的行为, 称�
 #### 记录中的 2 个隐藏列
 
 - trx_id: 创建/更新该条记录的事务 id, 长度 6 个字节
-- roll_pointer: 指向该条记录上个版本 (写入到 undo log 重做日志) 的指针, 长度 7 个字节
+- roll_pointer: 指向该条记录上个版本 (写入到 undo log 回滚日志) 的指针, 长度 7 个字节
 
 ```js
 if (trx_id < min_trx_id) {
@@ -539,7 +539,7 @@ mysql -u <username> -p<password> [<database_name>] < ./backup.sql
 
 #### 表锁 (table S, table X)
 
-- 表共享锁 (Sharded Lock, table S): 允许共享读本表, 允许本线程写本表, 不允许其他线程写本表
+- 表共享锁 (Shared Lock, table S): 允许共享读本表, 允许本线程写本表, 不允许其他线程写本表
 - 表排他锁 (Exclusive Lock, table X): 允许本线程读写本表, 不允许其他线程读写本表
 
 ```sql
@@ -1026,9 +1026,9 @@ create table <table_name> (
 )
 
 -- 修改子表时, 添加从子表某列指向父表某列的外键
-alter table <table_name> add constraint <foreignKeyName> foreign key (<column_name>) references <foreignTableName> <foreignColumnName>;
+alter table <table_name> add constraint <foreignKeyName> foreign key (<column_name>) references <foreignTableName> (<foreignColumnName>);
 -- e.g. 添加从 t_emp 员工表 (子表) dep_id 字段指向 t_dep 部门表 (父表) id 字段的外键
-alter table t_emp add constraint fk_emp_dep_id foreign key (dep_id) references t_dep id;
+alter table t_emp add constraint fk_emp_dep_id foreign key (dep_id) references t_dep (id);
 
 -- 删除外键
 alter table <table_name> drop foreign key <foreignKeyName>;
@@ -1181,8 +1181,8 @@ where (job, salary) in (
 )
 
 select e.*, d.* from (
-  select * from t_emp where birthday >= "2002-02-28" as e left outer join t_dep as d on e.dep_id = d.id
-)
+  select * from t_emp where birthday >= "2002-02-28"
+) as e left outer join t_dep as d on e.dep_id = d.id
 ```
 
 ### 事务
@@ -1397,7 +1397,7 @@ show profile cpu for query <queryID>;
 
 ```shell
 # /etc/my.cnf 开启慢查询日志
-show_query_log=1
+slow_query_log=1
 # sql 查询时间超过 2s 时, 记录慢查询日志
 long_query_time=2
 

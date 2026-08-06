@@ -1200,7 +1200,7 @@ func main() {
 
 ### m0 是什么?
 
-m0 是 Go 启动时创建的第一个 Machine
+m0 是 Go 启动时创建的第一个 Machine, m0 即主线程, 在 Go 程序的整个生命周期中都存在; 与其他使用 `runtime.newm()` 动态创建的 Machine 不同, m0 是在程序初始化阶段静态分配的, 有
 
 ## Interface
 

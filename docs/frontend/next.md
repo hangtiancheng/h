@@ -1312,7 +1312,7 @@ export default function Login() {
 - formAction 可以作为 form 属性传递给表单组件, 或作为 formAction 属性传递给表单中的按钮组件
 
 ```ts
-const [state, formAction, isPending] = useActionsState<IState, FormData>(
+const [state, formAction, isPending] = useActionState<IState, FormData>(
   action, // (oldState: IState, formData: FormData) => Promise<IState>
   initialState, // IState
 );

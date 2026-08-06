@@ -309,7 +309,7 @@ text-overflow 生效的前提是: 块级元素显式设置 overflow 为 hidden, 
 1. px 像素
 2. em 相对当前元素 font-size 的倍数, 如果当前元素未设置 font-size, 则继承父元素的 font-size
 3. rem 相对根元素 (html) font-size 的倍数
-4. % 相对包含块 font-size 的倍数
+4. % 相对参考值的百分比, 例如 width 参考包含块 width, font-size 参考父元素 font-size
 5. vw: viewport width, 1vw = 视口宽度的 1%
 6. vh: viewport height, 1vh = 视口高度的 1%
 7. vmax: vmax = Math.max(vw, vh)

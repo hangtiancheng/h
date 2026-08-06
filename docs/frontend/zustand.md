@@ -514,7 +514,7 @@ export default useKunStore;
 ```
 
 ```tsx [@/App.tsx]
-import { useShallow } from "zustand/shallow";
+import { useShallow } from "zustand/react/shallow";
 import useKunStore from "./stores/kun";
 
 export default function App() {
@@ -638,7 +638,7 @@ export default useUserStore;
 
 ```tsx [未使用 subscribe 订阅]
 import useUserStore from "./stores/user";
-import { useShallow } from "zustand/shallow";
+import { useShallow } from "zustand/react/shallow";
 
 function Update() {
   const { setName, incAge, decAge } = useUserStore();

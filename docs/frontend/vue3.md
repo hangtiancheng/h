@@ -659,7 +659,7 @@ const watchHandle = watchEffect(
 
 setup 语法糖中, 将 beforeCreate, created 合并为 setup
 
-组件的生命周期: setup -> onBeforeMount -> onMounted -> onBeforeUpdate -> onUpdated -> onBeforeUnmount -> onUnmount
+组件的生命周期: setup -> onBeforeMount -> onMounted -> onBeforeUpdate -> onUpdated -> onBeforeUnmount -> onUnmounted
 
 1. setup 创建阶段
 2. onBeforeMount 挂载前, 获取不到 DOM

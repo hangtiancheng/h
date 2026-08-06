@@ -77,7 +77,7 @@ root.render(
 # 检查配置文件是否有语法错误
 nginx -t
 # 重新加载配置文件
-nginx -s reload c
+nginx -s reload
 ```
 
 ```txt

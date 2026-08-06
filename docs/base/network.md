@@ -123,7 +123,7 @@ https://www.example.com/path/to/index.html
 1. seq (sequence number) 序列号, 随机生成
 2. ack (acknowledgement number) 确认号, ack = seq + 1
 3. ACK, ACK = 1 确认
-4. SYN (synchronous) SYN 默认 0, SYN = 1 表示请求同步连接
+4. SYN (synchronize) SYN 默认 0, SYN = 1 表示请求同步连接
 5. FIN (finish) FIN 默认 0, FIN = 1 表示请求终止连接
 
 ```shell
@@ -1266,7 +1266,7 @@ fetch("http://localhost:3000")
 
 XMLHttpRequest 或 fetch, 页面卸载可能导致数据丢失; `navigator.sendBeacon` 不会受到页面卸载的影响, 可以发送跨域请求
 
-- `navigator.sendBeacon` 只能发送 GET 请求或 POST 请求
+- `navigator.sendBeacon` 只能发送 POST 请求
 - 不能自定义请求头
 - 只能传输少量数据 (\<= 64KB)
 - 只能传输 ArrayBuffer, ArrayBufferView, Blob, DOMString, FormData 或 URLSearchParams 类型的数据
@@ -1336,7 +1336,7 @@ Service Worker 还可以:
 ```bash
 User-Agent: * # 搜索引擎爬虫, 例如 Googlebot, Bingbot, ...
 
-Disallow: /api/ # 不允许搜索引擎爬虫访问 /private/ 路径下的页面
+Disallow: /api/ # 不允许搜索引擎爬虫访问 /api/ 路径下的页面
 Disallow: /index.html # 不允许搜索引擎爬虫访问 /index.html
 
 Allow: / # 允许搜索引擎爬虫访问 / 路径下的页面

@@ -191,11 +191,11 @@ React 中有两颗 Fiber 树
 
 ### requestIdleCallback, React 调度器
 
-requestIdleCallback: 当前帧的空闲时间, 执行传递的 callback; callback 有两个参数 deadline, options
+requestIdleCallback: 当前帧的空闲时间, 执行传递的 callback, callback 有一个参数 deadline
 
 - deadline.timeRemaining() 当前帧的剩余时间 (ms)
-- deadline.didTimeout() 返回是否因为超时而强制执行 callback
-- options: 例 `{ timeout: 1000 }`, 指定超时时间, 如果 1000ms 内没有空闲时间, 则强制执行 callback
+- deadline.didTimeout 返回是否因为超时而强制执行 callback
+- requestIdleCallback 有一个可选参数 options: 例 `{ timeout: 1000 }`, 指定超时时间, 如果 1000ms 内没有空闲时间, 则强制执行 callback
 
 ```js
 // requestIdleCallback 示例
@@ -865,7 +865,7 @@ startTransition(() => {
 // React 的优先级
 const Immediate = 1; // 立即执行, 例如动画
 const UserBlocking = 2; // 用户交互
-const Normal = 3; // 用户交互
+const Normal = 3; // 默认
 const Low = 4; // 低优先级
 const Idle = 5; // 空闲时执行, 例如 console.log()
 ```
@@ -1864,7 +1864,7 @@ export default function App() {
 - formAction 可以作为 form 属性传递给表单组件, 或作为 formAction 属性传递给表单中的按钮组件
 
 ```ts
-const [state, formAction, isPending] = useActionsState<IState, FormData>(
+const [state, formAction, isPending] = useActionState<IState, FormData>(
   action, // (oldState: IState, formData: FormData) => Promise<IState>
   initialState, // IState
 );

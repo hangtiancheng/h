@@ -65,6 +65,8 @@
     "unstub",
     "vdom",
     "vitepress",
+    "vmax",
+    "vmin",
     "worktree",
     "xlink",
     "zerobase"
