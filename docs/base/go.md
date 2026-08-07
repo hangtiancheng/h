@@ -1144,7 +1144,7 @@ Go 使用抢占式调度
   - 所有 Machine 都在执行阻塞的系统调用, 但是有可运行的 goroutine 等待执行
   - 没有空闲的 Machine 可以绑定 Processor 执行 goroutine
 - Machine 的数量受到 runtime 的 sched.maxmcount 限制 (默认 10_000), 可以调用 `debug.SetMaxThreads()` 调整
-- 新的 Machine 由 runtime 调用 `newm()` 创建: `newm()` 先为该 Machine 分配独立的 g0, 再调用 `newosproc()` 创建新的 OS 线程; Machine 创建完成后, 新的 Machine 进入 mstart() 开始调度循环
+- 新的 Machine 调用 `runtime.newm()` 创建: `newm()` 先为该 Machine 分配独立的 g0, 再调用 `newosproc()` 创建新的 OS 线程; Machine 创建完成后, 新的 Machine 执行 mstart() 调度循环
 
 ```go
 package main
@@ -1200,7 +1200,29 @@ func main() {
 
 ### m0 是什么?
 
-m0 是 Go 启动时创建的第一个 Machine, m0 即主线程, 在 Go 程序的整个生命周期中都存在; 与其他使用 `runtime.newm()` 动态创建的 Machine 不同, m0 是在程序初始化阶段静态分配的, 有
+m0 即主线程, 是编译器确定的全局变量 `runtime.m0`, 是 Go 运行时的第一个 Machine, 在 Go 程序的整个生命周期中都存在; 后续其他 Machine 通过 `runtime.newm()` 动态创建
+
+m0/g0 (系统 goroutine) 负责调度器的初始化、内存分配器初始化、垃圾回收器设置, 通过 `runtime.newproc` 创建第一个用户 goroutine `runtime.main()`, 再执行 `mstart()` 调度循环; `runtime.main` 被调度执行后, 先调用所有包的 `init()` 函数, 最后调用 `main.main`
+
+Go 程序运行期间, m0 也参与 goroutine 调度, 和其他 Machine 没有区别; 程序退出时 m0 负责清理工作, 例如等待其他 goroutine 结束, 执行 defer 函数等
+
+### g0 是什么?
+
+g0 是系统 goroutine, 不是用户 goroutine, 负责执行调度器代码; 每个 Machine 都有自己的 g0, g0 直接使用 OS 线程栈 (macOS 默认 512K, Linux 默认 8MB), 而用户 goroutine 使用 runtime 管理的可动态增长的连续栈, 初始栈大小仅 2KB
+
+> g0 的核心职责
+
+g0 的核心职责是执行调度循环: `schedule()` -> 选择下一个可运行的用户 goroutine -> 切换到该用户 goroutine 执行; 通常 Machine 在用户 goroutine 上运行用户代码, 发生调度事件时, 例如 (用户 goroutine 阻塞/抢占/结束、系统调用返回), Machine 会切换到 g0 执行调度器代码, 选择下一个可运行的用户 goroutine, 再切换到该用户 goroutine 执行
+
+> 为什么需要 g0
+
+- 用户 goroutine 的初始栈大小仅 2KB, 并且需要动态增长
+- g0 直接使用 OS 线程栈, 提供独立、稳定的执行环境
+- 调度器代码如果运行在用户 goroutine 的栈上, 栈空间可能不足, 也无法安全的动态增长 (正在执行调度的 goroutine 不能被重新调度), 可能导致递归调度问题
+
+### 如何切换 g0 栈和用户栈
+
+g0 和用户 goroutine 的切换, 本质是 SP (Stack Pointer)、PC (Program Counter)、BP (Base Pointer) 等寄存器的保存与恢复, SP 的切换即 g0 和用户 goroutine 的栈切换
 
 ## Interface
 

@@ -43,6 +43,7 @@
     "mouseout",
     "navigations",
     "netpoll",
+    "newproc",
     "nums",
     "oxfmt",
     "Println",

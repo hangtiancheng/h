@@ -3,8 +3,8 @@ name: Deploy https://hangtiancheng.github.io/h homepage
 on:
   push:
     branches: [main]
-
-  workflow_dispatch:
+    paths:
+      - 'docs/**'
 
 permissions:
   contents: read
@@ -17,7 +17,6 @@ concurrency:
 
 jobs:
   build:
-    if: "${{ github.event_name == 'workflow_dispatch' }}"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -66,7 +65,6 @@ jobs:
         with:
           path: ./.vitepress/dist
   deploy:
-    if: "${{ github.event_name == 'workflow_dispatch' }}"
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
