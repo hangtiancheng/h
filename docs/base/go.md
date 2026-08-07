@@ -1226,6 +1226,111 @@ g0 和用户 goroutine 的切换, 本质是 SP (Stack Pointer)、PC (Program Cou
 
 ## Interface
 
+### interface 底层原理
+
+Go 的 interface 底层有两种数据结构: eface 和 iface
+
+- static type: 静态类型, 即接口类型
+- dynamic type: 动态类型, 例如 *os.File
+- dynamic value: 动态值, 动态类型的实例
+- eface: 空接口 interface{} 的底层实现, 包含两个指针
+  - _type 类型指针, 指向动态类型
+  - data 数据指针, 指向动态值 (任意类型)
+- iface: 非空接口的底层实现, 包含 itab 和 data
+  - itab 存储动态类型 (例如 *os.File)、接口类型 (例如 io.Reader)、方法表, 方法表是函数指针数组, 保存该动态类型实现的所有接口方法的地址
+  - data 数据指针, 指向动态值
+
+::: code-group
+
+```go [eface]
+type eface struct {
+  _type *_type
+  data  unsafe.Pointer
+}
+```
+
+```go [iface]
+type iface struct {
+  tab  *itab
+  data unsafe.Pointer
+}
+```
+
+:::
+
+### eface 和 iface 的区别
+
+eface 和 iface 的核心区别是: 是否包含方法信息
+
+- eface: 空接口 interface{} 的底层实现, 不包含方法信息
+- iface: 非空接口的底层实现, 包含 itab 和 data; itab 存储动态类型 (例如 *os.File)、接口类型 (例如 io.Reader)、方法表, 方法表是函数指针数组, 保存该动态类型实现的所有接口方法的地址
+
+### 类型转换和类型断言
+
+- 类型转换 `T(value)`
+  - 编译期确定的强制类型转换
+  - 编译期保证类型安全
+- 类型断言 `value.(T)`
+  - 将一个接口类型断言为另一个接口类型或动态类型
+  - 运行时可能类型断言抛出错误 `typed, ok := untyped.(string)`
+
+### 接口值
+
+```go
+var a any // a 是一个接口值, 接口类型 (静态类型) 为 any (interface{})
+var w io.Writer // w 是一个接口值, 接口类型 (静态类型) 为 io.Writer
+```
+
+接口值 == nil: 动态类型和动态值都为 nil
+
+### 接口值之间的比较
+
+接口值之间可以使用 == 和 != 比较:
+
+- 两个接口值都 == nil (动态类型和动态值都为 nil) 时, 两个接口值相等
+- 两个接口值的动态类型相同, 并且动态值按该动态类型的 == 运算相等时, 两个接口值相等
+
+如果动态类型是不可比较的类型: slice/map/func, 以及包含 slice/map/func 的复合类型 (channel 是可比较类型), 则比较会导致运行时 panic
+
+### 接口值与非接口值的比较
+
+先将非接口值转换为对应的接口类型, 再按接口值比较规则进行比较
+
+```go
+package main
+
+import "fmt"
+
+type Coder interface {
+  code()
+}
+
+type Gopher struct {
+  name string
+}
+
+func (g Gopher) code() {
+  fmt.Printf("%s is coding\n", g.name)
+}
+
+func main() {
+  var c Coder // c 是接口值, 静态类型是 Coder, 动态类型是 nil (未赋值), 动态值是 nil (未赋值)
+
+  // 接口值 == nil: 动态类型和动态值都为 nil
+  fmt.Println(c == nil) // true, 动态类型和动态值都为 nil
+  fmt.Printf("%T, %v\n", c, c) // nil, nil
+
+  var g *Gopher // g 是非接口值, 值是 nil (未赋值)
+  fmt.Println(g == nil) // true
+
+  c = g // c 是接口值, 静态类型是 Coder, 动态类型是 *Gopher, 动态值是 nil
+
+  // 接口值 == nil: 动态类型和动态值都为 nil
+  fmt.Println(c == nil) // false
+  fmt.Printf("%T, %v\n", c, c) // *main.Gopher, nil
+}
+```
+
 ## 反射
 
 ## 内存管理
