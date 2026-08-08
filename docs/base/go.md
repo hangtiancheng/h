@@ -1290,7 +1290,7 @@ var w io.Writer // w 是一个接口值, 接口类型 (静态类型) 为 io.Writ
 - 两个接口值都 == nil (动态类型和动态值都为 nil) 时, 两个接口值相等
 - 两个接口值的动态类型相同, 并且动态值按该动态类型的 == 运算相等时, 两个接口值相等
 
-如果动态类型是不可比较的类型: slice/map/func, 以及包含 slice/map/func 的复合类型 (channel 是可比较类型), 则比较会导致运行时 panic
+如果动态类型不可比较: slice/map/func, 以及包含 slice/map/func 的复合类型 (channel 是可比较类型), 则比较会导致运行时 panic
 
 ### 接口值与非接口值的比较
 
@@ -1332,6 +1332,99 @@ func main() {
 ```
 
 ## 反射
+
+### 什么是反射
+
+Go 的反射使用接口实现
+
+- `reflect.TypeOf()`: 运行时访问接口值的动态类型 (dynamic type)
+- `reflect.ValueOf()`: 运行时读取、修改接口值的动态值 (dynamic value)
+
+### 反射应用
+
+go tag
+
+```go
+package main
+
+import (
+	"fmt"
+	"reflect"
+)
+
+type User struct {
+	Name  string `json:"name"`
+	Age   int    `json:"age"`
+	Pwd   string `json:"-"`
+}
+
+func main() {
+	// 1. Read struct tags via reflection
+	t := reflect.TypeOf(User{})
+	for i := 0; i < t.NumField(); i++ {
+		field := t.Field(i)
+		tag := field.Tag.Get("json")
+    // field Name   -> json tag: "name"
+    // field Age    -> json tag: "age"
+    // field Pwd    -> json tag: "-"
+		fmt.Printf("field %-6s -> json tag: %q\n", field.Name, tag)
+	}
+
+	fmt.Println()
+
+	// 2. Custom marshal (json.Marshal/JSON.stringify) using reflection + tags
+	u := User{Name: "jane", Age: 22, Pwd: "secret"}
+	fmt.Println("Custom marshal:", customMarshal(u))
+}
+
+// customMarshal iterates fields via reflection and builds a map keyed by json tag.
+func customMarshal(v any) map[string]any {
+	val := reflect.ValueOf(v)
+	typ := val.Type()
+	result := make(map[string]any)
+
+	for i := 0; i < typ.NumField(); i++ {
+		field := typ.Field(i)
+    tag := field.Tag
+    jsonTag := tag.Get("json")
+		if jsonTag == "-" || jsonTag == "" {
+			continue
+		}
+		result[jsonTag] = val.Field(i).Interface()
+	}
+	return result
+}
+```
+
+### 比较两个变量是否完全相等
+
+1. == 运算: 基本类型 (bool, 数字类型, string)、pointer、数组、struct、interface、channel
+
+- string: 长度相等、每个字节都相等
+- pointer: 指向的地址相等, 或者都是 nil
+- 数组: 长度相等, 每个元素使用 == 运算都相等; 如果元素类型不可比较, 则整个 array 不可比较, == 运算编译时报错
+- struct
+  - 所有字段使用 == 运算都相等时, 两个 struct 实例相等
+  - 只要有一个字段的类型不可比较 (slice/map/func), 整个 struct 就不可比较, == 运算编译时报错
+- interface:
+  - 两个接口值都 == nil (动态类型和动态值都为 nil) 时, 两个接口值相等
+  - 两个接口值的动态类型相同
+    - 动态值按该动态类型的 == 运算相等时, 两个接口值相等
+    - 如果动态类型不可比较 (slice/map/func), 则编译时不报错, 运行时 panic
+- channel: 不同的 make() 创建的 channel 都不相等
+
+2. `reflect.DeepEqual()`
+
+- 遇到指针, 不是比较指针指向的地址, 而是比较指针指向的值
+- 可以比较 slice/map: 每个元素/kv 都相等
+- 可以比较 func:
+  - 两个都是 nil -> true
+  - 至少有一个是非 nil -> false
+
+```go
+f := func() {}
+reflect.DeepEqual(f, f) // false
+```
 
 ## 内存管理
 
