@@ -1568,6 +1568,98 @@ func main() {
 }
 ```
 
+### 定位内存泄漏
+
+1. 观察 `runtime.ReadMemStats()` / `runtime.NumGoroutine()` 趋势
+   - HeapAlloc 持续上涨, 并且 GC 后不回落 -> 内存泄漏
+   - NumGoroutine 持续上涨 -> goroutine 泄漏
+2. pprof 快照, 定位哪个函数分配的内存最多, 哪类 goroutine 的阻塞时间最长
+3. trace 录制, 看 GC 频率、goroutine 创建/阻塞/销毁、调度延迟
+
+::: code-group
+
+```go [Go runtime]
+var m runtime.MemStats
+runtime.ReadMemStats(&m)
+// 堆上已分配, 并且未释放的字节数
+fmt.Printf("HeapAlloc: %d MB\n", m.HeapAlloc/1024/1024)
+// 堆上的对象数量
+fmt.Printf("HeapObjects: %d\n", m.HeapObjects)
+// 已完成的 GC 周期数
+fmt.Printf("NumGC: %d\n", m.NumGC)
+// 存活的 goroutine 数量
+fmt.Printf("Goroutines: %d\n", runtime.NumGoroutine())
+```
+
+```js [JS V8]
+import v8 from "v8";
+const mem = process.memoryUsage();
+// 已使用的堆内存
+console.log(`heapUsed: ${Math.round(mem.heapUsed / 1024 / 1024)} MB`);
+// V8 已申请的堆内存总量
+console.log(`heapTotal: ${Math.round(mem.heapTotal / 1024 / 1024)} MB`);
+// C++ 对象占用的内存
+console.log(`external: ${Math.round(mem.external / 1024 / 1024)} MB`);
+
+const stats = v8.getHeapStatistics();
+// 已使用的堆内存
+console.log(
+  `usedHeapSize: ${Math.round(stats.used_heap_size / 1024 / 1024)} MB`,
+);
+// 堆内存上限 (超过则 OOM)
+console.log(
+  `heapSizeLimit: ${Math.round(stats.heap_size_limit / 1024 / 1024)} MB`,
+);
+
+// V8 没有直接的 GC 计数, 使用 perf_hooks 监听 GC 事件
+import { PerformanceObserver } from "perf_hooks";
+let gcCount = 0;
+const obs = new PerformanceObserver((list) => {
+  gcCount += list.getEntries().length;
+});
+obs.observe({ entryTypes: ["gc"] });
+```
+
+```go [Go pprof]
+import _ "net/http/pprof"
+
+go func() {
+  http.ListenAndServe(":6060", nil)
+}()
+```
+
+```go [Go trace]
+import "runtime/trace"
+
+f, _ := os.Create("trace.out")
+trace.Start(f)
+defer trace.Stop()
+```
+
+```bash [go tool]
+# heap 快照
+go tool pprof http://localhost:6060/debug/pprof/heap
+
+# 对比两个时间点内存分配的增量
+curl -o old.pb.gz http://localhost:6060/debug/pprof/heap
+go tool pprof -base old.pb.gz http://localhost:6060/debug/pprof/heap
+
+# goroutine 快照
+go tool pprof http://localhost:6060/debug/pprof/goroutine
+# trace 可视化
+go tool trace trace.out
+```
+
+```bash [pprof commands]
+top 20        # 按当前内存分配量降序排序的前 20 个函数
+top -cum 20   # 按累积内存分配量降序排序的前 20 个函数
+list FuncName # 某个函数的源码, 逐行的内存分配量
+traces        # 列出每个 goroutine 的完整调用栈, 用于定位阻塞点
+web           # 生成函数调用关系的 SVG 并浏览器打开 (brew install graphviz)
+```
+
+:::
+
 ## 垃圾回收
 
 ## 数据结构
