@@ -450,35 +450,41 @@ Go <1.24: 渐进式搬迁
 - 将大的扩容成本分摊到后续的多次 set (upsert)/remove 操作
 - get 和 for range 不参与搬迁, 触发扩容后如果只读不写, 则会一直停在「扩容中」状态
 
-Go >=1.24: Swiss Table
+Go >=1.24: swiss table
+
+map 由多个 swiss table 组成
+
+- 1 个 swiss table 最多 1024 个 kv
+- 1 个 swiss table 最多 128 个 groups
+- 1 个 group 有 8 个 slots
 
 ```txt
 Map
-└── directory ──> [table0][table1]... 每个子 table 最多 1024 个 kv
-                    └── groups --- 1 个 group 有 8 个 slots
+└── directory ──> [table0][table1] swiss table
+                    └── groups
 ```
 
 ```go
 type Map struct {
   used       uint64         // kv 数量, len(m) 直接返回 used
   seed       uintptr        // 哈希种子
-  dirPtr     unsafe.Pointer // 指向 directory: 子 table 指针数组 []*table 的指针
+  dirPtr     unsafe.Pointer // 指向 directory: swiss table 指针数组 []*table 的指针
 }
 
-// 每个子 table 最多 1024 个 kv
+// 每个 swiss table 最多 1024 个 kv
 type table struct {
   used     uint16
   capacity uint16
   groups   groupsReference  // group 数组
-  // 每个子 table 最多 128 个 groups
+  // 1 个 swiss table 最多 128 个 groups
   // 1 个 group 有 8 个 slots
 }
 ```
 
-- map 改为 directory 目录 + 多个子 table 的结构, 每个子 table 最多 1024 个 kv 键值对 (128 groups \* 8 slots): table 是 <=128 个 groups 的集合, group 是 8 个 slots 的集合
-- 某个 table 长度超过 7/8 时, 该 table 单独扩容/分裂
-- table 满 1024 后分裂为 2 个 table
-- 单个 table 的搬迁一次性完成, 不再需要渐进式搬迁
+- map 改为 directory 目录 + 多个 swiss table 的结构, 每个 swiss table 最多 1024 个 kv 键值对 (128 groups \* 8 slots): swiss table 是 <=128 个 groups 的集合, group 是 8 个 slots 的集合
+- 某个 swiss table 长度超过 7/8 时, 该 swiss table 单独扩容/分裂
+- swiss table 满 1024 后分裂为 2 个 swiss table
+- 单个 swiss table 的搬迁一次性完成, 不再需要渐进式搬迁
 
 ### 从 map 中删除 kv
 
@@ -1419,7 +1425,7 @@ func customMarshal(v any) map[string]any {
 - 可以比较 slice/map: 每个元素/kv 都相等
 - 可以比较 func:
   - 两个都是 nil -> true
-  - 至少有一个是非 nil -> false
+  - 至少有一个非 nil -> false
 
 ```go
 f := func() {}
@@ -1430,9 +1436,7 @@ reflect.DeepEqual(f, f) // false
 
 ### 内存分配
 
-Go 的内存分配基于 TCMalloc 算法
-
-Go 的内存分配有 3 层
+Go 的内存分配基于 TCMalloc 算法, 内存分配有 3 层
 
 - mcache 线程缓存: 每个 Processor 都有独立的 mcache, 避免锁竞争
 - mcentral 中央缓存: mcentral 按对象大小分类分配
@@ -1442,12 +1446,10 @@ Go 的内存分配有 3 层
 
 1. 微小对象 (<16Bytes、不包含指针): 在 mcache 的 tiny 分配器中分配, 多个微小对象可以共享一个内存块
 2. 小对象 (16Bytes ~ 32KB): Go 预定义了 67 种大小规格的 size class
-
-- 优先从 Processor 的 mcache 对应的 mspan 中分配
-- 如果 mcache 没有足够的内存, 则从 mcentral 中分配
-- 如果 mcentral 没有足够的内存, 则从 mheap 中分配
-- 如果 mheap 没有足够的内存, 则向操作系统申请内存
-
+   - 优先从 Processor 的 mcache 对应的 mspan 中分配
+   - 如果 mcache 没有足够的内存, 则从 mcentral 中分配
+   - 如果 mcentral 没有足够的内存, 则从 mheap 中分配
+   - 如果 mheap 没有足够的内存, 则向操作系统申请内存
 3. 大对象 (>32KB) 直接从 mheap 中分配, 跨越多个内存页
 
 ### 内存逃逸
@@ -1455,10 +1457,116 @@ Go 的内存分配有 3 层
 逃逸场景
 
 1. 返回局部变量的指针: 函数返回局部变量的指针, 该局部变量从栈逃逸到堆
-2. interface{}/any 类型: 传递给 interface{}/any 类型, 具体类型会逃逸, 因为需要运行时类型信息
-3. 闭包引用外部变量: 闭包捕获的外部变量会逃逸到堆
-4. 切片/map 动态扩容: 切片/map 的容量 (cap) 超过编译期确定的范围时会逃逸到堆
+2. interface{}/any 类型: 赋值给 interface{}/any 类型, 接口值的动态类型可能会逃逸
+3. 闭包引用外部变量: 闭包捕获的外部变量可能会逃逸到堆
+4. 切片/map 动态扩容: 切片/map 的容量 (cap) 超过编译期确定的范围时, 可能会逃逸到堆
 5. 大对象: 超过栈大小限制的大对象直接分配到堆
+
+```go
+func f() any {
+  x := 42 // 栈
+  // (int, 42) 表示: 接口值的动态类型 int, 动态值 42
+  return x // x 被装箱为 (int, 42) 返回, 逃逸到堆
+}
+
+func g() any {
+  var y any = 42 // 装箱 (int, 42)
+  return y.(int) // 没有逃逸
+}
+```
+
+### 内存逃逸的影响
+
+栈对象随着函数返回自动释放 (移动 SP, Stack Pointer 栈指针); 堆对象需要垃圾回收器释放内存, 大量的内存逃逸会增大 GC 压力
+
+### channel 分配在堆上
+
+channel 用于 goroutine 间的通信, channel 分配在堆上
+
+### 内存泄漏的场景
+
+- goroutine 泄漏: goroutine 正常退出前一直占用内存, 例如 goroutine 从 channel 中读取数据但该 channel 一直未被写入数据, 导致该 goroutine 持续阻塞; 或者 goroutine 中有死循环
+- channel 泄漏: 未关闭的 channel 和等待该 channel 的 goroutine 会相互持有引用, 例如生产者 goroutine 生产结束, 但是没有关闭该 channel, 导致消费者 goroutine 持续阻塞
+- slice 引用大数组: 一个 slice 引用一个大数组的小切片时, 整个大数组都无法被 GC 回收, 解决方法是使用 copy 或 `slices.Clone()` 创建新的 slice
+- map 的元素过多: `delete(map, key)` 是标记删除, 底层的 bucket 或 groups (Go >=1.24, map 由多个 swiss table 组成) 仍然占用内存
+- 定时器未手动清除
+  - 需要手动 Stop 取消: `time.NewTicker(duration)`, `time.NewTimer(duration)`, `time.AfterFunc(duration, callback)`
+  - 无法取消: `time.After()`, `time.Tick()`
+
+补充
+
+- goroutine 中 panic 并且没有 recover: 整个进程崩溃
+- goroutine 中 panic 但是有 recover: 该 goroutine 正常退出, 栈内存释放, 不会导致 goroutine 泄漏
+
+```go
+package main
+
+import (
+  "fmt"
+  "time"
+)
+
+func main() {
+  // Go time.NewTicker — fires repeatedly until Stop() is called.
+  // JS equivalent: setInterval(fn, ms)
+  ticker := time.NewTicker(500 * time.Millisecond)
+  done := make(chan struct{})
+
+  go func() {
+    count := 0
+    for tick := range ticker.C /** channel */ {
+      count++
+			fmt.Println("tick", count, "at", tick.Format("15:04:05.000"))
+      if count >= 5 {
+        close(done)
+        return
+      }
+    }
+  }
+
+  <-done // await
+	ticker.Stop() // like clearInterval(id)
+	fmt.Println("ticker stopped")
+
+  // Go time.AfterFunc — fires callback once after duration, cancellable.
+	// JS equivalent: const id = setTimeout(fn, ms); clearTimeout(id)
+
+	// Case 1: let it fire (like setTimeout that runs)
+	done2 := make(chan struct{})
+	time.AfterFunc(time.Second, func() {
+		fmt.Println("timer fired (like setTimeout callback)")
+		close(done2)
+	})
+	<-done2 // await
+
+  // Case 2: cancel before it fires (like clearTimeout)
+	timer := time.AfterFunc(time.Second, func() {
+		fmt.Println("you should NOT see this")
+	})
+	timer.Stop() // clearTimeout(id)
+	fmt.Println("timer cancelled, callback will not run")
+
+	// Pitfall: time.After in select accumulates unfired timers.
+	// If another case wins, the timer lingers until it fires.
+	ch := make(chan int, 1)
+	go func() {
+		time.Sleep(100 * time.Millisecond)
+		ch <- 1
+	}()
+
+  // 如果以下的 select 在一个高频循环中
+  // 例如每秒执行 100 次
+  // 每次都会创建一个 duration 10s 的无用 Timer
+  // 3s 内会累积 300 个无用 Timer
+  // 导致不必要的内存分配和 GC 压力
+	select {
+	case <-ch:
+		fmt.Println("got value early — the 10s timer below is garbage")
+	case <-time.After(10 * time.Second):
+		fmt.Println("timeout")
+	}
+}
+```
 
 ## 垃圾回收
 
