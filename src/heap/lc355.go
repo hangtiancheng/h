@@ -29,8 +29,8 @@ func (h *tweetHeap) Len() int {
 
 // Less implements [heap.Interface].
 // Less(i, j) 表示 i 是否排在 j 前面
-// 如果是最大堆（堆顶的 Timestamp 最大）则 Less 是 >
-// 如果是最小堆（堆顶的 Timestamp 最小）则 Less 是 <
+// 如果是最大堆 (堆顶的 Timestamp 最大) 则 Less 是 >
+// 如果是最小堆 (堆顶的 Timestamp 最小) 则 Less 是 <
 func (h *tweetHeap) Less(i int, j int) bool {
 	return (*h)[i].tweet.timestamp > (*h)[j].tweet.timestamp
 }

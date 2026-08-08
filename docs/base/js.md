@@ -76,7 +76,7 @@ const { promise, resolve, reject } = Promise.withResolvers();
  * 1.5 "reason" 代表 promise 被拒绝的原因
  */
 
-// 2.1 promise 的三个状态：pending、fulfilled 或 rejected
+// 2.1 promise 的三个状态: pending、fulfilled 或 rejected
 enum PromiseState {
   PENDING = "pending",
   FULFILLED = "fulfilled",
@@ -269,7 +269,7 @@ class MyPromise<T = any> {
               // 2.2.2.1 必须在 promise fulfilled 后调用 onFulfilled, 且使用 promise 的 value 作为第一个参数
               // 2.2.2.2 在 promise fulfilled 前不能调用 onFulfilled
               // 2.2.2.3 onFulfilled 只能调用 1 次
-              // 2.2.5 onFulfilled 和 onRejected 必须作为函数调用（即 this === undefined）
+              // 2.2.5 onFulfilled 和 onRejected 必须作为函数调用 (即 this === undefined)
               const x = onFulfilled.call(undefined, this._value);
               // 2.2.7.1 如果 onFulfilled 或 onRejected 返回值 x
               // 则 then 方法使用 resolve(x) 返回一个 fulfilled 的 promise2, value 为 x
@@ -296,7 +296,7 @@ class MyPromise<T = any> {
               // 2.2.3.1 必须在 promise rejected 后调用 onRejected, 且使用 promise 的 reason 作为第一个参数
               // 2.2.3.2 在 promise rejected 前不能调用 onRejected
               // 2.2.3.3 onRejected 只能调用 1 次
-              // 2.2.5 onFulfilled 和 onRejected 必须作为函数调用（即 this === undefined）
+              // 2.2.5 onFulfilled 和 onRejected 必须作为函数调用 (即 this === undefined)
               const x = onRejected.call(undefined, this._reason);
               resolve(x);
             }
@@ -1332,4 +1332,4 @@ body {
 
 - 文字渲染为 svg / canvas / 图片
 - 透明遮罩层
-- 字体混淆: 自定义字体映射，复制得到乱码
+- 字体混淆: 自定义字体映射, 复制得到乱码

@@ -1004,7 +1004,7 @@ HTTP 明文传输不安全, 引入安全层: IP (网络层) -> TCP (传输层) -
 - 非对称加密: 加密和解密使用不同密钥, 如果使用公钥 (public key) 加密, 则必须使用私钥 (private key) 解密; 如果使用私钥加密, 则必须使用公钥解密, 例如 RSA
   - 优点: 只需要传输公钥, 不需要传输私钥, 安全
   - 缺点: 计算量大, 加密解密速度慢
-- 使用 HTTPS, 有 SSL/TLS 安全层，可以证明身份合法性，预防中间人攻击 (MITM, Man-in-the-Middle)
+- 使用 HTTPS, 有 SSL/TLS 安全层, 可以证明身份合法性, 预防中间人攻击 (MITM, Man-in-the-Middle)
 
 ### SSL/TLS 握手
 
@@ -1103,7 +1103,7 @@ ctx.cookies.set("session_id", "...", {
 - capture: 同 useCapture, 默认 false
 - once: callback 执行 1 次后是否自动移除, 默认 false
 - passive: `passive: true` 承诺 callback 中不会调用 `e.preventDefault()`, 浏览器无需等待 callback 执行结束, 可以立刻滚动, 以消除 touch/wheel 事件回调导致的滚动延迟
-- signal：支持传递 AbortSignal, 调用 AbortController 的 abort() 移除 listener, 对比保存 listener 引用再 element.removeEventListener(listener) 更方便, 并且支持批量移除
+- signal: 支持传递 AbortSignal, 调用 AbortController 的 abort() 移除 listener, 对比保存 listener 引用再 element.removeEventListener(listener) 更方便, 并且支持批量移除
 
 ```js
 const controller = new AbortController();

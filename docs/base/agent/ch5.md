@@ -135,7 +135,7 @@ LLM 看到 `<system-reminder />`, 就知道标签间的内容是当指令对待,
 
 ## Prompt 与成本
 
-每轮 agent loop turn 都需要调用 LLM API, 每次调用 LLM API 都需要发送 system + tools + messages, 其中 system + tools 的内容几乎不变, messages 的内容随对话增长。
+每轮 agent loop turn 都需要调用 LLM API, 每次调用 LLM API 都需要发送 system + tools + messages, 其中 system + tools 的内容几乎不变, messages 的内容随对话增长
 
 usage 字段包含 4 个 token 计数 (Anthropic):
 

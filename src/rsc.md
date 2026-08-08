@@ -242,7 +242,7 @@ async function Notes() {
 </head>
 <body>
   <div>
-    {/* 浏览器中，服务器可以传递 props 给客户端组件 */}
+    {/* 浏览器中, 服务器可以传递 props 给客户端组件 */}
     <Expandable key="{1}">
       <p>this is the first note</p>
     </Expandable>

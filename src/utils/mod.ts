@@ -29,9 +29,9 @@ function qpow(x_: number, n_: number, m: number): number {
 }
 
 (async function () {
-  const a = Number.parseInt(await input());
+  const a = Number.parseInt((await input()) ?? "");
 
-  const b = Number.parseInt(await input());
+  const b = Number.parseInt((await input()) ?? "");
 
   // 加
   const res = (a + b) % MOD;
@@ -41,8 +41,8 @@ function qpow(x_: number, n_: number, m: number): number {
   const res2 = (a - b + MOD) % MOD;
   console.log(res2);
 
-  // 将任意整数 c 取模到 [0, MOD - 1] 中，无论 c 是正是负
-  const c = Number.parseInt(await input());
+  // 将任意整数 c 取模到 [0, MOD - 1] 中, 无论 c 是正是负
+  const c = Number.parseInt((await input()) ?? "");
   const res3 = ((c % MOD) + MOD) % MOD;
   console.log(res3);
 

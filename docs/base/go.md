@@ -650,7 +650,7 @@ Go 先对所有 case 语句进行随机排序, 以避免饥饿; 再执行两轮�
 // cSpell: words scase releasetime selectgo
 type scase struct {
   c    *hchan         // channel 指针
-  elem unsafe.Pointer // 数据元素指针，用于存放发送/接收的数据
+  elem unsafe.Pointer // 数据元素指针, 用于存放发送/接收的数据
   kind uint16         // 操作类型: caseNil、caseRecv、caseSend、caseDefault
   pc   uintptr        // 程序计数器, 用于调试
   releasetime int64   // 释放时间, 用于竞态检测
@@ -757,7 +757,7 @@ Go "sync/atomic" 包中的函数, 编译期转换为目标架构 (x86/arm) 的�
 
 ### 锁对比原子操作
 
-- 锁是操作系统或编程语言提供的, 获取锁失败时, goroutine 自旋 4 次后阻塞，而不是 CPU 空转, 锁的开销远大于原子操作, 但是可以保护一段代码块 (临界区)
+- 锁是操作系统或编程语言提供的, 获取锁失败时, goroutine 自旋 4 次后阻塞, 而不是 CPU 空转, 锁的开销远大于原子操作, 但是可以保护一段代码块 (临界区)
 - 原子操作是 CPU 提供的原子机器指令, 保证对单个数据的单次读、改、写操作是不可分割的, 性能极高, 不涉及操作系统和 goroutine 的阻塞
 
 阻塞: gopark() 当前运行的 Goroutine 让出 CPU, 状态变为 _Gwaiting, Machine (OS 线程) 继续执行其他 Goroutine
@@ -826,7 +826,7 @@ flowchart TD
 
 ### 自旋的目的
 
-自旋的目的: 以极小的 CPU 空转开销为代价, 避免一次 goroutine 阻塞/唤醒的上下文切换，锁竞争不激烈、锁占用时间 (临界区) 极短的场景下节约资源
+自旋的目的: 以极小的 CPU 空转开销为代价, 避免一次 goroutine 阻塞/唤醒的上下文切换, 锁竞争不激烈、锁占用时间 (临界区) 极短的场景下节约资源
 
 ### mutex 被一个 goroutine G1 占有, 其他 goroutine 等待 G1 释放 mutex, G1 释放 mutex 后, 哪个等待中的 goroutine 可以优先占有 mutex
 
@@ -874,7 +874,7 @@ type Once struct {
 
 ### WaitGroup
 
-WaitGroup 等待组，本质是一个原子计数器 state (counter32 + waiter32) 和一个信号量 (sema)
+WaitGroup 等待组, 本质是一个原子计数器 state (counter32 + waiter32) 和一个信号量 (sema)
 
 ```go
 type WaitGroup struct {
@@ -1428,6 +1428,38 @@ reflect.DeepEqual(f, f) // false
 
 ## 内存管理
 
+### 内存分配
+
+Go 的内存分配基于 TCMalloc 算法
+
+Go 的内存分配有 3 层
+
+- mcache 线程缓存: 每个 Processor 都有独立的 mcache, 避免锁竞争
+- mcentral 中央缓存: mcentral 按对象大小分类分配
+- mheap 页堆: mheap 负责从操作系统申请大块内存
+
+对象分类分配, 根据对象大小分为 3 类
+
+1. 微小对象 (<16Bytes、不包含指针): 在 mcache 的 tiny 分配器中分配, 多个微小对象可以共享一个内存块
+2. 小对象 (16Bytes ~ 32KB): Go 预定义了 67 种大小规格的 size class
+
+- 优先从 Processor 的 mcache 对应的 mspan 中分配
+- 如果 mcache 没有足够的内存, 则从 mcentral 中分配
+- 如果 mcentral 没有足够的内存, 则从 mheap 中分配
+- 如果 mheap 没有足够的内存, 则向操作系统申请内存
+
+3. 大对象 (>32KB) 直接从 mheap 中分配, 跨越多个内存页
+
+### 内存逃逸
+
+逃逸场景
+
+1. 返回局部变量的指针: 函数返回局部变量的指针, 该局部变量从栈逃逸到堆
+2. interface{}/any 类型: 传递给 interface{}/any 类型, 具体类型会逃逸, 因为需要运行时类型信息
+3. 闭包引用外部变量: 闭包捕获的外部变量会逃逸到堆
+4. 切片/map 动态扩容: 切片/map 的容量 (cap) 超过编译期确定的范围时会逃逸到堆
+5. 大对象: 超过栈大小限制的大对象直接分配到堆
+
 ## 垃圾回收
 
 ## 数据结构
@@ -1466,8 +1498,8 @@ func (h *tweetHeap) Len() int {
 
 // Less implements [heap.Interface].
 // Less(i, j) 表示 i 是否排在 j 前面
-// 如果是最大堆（堆顶的 Timestamp 最大）则 Less 是 >
-// 如果是最小堆（堆顶的 Timestamp 最小）则 Less 是 <
+// 如果是最大堆 (堆顶的 Timestamp 最大) 则 Less 是 >
+// 如果是最小堆 (堆顶的 Timestamp 最小) 则 Less 是 <
 func (h *tweetHeap) Less(i int, j int) bool {
 	return (*h)[i].tweet.timestamp > (*h)[j].tweet.timestamp
 }
