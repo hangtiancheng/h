@@ -1805,7 +1805,11 @@ Go 通过「混合写屏障」和「弱三色不变性」解决并发标记清�
 
 ### 观察 GC
 
-```go
+实验 1: `GODEBUG=gctrace=1`
+
+::: code-group
+
+```go [go]
 package main
 
 func allocate() {
@@ -1819,10 +1823,151 @@ func main() {
 }
 ```
 
-```bash
+```bash [bash]
 go build -o ./main ./src/main.go
 GODEBUG=gctrace=1 ./main
 ```
+
+:::
+
+实验 2: `go tool trace`
+
+::: code-group
+
+```go [go]
+package main
+
+import (
+	"log"
+	"os"
+	"runtime/trace"
+	"sync"
+)
+
+func allocate() {
+	_ = make([]byte, 1<<20)
+}
+
+func main() {
+	f, err := os.Create("trace.out")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer f.Close()
+	if err := trace.Start(f); err != nil {
+		log.Fatal(err)
+	}
+	defer trace.Stop()
+
+	var wg sync.WaitGroup
+	for range 4 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for range 25_000 {
+				allocate()
+			}
+		}()
+	}
+	wg.Wait()
+}
+```
+
+```bash [bash]
+cd src && go build -o ./main . && ./main
+go tool trace ./trace.out
+```
+
+:::
+
+方式 3: `debug.ReadGCStats()`
+
+::: code-group
+
+```go [go]
+package main
+
+import (
+	"fmt"
+	"runtime/debug"
+	"time"
+)
+
+func printGCStats() {
+	t := time.NewTicker(time.Second)
+	s := debug.GCStats{}
+	for {
+		select {
+		case <-t.C:
+			debug.ReadGCStats(&s)
+			fmt.Printf("gc %d last@%v, PauseTotal %v\n", s.NumGC, s.LastGC, s.PauseTotal)
+		}
+	}
+}
+
+func allocate() {
+	_ = make([]byte, 1<<20)
+}
+
+func main() {
+	go printGCStats()
+	for range 100_000 {
+		allocate()
+	}
+	time.Sleep(2 * time.Second)
+}
+```
+
+```bash [bash]
+go run ./src/main.go
+```
+
+:::
+
+方式 4: `runtime.ReadMemStats()`
+
+::: code-group
+
+```go [go]
+package main
+
+import (
+	"fmt"
+	"runtime"
+	"time"
+)
+
+func printMemStats() {
+	t := time.NewTicker(time.Second)
+	s := runtime.MemStats{}
+
+	for {
+		select {
+		case <-t.C:
+			runtime.ReadMemStats(&s)
+			fmt.Printf("gc %d last@%v, next_heap_size@%vMB\n", s.NumGC, time.Unix(0, int64(s.LastGC)), s.NextGC/(1<<20))
+		}
+	}
+}
+
+func allocate() {
+	_ = make([]byte, 1<<20)
+}
+
+func main() {
+	go printMemStats()
+	for range 100_000 {
+		allocate()
+	}
+	time.Sleep(2 * time.Second)
+}
+```
+
+```bash [bash]
+go run ./src/main.go
+```
+
+:::
 
 ## 数据结构
 
