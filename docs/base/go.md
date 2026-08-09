@@ -1117,6 +1117,7 @@ Go scheduler 是 Go runtime 的 goroutine 调度器, 负责将 goroutine 调度�
 
 Go 使用抢占式调度
 
+- Go 运行时有一个专用的 OS 监控线程 sysmon, 不是 goroutine, 不受调度器管理
 - sysmon 监控线程运行在 Machine 上, 并且不需要绑定 Processor; sysmon 每隔一段时间检查所有的 Processor, 发现某个 goroutine 在 Machine 上运行超过 10ms 时, 判定需要抢占
 - sysmon 向运行该 goroutine 的 Machine 发送 SIGURG 信号; 信号处理代码在 Machine 的 gsignal 栈上运行, 修改被中断的上下文, 该 goroutine 被放回 Processor 的本地队列尾部, Machine 重新执行 schedule() 调度循环
 
@@ -1665,7 +1666,7 @@ web           # 生成函数调用关系的 SVG 并浏览器打开 (brew install
 ### 常见的 GC 算法
 
 - 标记清除: 参考 JS/TS v8 垃圾回收
-- 标记整理
+- 标记整理: 参考 JS/TS v8 垃圾回收
 - 引用计数: 对象的引用计数 = 0 时自动回收
 - 三色标记
 
@@ -1765,13 +1766,63 @@ Go 通过「混合写屏障」和「弱三色不变性」解决并发标记清�
 
 ### GC 过程
 
+| 阶段             | 说明                     | 赋值器状态 |
+| ---------------- | ------------------------ | ---------- |
+| SweepTermination | 清理终止阶段, 开启写屏障 | STW        |
+| Mark             | 扫描、标记 (染色) 阶段   | 并发标记   |
+| MarkTermination  | 标记终止阶段, 关闭写屏障 | STW        |
+| GCoff            | 内存清理阶段             | 并发清理   |
+
+### GC 触发时机
+
+1. 手动触发: 调用 `runtime.GC()` 手动触发, 阻塞等待 GC 结束
+2. 自动触发
+   - Go 运行时有一个专用的 OS 监控线程 sysmon, 不是 goroutine, 不受调度器管理
+   - 超过两分钟没有 GC 时, 强制触发 GC
+   - 每次内存分配时, 检查当前堆内存大小是否超过阈值, 阈值 = 上次 GC 结束后的堆内存大小 * (1 + GOGC/100), 默认 GOGC = 100, 即默认当前堆内存大小 >= 上次 GC 结束后的堆内存的 2 倍时, 触发 GC
+   - 可以通过 `debug.SetGCPercent(300)`, 当前堆内存大小 >= 上次 GC 结束后的堆内存的 (1 + 300/100) = 4 倍时, 才触发 GC
+   - 首次 GC 触发, 堆内存大小的下限是 4MB, 堆内存大小 < 4MB 不会触发 GC
+
 ### GC 指标
 
-### 有 GC, 为什么还有内存泄漏
+- CPU 利用率: GC 占用的 CPU 时间占 CPU 总时间的百分比
+- GC 停顿时间: 单次 GC 的停顿时间, 包括 STW 和 Mark Assist 两部分
+  - STW: 并发标记前的 SweepTermination 和并发标记后的 MarkTermination, 是全局硬停顿
+  - Mark Assist: 标记辅助, 是单个 goroutine 的软停顿
+- GC 停顿频率: 包括 STW 和 Mark Assist 两部分
+
+### 有了 GC, 为什么还有内存泄漏
+
+内存泄漏: 预期可以很快被释放的内存, 生命周期被意外的延长 (GC 根对象可达), 导致该内存长时间得不到回收
+
+1. 内存被 GC 根对象引用
+2. 参考上文「内存泄漏的场景」
 
 ### GC 调优
 
+1. 使用 `sync.Pool` 对象池, 复用频繁创建的对象; `sync.Pool` 对象池中的对象, 可能在任意一次 GC 时被清空, 所以不是「保证复用」, 而是「尽力复用」, 降低 GC 压力
+2. 微调 GOGC, 适当增大 GOGC, 使得 GC 触发时机更晚, 降低 GC 频率
+
 ### 观察 GC
+
+```go
+package main
+
+func allocate() {
+  _ = make([]byte, 1<<20)
+}
+
+func main() {
+  for range 100_000 {
+    allocate()
+  }
+}
+```
+
+```bash
+go build -o ./main ./src/main.go
+GODEBUG=gctrace=1 ./main
+```
 
 ## 数据结构
 
