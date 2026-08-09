@@ -1,0 +1,714 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>并发GC对象消失问题 - 完整图解</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        background: #1a1a2e;
+        color: #e0e0e0;
+        font-family: "SF Mono", "Fira Code", "Consolas", monospace;
+        padding: 30px 20px;
+        line-height: 1.6;
+      }
+      h1 {
+        text-align: center;
+        font-size: 24px;
+        margin-bottom: 8px;
+        color: #ffffff;
+      }
+      .subtitle {
+        text-align: center;
+        font-size: 14px;
+        color: #888;
+        margin-bottom: 40px;
+      }
+      .legend {
+        display: flex;
+        justify-content: center;
+        gap: 30px;
+        margin-bottom: 40px;
+        flex-wrap: wrap;
+      }
+      .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+      }
+      .legend-box {
+        width: 20px;
+        height: 20px;
+        border-radius: 3px;
+        border: 2px solid;
+      }
+      .legend-box.black {
+        background: #2d2d5e;
+        border-color: #7b7bff;
+      }
+      .legend-box.gray {
+        background: #555;
+        border-color: #aaa;
+      }
+      .legend-box.white {
+        background: #fff;
+        border-color: #ccc;
+      }
+      .legend-box.dashed {
+        background: transparent;
+        border-color: #888;
+        border-style: dashed;
+      }
+      .step-container {
+        max-width: 900px;
+        margin: 0 auto 50px;
+        background: #16213e;
+        border-radius: 12px;
+        padding: 24px;
+        border: 1px solid #333;
+      }
+      .step-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid #333;
+      }
+      .step-title {
+        font-size: 16px;
+        font-weight: bold;
+        color: #fff;
+      }
+      .step-tag {
+        font-size: 12px;
+        padding: 3px 10px;
+        border-radius: 10px;
+        font-weight: bold;
+      }
+      .tag-gc {
+        background: #2a2a5e;
+        color: #7b7bff;
+      }
+      .tag-assign {
+        background: #2a3a2a;
+        color: #5fba5f;
+      }
+      svg {
+        display: block;
+        margin: 0 auto;
+        max-width: 100%;
+        height: auto;
+      }
+      .node-label {
+        font-size: 22px;
+        font-weight: bold;
+        fill: #fff;
+        text-anchor: middle;
+        dominant-baseline: central;
+      }
+      .node-label.dark {
+        fill: #1a1a2e;
+      }
+      .edge-label {
+        font-size: 12px;
+        fill: #aaa;
+        text-anchor: middle;
+      }
+      .annotation {
+        font-size: 13px;
+        fill: #ffd700;
+      }
+      .annotation-red {
+        font-size: 13px;
+        fill: #ff6b6b;
+      }
+      .annotation-green {
+        font-size: 13px;
+        fill: #5fba5f;
+      }
+      .result-callout {
+        font-size: 14px;
+        fill: #ff6b6b;
+        font-weight: bold;
+      }
+      .result-callout-ok {
+        font-size: 14px;
+        fill: #5fba5f;
+        font-weight: bold;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>并发GC中的对象消失问题（Tombstone Problem）</h1>
+    <div class="subtitle">三色标记法在并发场景下可能错误回收可达对象</div>
+
+    <div class="legend">
+      <div class="legend-item">
+        <div class="legend-box black"></div>
+        黑色（已扫描完毕，不再重扫）
+      </div>
+      <div class="legend-item">
+        <div class="legend-box gray"></div>
+        灰色（正在扫描中）
+      </div>
+      <div class="legend-item">
+        <div class="legend-box white"></div>
+        白色（未扫描，视为不可达）
+      </div>
+      <div class="legend-item">
+        <div class="legend-box dashed"></div>
+        虚线框 = 已被回收 / 不存在
+      </div>
+    </div>
+
+    <!-- Step 1 -->
+    <div class="step-container">
+      <div class="step-header">
+        <span class="step-title">Step 1：shade(A, gray)</span>
+        <span class="step-tag tag-gc">回收器操作</span>
+      </div>
+      <svg viewBox="0 0 600 260" xmlns="http://www.w3.org/2000/svg">
+        <!-- C (black) -->
+        <rect
+          x="230"
+          y="10"
+          width="80"
+          height="60"
+          rx="6"
+          fill="#2d2d5e"
+          stroke="#7b7bff"
+          stroke-width="2"
+        />
+        <text x="270" y="40" class="node-label">C</text>
+        <!-- A (gray) -->
+        <rect
+          x="80"
+          y="140"
+          width="80"
+          height="60"
+          rx="6"
+          fill="#555"
+          stroke="#aaa"
+          stroke-width="2"
+        />
+        <text x="120" y="170" class="node-label">A</text>
+        <!-- B (white) -->
+        <rect
+          x="420"
+          y="140"
+          width="80"
+          height="60"
+          rx="6"
+          fill="#fff"
+          stroke="#ccc"
+          stroke-width="2"
+        />
+        <text x="460" y="170" class="node-label dark">B</text>
+        <!-- Edge C.ref2 -> A -->
+        <line
+          x1="240"
+          y1="70"
+          x2="140"
+          y2="140"
+          stroke="#7b7bff"
+          stroke-width="2"
+        />
+        <polygon points="140,140 150,130 148,145" fill="#7b7bff" />
+        <text x="175" y="105" class="edge-label" fill="#7b7bff">ref2</text>
+        <!-- Edge A.ref1 -> B -->
+        <line
+          x1="180"
+          y1="170"
+          x2="420"
+          y2="170"
+          stroke="#aaa"
+          stroke-width="2"
+        />
+        <polygon points="420,170 410,163 410,177" fill="#aaa" />
+        <text x="300" y="160" class="edge-label">ref1</text>
+        <!-- Annotation -->
+        <text x="300" y="240" class="annotation" text-anchor="middle">
+          GC将A的子节点着色为灰色 → A变为灰色，C仍为黑色
+        </text>
+      </svg>
+    </div>
+
+    <!-- Step 2 -->
+    <div class="step-container">
+      <div class="step-header">
+        <span class="step-title">Step 2：shade(C, black)</span>
+        <span class="step-tag tag-gc">回收器操作</span>
+      </div>
+      <svg viewBox="0 0 600 260" xmlns="http://www.w3.org/2000/svg">
+        <!-- C (black) - now fully scanned -->
+        <rect
+          x="230"
+          y="10"
+          width="80"
+          height="60"
+          rx="6"
+          fill="#2d2d5e"
+          stroke="#7b7bff"
+          stroke-width="2"
+        />
+        <text x="270" y="40" class="node-label">C</text>
+        <!-- A (gray) -->
+        <rect
+          x="80"
+          y="140"
+          width="80"
+          height="60"
+          rx="6"
+          fill="#555"
+          stroke="#aaa"
+          stroke-width="2"
+        />
+        <text x="120" y="170" class="node-label">A</text>
+        <!-- B (white) -->
+        <rect
+          x="420"
+          y="140"
+          width="80"
+          height="60"
+          rx="6"
+          fill="#fff"
+          stroke="#ccc"
+          stroke-width="2"
+        />
+        <text x="460" y="170" class="node-label dark">B</text>
+        <!-- Edge C.ref2 -> A -->
+        <line
+          x1="240"
+          y1="70"
+          x2="140"
+          y2="140"
+          stroke="#7b7bff"
+          stroke-width="2"
+        />
+        <polygon points="140,140 150,130 148,145" fill="#7b7bff" />
+        <text x="175" y="105" class="edge-label" fill="#7b7bff">ref2</text>
+        <!-- Edge A.ref1 -> B -->
+        <line
+          x1="180"
+          y1="170"
+          x2="420"
+          y2="170"
+          stroke="#aaa"
+          stroke-width="2"
+        />
+        <polygon points="420,170 410,163 410,177" fill="#aaa" />
+        <text x="300" y="160" class="edge-label">ref1</text>
+        <!-- Annotation -->
+        <text x="300" y="240" class="annotation" text-anchor="middle">
+          A所有子节点已标灰 → C着色为黑色（GC承诺不再重扫C）
+        </text>
+      </svg>
+    </div>
+
+    <!-- Step 3 -->
+    <div class="step-container">
+      <div class="step-header">
+        <span class="step-title">Step 3：C.ref3 = C.ref2.ref1</span>
+        <span class="step-tag tag-assign">赋值器操作（并发）</span>
+      </div>
+      <svg viewBox="0 0 600 260" xmlns="http://www.w3.org/2000/svg">
+        <!-- C (black) -->
+        <rect
+          x="230"
+          y="10"
+          width="80"
+          height="60"
+          rx="6"
+          fill="#2d2d5e"
+          stroke="#7b7bff"
+          stroke-width="2"
+        />
+        <text x="270" y="40" class="node-label">C</text>
+        <!-- A (gray) -->
+        <rect
+          x="80"
+          y="140"
+          width="80"
+          height="60"
+          rx="6"
+          fill="#555"
+          stroke="#aaa"
+          stroke-width="2"
+        />
+        <text x="120" y="170" class="node-label">A</text>
+        <!-- B (white) -->
+        <rect
+          x="420"
+          y="140"
+          width="80"
+          height="60"
+          rx="6"
+          fill="#fff"
+          stroke="#ccc"
+          stroke-width="2"
+        />
+        <text x="460" y="170" class="node-label dark">B</text>
+        <!-- Edge C.ref2 -> A -->
+        <line
+          x1="240"
+          y1="70"
+          x2="140"
+          y2="140"
+          stroke="#7b7bff"
+          stroke-width="2"
+        />
+        <polygon points="140,140 150,130 148,145" fill="#7b7bff" />
+        <text x="175" y="105" class="edge-label" fill="#7b7bff">ref2</text>
+        <!-- Edge A.ref1 -> B -->
+        <line
+          x1="180"
+          y1="170"
+          x2="420"
+          y2="170"
+          stroke="#aaa"
+          stroke-width="2"
+        />
+        <polygon points="420,170 410,163 410,177" fill="#aaa" />
+        <text x="300" y="160" class="edge-label">ref1</text>
+        <!-- NEW Edge C.ref3 -> B (via ref2.ref1 = B) -->
+        <path
+          d="M310,40 Q400,80 420,140"
+          fill="none"
+          stroke="#ff6b6b"
+          stroke-width="2.5"
+          stroke-dasharray="6,3"
+        />
+        <polygon points="420,140 410,150 425,148" fill="#ff6b6b" />
+        <text x="370" y="90" class="annotation-green" fill="#5fba5f">
+          ref3 (新增！)
+        </text>
+        <!-- Callout -->
+        <text x="500" y="230" class="annotation-green" text-anchor="start">
+          ★ C.ref2.ref1 = B
+          <br />
+          C 新增直接引用 B
+        </text>
+      </svg>
+    </div>
+
+    <!-- Step 4 -->
+    <div class="step-container">
+      <div class="step-header">
+        <span class="step-title">Step 4：A.ref1 = nil</span>
+        <span class="step-tag tag-assign">赋值器操作（并发）</span>
+      </div>
+      <svg viewBox="0 0 600 260" xmlns="http://www.w3.org/2000/svg">
+        <!-- C (black) -->
+        <rect
+          x="230"
+          y="10"
+          width="80"
+          height="60"
+          rx="6"
+          fill="#2d2d5e"
+          stroke="#7b7bff"
+          stroke-width="2"
+        />
+        <text x="270" y="40" class="node-label">C</text>
+        <!-- A (gray) -->
+        <rect
+          x="80"
+          y="140"
+          width="80"
+          height="60"
+          rx="6"
+          fill="#555"
+          stroke="#aaa"
+          stroke-width="2"
+        />
+        <text x="120" y="170" class="node-label">A</text>
+        <!-- B (white) -->
+        <rect
+          x="420"
+          y="140"
+          width="80"
+          height="60"
+          rx="6"
+          fill="#fff"
+          stroke="#ccc"
+          stroke-width="2"
+        />
+        <text x="460" y="170" class="node-label dark">B</text>
+        <!-- Edge C.ref2 -> A -->
+        <line
+          x1="240"
+          y1="70"
+          x2="140"
+          y2="140"
+          stroke="#7b7bff"
+          stroke-width="2"
+        />
+        <polygon points="140,140 150,130 148,145" fill="#7b7bff" />
+        <text x="175" y="105" class="edge-label" fill="#7b7bff">ref2</text>
+        <!-- Edge A.ref1 -> nil (broken) -->
+        <line
+          x1="180"
+          y1="170"
+          x2="310"
+          y2="170"
+          stroke="#ff6b6b"
+          stroke-width="2"
+          stroke-dasharray="6,3"
+        />
+        <text x="245" y="185" class="annotation-red" text-anchor="middle">
+          ref1 = nil ✕
+        </text>
+        <!-- Edge C.ref3 -> B -->
+        <path
+          d="M310,40 Q400,80 420,140"
+          fill="none"
+          stroke="#5fba5f"
+          stroke-width="2.5"
+        />
+        <polygon points="420,140 410,150 425,148" fill="#5fba5f" />
+        <text x="370" y="90" class="annotation-green" fill="#5fba5f">ref3</text>
+        <!-- Callout -->
+        <text x="500" y="230" class="annotation-red" text-anchor="start">
+          ★ A 断开对 B 的引用
+          <br />
+          B 仅通过 C.ref3 可达
+        </text>
+      </svg>
+    </div>
+
+    <!-- Step 5 -->
+    <div class="step-container">
+      <div class="step-header">
+        <span class="step-title">Step 5：scan(A) → shade(A.ref1, gray)</span>
+        <span class="step-tag tag-gc">回收器操作</span>
+      </div>
+      <svg viewBox="0 0 600 260" xmlns="http://www.w3.org/2000/svg">
+        <!-- C (black) -->
+        <rect
+          x="230"
+          y="10"
+          width="80"
+          height="60"
+          rx="6"
+          fill="#2d2d5e"
+          stroke="#7b7bff"
+          stroke-width="2"
+        />
+        <text x="270" y="40" class="node-label">C</text>
+        <!-- A (gray) -->
+        <rect
+          x="80"
+          y="140"
+          width="80"
+          height="60"
+          rx="6"
+          fill="#555"
+          stroke="#aaa"
+          stroke-width="2"
+        />
+        <text x="120" y="170" class="node-label">A</text>
+        <!-- B (white) - NOT reached! -->
+        <rect
+          x="420"
+          y="140"
+          width="80"
+          height="60"
+          rx="6"
+          fill="#fff"
+          stroke="#ccc"
+          stroke-width="2"
+        />
+        <text x="460" y="170" class="node-label dark">B</text>
+        <!-- Edge C.ref2 -> A -->
+        <line
+          x1="240"
+          y1="70"
+          x2="140"
+          y2="140"
+          stroke="#7b7bff"
+          stroke-width="2"
+        />
+        <polygon points="140,140 150,130 148,145" fill="#7b7bff" />
+        <text x="175" y="105" class="edge-label" fill="#7b7bff">ref2</text>
+        <!-- Edge A.ref1 -> nil (broken) -->
+        <line
+          x1="180"
+          y1="170"
+          x2="280"
+          y2="170"
+          stroke="#ff6b6b"
+          stroke-width="2"
+          stroke-dasharray="6,3"
+        />
+        <text x="230" y="185" class="annotation-red" text-anchor="middle">
+          ref1 = nil
+        </text>
+        <!-- Edge C.ref3 -> B (GC doesn't see this!) -->
+        <path
+          d="M310,40 Q400,80 420,140"
+          fill="none"
+          stroke="#ff6b6b"
+          stroke-width="2"
+          stroke-dasharray="4,4"
+          opacity="0.5"
+        />
+        <text
+          x="370"
+          y="90"
+          class="annotation-red"
+          text-anchor="middle"
+          opacity="0.5"
+        >
+          GC看不到这条边
+        </text>
+        <!-- Callout -->
+        <text x="500" y="230" class="annotation-red" text-anchor="start">
+          ★ A.ref1 已为 nil → scan(A) 什么也不做
+          <br />
+          GC 以为 B 已不可达（实际上 C.ref3 还指向 B）
+        </text>
+      </svg>
+    </div>
+
+    <!-- Step 6 -->
+    <div class="step-container">
+      <div class="step-header">
+        <span class="step-title">Step 6：shade(A, black) → B 被错误回收！</span>
+        <span class="step-tag tag-gc">回收器操作</span>
+      </div>
+      <svg viewBox="0 0 600 260" xmlns="http://www.w3.org/2000/svg">
+        <!-- C (black) -->
+        <rect
+          x="230"
+          y="10"
+          width="80"
+          height="60"
+          rx="6"
+          fill="#2d2d5e"
+          stroke="#7b7bff"
+          stroke-width="2"
+        />
+        <text x="270" y="40" class="node-label">C</text>
+        <!-- A (black) - now also scanned -->
+        <rect
+          x="80"
+          y="140"
+          width="80"
+          height="60"
+          rx="6"
+          fill="#2d2d5e"
+          stroke="#7b7bff"
+          stroke-width="2"
+        />
+        <text x="120" y="170" class="node-label">A</text>
+        <!-- B (DEAD - dashed, being collected) -->
+        <rect
+          x="420"
+          y="140"
+          width="80"
+          height="60"
+          rx="6"
+          fill="transparent"
+          stroke="#888"
+          stroke-width="2"
+          stroke-dasharray="6,4"
+        />
+        <text x="460" y="170" class="node-label" fill="#888">B</text>
+        <!-- Edge C.ref2 -> A -->
+        <line
+          x1="240"
+          y1="70"
+          x2="140"
+          y2="140"
+          stroke="#7b7bff"
+          stroke-width="2"
+        />
+        <polygon points="140,140 150,130 148,145" fill="#7b7bff" />
+        <text x="175" y="105" class="edge-label" fill="#7b7bff">ref2</text>
+        <!-- Edge C.ref3 -> B (dead) -->
+        <line
+          x1="310"
+          y1="40"
+          x2="460"
+          y2="170"
+          stroke="#ff6b6b"
+          stroke-width="2"
+          stroke-dasharray="6,4"
+        />
+        <text
+          x="395"
+          y="100"
+          class="annotation-red"
+          text-anchor="middle"
+          transform="rotate(-45, 395, 100)"
+        >
+          ref3
+        </text>
+        <!-- Big X over B -->
+        <text
+          x="460"
+          y="130"
+          font-size="36"
+          fill="#ff6b6b"
+          text-anchor="middle"
+          font-weight="bold"
+        >
+          ✕
+        </text>
+        <!-- Callout -->
+        <text x="500" y="230" class="annotation-red" text-anchor="start">
+          ★ A 着色为黑色，GC不再重扫
+          <br />
+          C 是黑色 → GC 不检查 C.ref3 → B 永远无法被标记
+          <br />
+          <br />
+          💀 B 实际可达（C.ref3 → B），但被错误回收！
+        </text>
+      </svg>
+    </div>
+
+    <!-- Summary -->
+    <div class="step-container" style="border-color: #ff6b6b">
+      <div class="step-header">
+        <span class="step-title" style="color: #ff6b6b">问题根因总结</span>
+      </div>
+      <div
+        style="
+          padding: 16px 20px;
+          background: #1a1a2e;
+          border-radius: 8px;
+          margin-top: 10px;
+        "
+      >
+        <p style="margin-bottom: 10px">
+          <strong style="color: #ffd700">关键矛盾：</strong>C 已经是<span
+            style="color: #7b7bff"
+            >黑色</span
+          >（GC承诺不再重扫），但赋值器在并发中给 C 新增了到 B 的引用（<code
+            >C.ref3 = B</code
+          >）。
+        </p>
+        <p style="margin-bottom: 10px">
+          同时 A 断开了对 B 的引用（<code>A.ref1 = nil</code>），导致 GC 扫描 A
+          时找不到 B。
+        </p>
+        <p style="margin-bottom: 10px">
+          GC 的逻辑是："B 只被灰色对象 A 引用，A 扫完就没了，所以 B 不可达"。 但
+          GC <strong>忽略了</strong>：B 还被黑色对象 C 引用着，而 C
+          因为已是黑色，GC 不会回头检查。
+        </p>
+        <p style="color: #5fba5f; font-weight: bold">
+          解决方案：写屏障（Write Barrier）——
+          当灰色/黑色对象向白色对象写入引用时，自动将该白色对象重新标为灰色，确保不会被漏掉。
+        </p>
+      </div>
+    </div>
+  </body>
+</html>

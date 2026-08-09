@@ -275,8 +275,11 @@ function main() {
   let fixedFiles = 0;
   let fixedCount = 0;
 
+  const self = resolve("scripts/check-fullwidth-emoji.js");
+
   for (const file of files) {
     const absPath = resolve(file);
+    if (absPath === self) continue;
     /** @type {Buffer} */
     let buf;
     try {
