@@ -1880,7 +1880,7 @@ go tool trace ./trace.out
 
 :::
 
-方式 3: `debug.ReadGCStats()`
+实验 3: `debug.ReadGCStats()`
 
 ::: code-group
 
@@ -1924,7 +1924,7 @@ go run ./src/main.go
 
 :::
 
-方式 4: `runtime.ReadMemStats()`
+实验 4: `runtime.ReadMemStats()`
 
 ::: code-group
 
