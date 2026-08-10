@@ -21,8 +21,8 @@ importers:
         specifier: workspace:^
         version: link:packages/anti-copy
       '@swifty.js/docs':
-        specifier: ^0.0.10
-        version: 0.0.10(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(tailwindcss@4.3.3)(vite@8.2.1(@types/node@25.9.5)(jiti@2.7.0)(terser@5.49.2)(yaml@2.9.0))
+        specifier: ^0.0.11
+        version: 0.0.11(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(tailwindcss@4.3.3)(vite@8.2.1(@types/node@25.9.5)(jiti@2.7.0)(terser@5.49.2)(yaml@2.9.0))
       '@tailwindcss/typography':
         specifier: ^0.5.20
         version: 0.5.20(tailwindcss@4.3.3)
@@ -1747,6 +1747,14 @@ packages:
 
   '@swifty.js/docs@0.0.10':
     resolution: {integrity: sha512-O/PEK+RN9bjINZAVVb8/HLfL0AQoQU8Q/Ai3lkSKHXyNjh/OqsB3CFaennunZo7S3KXoAkTYZ6Mrl3rshYSkNw==}
+    engines: {node: '>=20'}
+    peerDependencies:
+      react: ^18.0.0 || ^19.0.0
+      react-dom: ^18.0.0 || ^19.0.0
+      tailwindcss: ^4.0.0
+
+  '@swifty.js/docs@0.0.11':
+    resolution: {integrity: sha512-znFRGPY5GtQ3+oAeUJ5CA/shG2Jto3n759ACzOymhMAZnFuLNfE9IN05aKcnwJhOZaxdQIFUpM+EegaZakhSjQ==}
     engines: {node: '>=20'}
     peerDependencies:
       react: ^18.0.0 || ^19.0.0
@@ -6860,7 +6868,7 @@ snapshots:
       - supports-color
       - vite
 
-  '@swifty.js/docs@0.0.10(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(tailwindcss@4.3.3)(vite@8.2.1(@types/node@25.9.5)(jiti@2.7.0)(terser@5.49.2)(yaml@2.9.0))':
+  '@swifty.js/docs@0.0.11(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(tailwindcss@4.3.3)(vite@8.2.1(@types/node@25.9.5)(jiti@2.7.0)(terser@5.49.2)(yaml@2.9.0))':
     dependencies:
       '@tailwindcss/typography': 0.5.20(tailwindcss@4.3.3)
       '@vitejs/plugin-react': 4.7.0(vite@8.2.1(@types/node@25.9.5)(jiti@2.7.0)(terser@5.49.2)(yaml@2.9.0))
