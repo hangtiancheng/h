@@ -1,5 +1,5 @@
-import { useLocation } from "preact-iso";
-import { useEffect, useMemo } from "preact/hooks";
+import { useEffect, useMemo } from "react";
+import { useLocation } from "@swifty.js/docs";
 import { createAntiCopy, type AntiCopyOptions } from "@/core";
 import { DOCS_DEFAULT_EXCLUDES, isPathExcluded } from "./common";
 
@@ -22,7 +22,7 @@ export interface SwiftyDocsAntiCopyProps extends AntiCopyOptions {
 }
 
 /**
- * Renderless Preact component wiring copy protection into a @swifty.js/docs
+ * Renderless React component wiring copy protection into a @swifty.js/docs
  * app. Mount it anywhere inside `<LocationProvider>` so protection toggles
  * with client-side navigation:
  *

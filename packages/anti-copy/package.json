@@ -60,8 +60,8 @@
     "@rollup/plugin-typescript": "^12.3.0",
     "jsdom": "^30.0.1",
     "oxfmt": "^0.61.0",
-    "rollup": "^4.62.3",
-    "rollup-plugin-dts": "^6.4.1",
+    "rollup": "^4.62.4",
+    "rollup-plugin-dts": "^6.5.1",
     "tslib": "^2.8.1",
     "typescript": "^6.0.3",
     "vitest": "^4.1.10"
@@ -69,8 +69,7 @@
   "peerDependencies": {
     "@lark.js/docs": ">=0.0.13",
     "@rspress/core": ">=2.0.0",
-    "preact": ">=10.20.0",
-    "preact-iso": ">=2.0.0",
+    "@swifty.js/docs": ">=0.0.10",
     "react": ">=18.0.0",
     "vitepress": ">=1.0.0",
     "vue": ">=3.0.0"
@@ -79,16 +78,13 @@
     "@rspress/core": {
       "optional": true
     },
-    "preact": {
-      "optional": true
-    },
-    "preact-iso": {
-      "optional": true
-    },
     "react": {
       "optional": true
     },
     "@lark.js/docs": {
+      "optional": true
+    },
+    "@swifty.js/docs": {
       "optional": true
     },
     "vitepress": {

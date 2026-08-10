@@ -19,8 +19,6 @@ const input = {
 
 /** @type {(RegExp | string)[]} */
 const external = [
-  /^preact(\/|$)/,
-  "preact-iso",
   /^react(\/|$)/,
   /^vue(\/|$)/,
   /^vitepress(\/|$)/,

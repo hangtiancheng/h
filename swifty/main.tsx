@@ -1,9 +1,13 @@
 /// <reference types="@swifty.js/docs/client" />
 /// <reference types="vite/client" />
 
-import { render } from "preact";
-import { LocationProvider, Router, Route } from "preact-iso";
-import { createContentGuard, DocsProvider, DocsLayout } from "@swifty.js/docs";
+import { createRoot } from "react-dom/client";
+import {
+  createContentGuard,
+  DocsProvider,
+  DocsLayout,
+  LocationProvider,
+} from "@swifty.js/docs";
 import { AntiCopy } from "@swifty.js/anti-copy/swifty-docs";
 import {
   docsConfig,
@@ -17,7 +21,8 @@ import "./main.css";
 // DOCS_PASSWORD env) prompt for a password; everything else passes through.
 const guard = createContentGuard(loadContent);
 
-render(
+// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+createRoot(document.getElementById("app")!).render(
   <>
     <guard.ContentGuard />
     <DocsProvider
@@ -40,12 +45,8 @@ Unauthorized reproduction or distribution of this content is prohibited without 
             }
           />
         )}
-        <Router>
-          <Route path="/" component={DocsLayout} />
-          <Route default component={DocsLayout} />
-        </Router>
+        <DocsLayout />
       </LocationProvider>
     </DocsProvider>
   </>,
-  document.getElementById("app") ?? document.body,
 );

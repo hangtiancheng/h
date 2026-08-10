@@ -707,14 +707,14 @@ mysql 启动时, 为 buffer pool 申请一块连续的内存空间, 按默认的
   - 如果 buffer pool 中有该数据的缓存页, 则直接读 buffer pool 中的数据
   - 否则从磁盘中读该数据页, 并将数据页缓存到 buffer pool 中, 再返回数据 (即使查询 1 行, 也会缓存 1 页)
 - 更新数据时:
-  - 如果 buffer pool 中有该数据的缓存页, 则直接写 buffer pool 中的数据, 并将该缓存页标记为脏页, 同时向 redo log 中写入本次更新; 为了减少磁盘 I/O 次数, 不会立刻将脏页刷新到磁盘, 而是由后台线程每隔 1s 将脏页刷新到磁盘 (刷盘)
+  - 如果 buffer pool 中有该数据的缓存页, 则直接写 buffer pool 中的数据, 并将该缓存页标记为脏页 (page cache), 同时向 redo log 中写入本次更新; 为了减少磁盘 I/O 次数, 不会立刻将 page cache 刷新到磁盘, 而是由后台线程每隔 1s 将 page cache 刷新到磁盘 (刷盘)
   - 否则从磁盘中读该数据页, 并将数据页缓存到 buffer pool 中, 再更新数据 (即使更新 1 行, 也会缓存 1 页)
 
 ### 为什么需要 redo log
 
-WAL (Write-Ahead Logging): 更新数据时, 先写 buffer pool 中的数据, 并将该缓存页标记为脏页, 同时向 redo log 中写入本次更新; 为了减少磁盘 I/O 次数, 不会立刻将脏页刷新到磁盘, 而是由后台线程每隔 1s 将脏页刷新到磁盘 (刷盘)
+WAL (Write-Ahead Logging): 更新数据时, 先写 buffer pool 中的数据, 并将该缓存页标记为脏页 (page cache), 同时向 redo log 中写入本次更新; 为了减少磁盘 I/O 次数, 不会立刻将 page cache 刷新到磁盘, 而是由后台线程每隔 1s 将 page cache 刷新到磁盘 (刷盘)
 
-故障时, 虽然脏页没有写入磁盘, 但是有 redo log, 可以使用 redo log 恢复数据
+故障时, 虽然 page cache 没有写入磁盘, 但是有 redo log, 可以使用 redo log 恢复数据
 
 #### redo log 需要写磁盘, 数据也需要写磁盘, 为什么需要 redo log
 
@@ -728,14 +728,14 @@ WAL (Write-Ahead Logging): 更新数据时, 先写 buffer pool 中的数据, 并
 
 #### redo log 刷盘时机
 
-- 后台线程每隔 1s 将脏页刷新到磁盘
+- 后台线程每隔 1s 将 page cache 刷新到磁盘
 - 每次事务提交时
 - mysql 正常关闭时
 - redo log buffer 使用量大于 1/2 时
 
 #### redo log 写满了怎么办
 
-redo log 写满时, mysql 更新操作会被「阻塞」先将 buffer pool 中的脏页刷新到磁盘, 擦除不必要的 redo log, 再继续执行更新操作
+redo log 写满时, mysql 更新操作会被「阻塞」先将 buffer pool 中的 page cache 刷新到磁盘, 擦除不必要的 redo log, 再继续执行更新操作
 
 ### 为什么需要 binlog
 
@@ -784,7 +784,7 @@ mysql 使用内部 XA 事务, coordinator 协调者是 binlog, participant 参�
 - commit 提交阶段
   1. 将 XID (内部 XA 事务的 ID) 写入 binlog
   2. 将 binlog 持久化到磁盘 (`sync_binlog = 1`) <- 崩溃时刻 2: redo log 和 binlog 都已持久化到磁盘, 但未设置 redo log 事务状态为 commit
-  3. 调用 InnoDB 引擎的提交事务接口, 设置 redo log 事务状态为 commit (只需要写入脏页 page cache, 不需要持久化到磁盘)
+  3. 调用 InnoDB 引擎的提交事务接口, 设置 redo log 事务状态为 commit (只需要写入 page cache, 不需要持久化到磁盘)
 
 - 崩溃时刻 1: redo log 已持久化到磁盘, binlog 未持久化到磁盘时, mysql 宕机, 此时 redo log 的事务状态是 prepare
   - 故障恢复时, 如果磁盘的 binlog 中没有当前内部 XA 事务的 XID, 则说明 redo log 已刷盘, binlog 未刷盘, 回滚事务
@@ -796,10 +796,38 @@ mysql 使用内部 XA 事务, coordinator 协调者是 binlog, participant 参�
 
 ### 两阶段提交存在的问题
 
-1. 磁盘 IO 次数多: 对于 `innodb_flush_log_at_trx_commit = 1` 和 `sync_binlog = 1`, 每个事务提交都有 2 次刷盘 (fsync), 一次是 redo log 刷盘, 一次是 binlog 刷盘
-2. 锁竞争激烈: 两阶段提交可以保证「单事务」redo log 和 binlog 两份日志的内容一致, 但是「多事务」的场景下, 不能保证两份日志的多事务提交顺序也一致, 需要加锁保证提交的原子性, 进而保证多事务的场景下, 两份日志的多事务提交顺序也一致
+1. 磁盘 IO 次数多: redo log 缓存到 redo log buffer, binlog 缓存到 binlog cache; `innodb_flush_log_at_trx_commit = 1` 每次提交事务时, 都会将缓存在 redo log buffer 中的 redo log 持久化到磁盘; `sync_binlog = 1` 每次提交事务时, 都会将缓存在 binlog cache 中的 binlog 持久化到磁盘; 每次提交事务都有 2 次刷盘 (fsync), 1 次是 redo log 刷盘, 1 次是 binlog 刷盘
+2. 锁竞争激烈: 两阶段提交可以保证「单事务」redo log 和 binlog 两份日志的内容一致, 但是多事务场景下, 不能保证两份日志的多事务提交顺序也一致, 需要加锁保证提交的原子性, 进而保证多事务场景下, 两份日志的多事务提交顺序也一致
 
-## syntax
+### binlog 组提交
+
+mysql 引入 binlog 组提交机制 (group commit), 多事务场景下, 可以将多个事务 binlog 刷盘合并为 1 次刷盘, 减少磁盘 IO 次数; 如果 10 个事务串行刷盘的时间成本是 10, 则 10 个事务一次性刷盘的时间成本约等于 1
+
+引入 binlog 组提交机制后, commit 提交阶段拆分为 3 个子阶段
+
+1. flush 子阶段: 多个事务按顺序将 binlog 从用户态的 binlog cache 写入内核态的 page cache (binlog 文件)
+2. sync 子阶段: 对 binlog 文件执行一次刷盘操作, 即将多个事务的 binlog 刷盘合并为 1 次刷盘
+3. commit 子阶段: 多个事务按顺序做 InnoDB commit 操作 (设置 redo log 事务状态为 commit)
+
+### redo log 组提交
+
+prepare 阶段不再执行多个事务的 redo log 刷盘, 推迟到 binlog 组提交的 flush 子阶段
+
+### 执行 `update users set name = 'whoami' where id = 1` 的流程
+
+1. 执行器调用存储引擎的接口, 通过主键索引树查找 id = 1 的行记录
+   - 如果 id = 1 的行记录所在的数据页在 buffer pool 中, 则直接返回给执行器更新
+   - 如果 id = 1 的行记录所在的数据页不在 buffer pool 中, 则将数据页从磁盘读入到 buffer pool, 再返回给执行器更新
+2. 执行器拿到聚簇索引记录后, 判断更新前的记录和更新后的记录是否相同
+   - 如果相同, 则直接返回
+   - 如果不同, 则传递更新前的记录和更新后的记录给 InnoDB 存储引擎, 通知 InnoDB 存储引擎执行更新记录的操作
+3. 开启事务, InnoDB 更新记录前, 先生成一条 undo log, 写入 buffer pool 中的 undo 页面
+4. InnoDB 更新记录, 先更新内存, 并标记为脏页 (page cache), 再将记录写入 redo log; 为了减少磁盘 IO 次数, 不是立刻将 page cache 写入磁盘, 而是后续由后台线程选择合适的时机将 page cache 写入磁盘 (WAL)
+5. 更新记录后, 将该 update 语句对应的 binlog 写入 binlog cache, 此时不会刷盘, 事务提交时才会将该 binlog 进行刷盘
+6. 事务提交
+   - prepare 阶段: 将 redo log 对应的
+
+## SQL
 
 ### 创建表, 修改表
 
