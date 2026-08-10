@@ -773,36 +773,20 @@ mysql 使用分布式事务:「两阶段提交」
 
 两阶段提交将事务拆分为 2 个阶段: prepare 准备阶段和 commit 提交阶段, 每个阶段都由 coordinator 协调者和 participant 参与者共同完成
 
-mysql 使用内部 XA 事务, 协调者是 binlog, 参与者是 InnoDB 存储引擎
+mysql 使用内部 XA 事务, coordinator 协调者是 binlog, participant 参与者是 InnoDB 存储引擎
 
 客户端自动提交或执行 commit 语句时, mysql 开启内部 XA 事务, 分为两个阶段
 
-```mermaid
-%%{init: {'themeVariables': {'fontFamily': 'Swifty'}}}%%
-sequenceDiagram
-  participant 事务请求
-  participant MySQL Server
-  participant binlog
-  participant innodb as InnoDB 存储引擎
+- prepare 准备阶段
+  1. 将 XID (内部 XA 事务的 ID) 写入 redo log
+  2. 将 redo log 事务状态设置为 prepare
+  3. 将 redo log 持久化到磁盘 (innodb_flush_log_at_trx_commit = 1)
+- commit 提交阶段
+  1. 将 XID (内部 XA 事务的 ID) 写入 binlog
+  2. 将 binlog 持久化到磁盘 (sync_binlog = 1)
+  3. 调用 InnoDB 引擎的提交事务接口, 将 redo log 事务状态设置为 commit
 
-  事务请求->>MySQL Server: 事务提交
-
-  rect rgb(200, 230, 255)
-    Note over MySQL Server, innodb: prepare 阶段
-    MySQL Server->>innodb: 写入 redo log
-    innodb->>MySQL Server: ok
-  end
-
-  rect rgb(220, 240, 200)
-  Note over MySQL Server, innodb: commit 阶段
-  MySQL Server->>binlog: 写入 binlog
-  binlog->>MySQL Server: ok
-  MySQL Server->>innodb: 调用 InnoDB 引擎的提交事务接口, 将 redo log 状态设置为 commit
-  innodb->>MySQL Server: ok
-  end
-
-  MySQL Server->>事务请求: ok
-```
+- 如果将 redo log 持久化到磁盘后, mysql 宕机, binlog 还未写入
 
 ## syntax
 
