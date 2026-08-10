@@ -4,7 +4,6 @@
 
 ### 索引
 
-- `count(*)` 和 `count(1)` 的区别?
 - mysql 分页性能优化
 
 ### 锁
@@ -674,7 +673,7 @@ delete from table ... where id = 1;
 
 :::
 
-## undo log, redo log
+## undo log, redo log, binlog
 
 - undo log 回滚日志: InnoDB 存储引擎层生成的日志, 保证事务的原子性, 实现事务回滚和 MVCC 多版本并发控制
 - redo log 重做日志: InnoDB 存储引擎层生成的日志, 保证事务的持久性, 用于故障恢复 (crash-safe)
@@ -753,6 +752,57 @@ binlog 记录「所有的」表结构修改和表数据更新, 不记录查询�
 - binlog 是全量日志, 记录「所有的」表结构修改和表数据更新
 
 ### 为什么需要两阶段提交
+
+事务提交后, redo log 和 binlog 都需要持久化到磁盘
+
+```sql
+select name from `users` where id = 1; -- jane
+update `users` set name = 'john' where id = 1;
+```
+
+- 如果将 redo log 持久化到磁盘后, mysql 宕机, binlog 还未写入
+  - 故障恢复时, 使用 redo log 可以将 buffer pool 中 id = 1 的行数据的 name 字段恢复到 john, 主库 id = 1 的行数据的 name 字段是新值 john
+  - 主从架构中, binlog 会被复制到从库, 由于 binlog 未记录该更新语句, 导致从库 id = 1 的行数据的 name 字段是旧值 jane, 与主库不一致
+- 如果将 binlog 持久化到磁盘后, mysql 宕机, redo log 还未写入
+  - 故障恢复时, 由于 redo log 未记录该更新语句, 导致主库 id = 1 的行数据的 name 字段是旧值 jane
+  - 主从架构中, binlog 会被复制到从库, binlog 记录该更新语句, 从库 id = 1 的行数据的 name 字段是新值 john, 与主库不一致
+
+持久化 redo log 和 binlog 两份日志时, 如果半成功, 则会导致主从的数据不一致: redo log 影响主库的数据, binlog 影响从库的数据, redo log 和 binlog 必须保证一致性
+
+mysql 使用分布式事务:「两阶段提交」
+
+两阶段提交将事务拆分为 2 个阶段: prepare 准备阶段和 commit 提交阶段, 每个阶段都由 coordinator 协调者和 participant 参与者共同完成
+
+mysql 使用内部 XA 事务, 协调者是 binlog, 参与者是 InnoDB 存储引擎
+
+客户端自动提交或执行 commit 语句时, mysql 开启内部 XA 事务, 分为两个阶段
+
+```mermaid
+%%{init: {'themeVariables': {'fontFamily': 'Swifty'}}}%%
+sequenceDiagram
+  participant 事务请求
+  participant MySQL Server
+  participant binlog
+  participant innodb as innodb存储引擎
+
+  事务请求->>MySQL Server: 事务提交
+
+  rect rgb(200, 230, 255)
+    Note over MySQL Server, innodb: prepare 阶段
+    MySQL Server->>innodb: 写入 redo log
+    innodb->>MySQL Server: ok
+  end
+
+  rect rgb(220, 240, 200)
+  Note over MySQL Server, innodb: commit 阶段
+  MySQL Server->>binlog: 写入 binlog
+  binlog->>MySQL Server: ok
+  MySQL Server->>innodb: 调用引擎的提交事务接口, 将 redo log 状态设置为 commit
+  innodb->>MySQL Server: ok
+  end
+
+  MySQL Server->>事务请求: ok
+```
 
 ## syntax
 

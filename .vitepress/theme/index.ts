@@ -10,14 +10,16 @@ const theme: Theme = {
   extends: DefaultTheme,
   enhanceApp(ctx) {
     ctx.app.component("Mermaid", Mermaid);
-    applyAntiCopy(ctx, {
-      mode: "replace",
-      replaceText: (selection) =>
-        `${selection}\n\n— Copyright © ${new Date().getFullYear()} hangtiancheng. All rights reserved.
+    if (import.meta.env.PROD) {
+      applyAntiCopy(ctx, {
+        mode: "replace",
+        replaceText: (selection) =>
+          `${selection}\n\n— Copyright © ${new Date().getFullYear()} hangtiancheng. All rights reserved.
 Unauthorized reproduction or distribution of this content is prohibited without prior written permission.`,
-      devtools: true,
-      onViolation: (e) => console.warn("[anti-copy]", e.type, e.key ?? ""),
-    });
+        devtools: true,
+        onViolation: (e) => console.warn("[anti-copy]", e.type, e.key ?? ""),
+      });
+    }
   },
 };
 
