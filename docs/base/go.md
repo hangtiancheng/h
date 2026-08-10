@@ -810,10 +810,10 @@ flowchart TD
   SudogLookup --> BlockG["将 g 加入 sudog 等待队列并阻塞 g"]
   SudogLookup --> WakeG["从 sudog 等待队列中取出 g 并唤醒"]
 
-  classDef green
-  classDef orange
-  classDef purple
-  classDef blue
+  classDef green fill:#dcfce7,stroke:#16a34a,color:#000
+  classDef orange fill:#fef3c7,stroke:#d97706,color:#000
+  classDef purple fill:#f3e8ff,stroke:#9333ea,color:#000
+  classDef blue fill:#dbeafe,stroke:#2563eb,color:#000
 
   class Lock green
   class UnLock orange

@@ -783,7 +783,7 @@ sequenceDiagram
   participant 事务请求
   participant MySQL Server
   participant binlog
-  participant innodb as innodb存储引擎
+  participant innodb as InnoDB 存储引擎
 
   事务请求->>MySQL Server: 事务提交
 
@@ -797,7 +797,7 @@ sequenceDiagram
   Note over MySQL Server, innodb: commit 阶段
   MySQL Server->>binlog: 写入 binlog
   binlog->>MySQL Server: ok
-  MySQL Server->>innodb: 调用引擎的提交事务接口, 将 redo log 状态设置为 commit
+  MySQL Server->>innodb: 调用 InnoDB 引擎的提交事务接口, 将 redo log 状态设置为 commit
   innodb->>MySQL Server: ok
   end
 
