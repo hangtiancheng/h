@@ -109,7 +109,7 @@ vite: {
 
 ## @swifty.js/docs integration
 
-Mount the renderless `AntiCopy` component anywhere inside preact-iso's
+Mount the renderless `AntiCopy` component anywhere inside @swifty.js/docs's
 `<LocationProvider>`:
 
 ```tsx

@@ -100,13 +100,13 @@ importers:
     dependencies:
       '@lark.js/docs':
         specifier: '>=0.0.13'
-        version: 0.0.16(@tailwindcss/typography@0.5.20(tailwindcss@4.3.3))(tailwindcss@4.3.3)(vite@8.2.1(@types/node@25.9.5)(jiti@2.7.0)(terser@5.49.2)(yaml@2.9.0))
+        version: 0.0.16(@tailwindcss/typography@0.5.20(tailwindcss@4.3.3))(tailwindcss@4.3.3)(vite@5.4.21(@types/node@25.9.5)(lightningcss@1.33.0)(terser@5.49.2))
       '@rspress/core':
         specifier: '>=2.0.0'
         version: 2.0.19(@rspack/core@2.1.8(@swc/helpers@0.5.23))(micromark-util-types@2.0.2)(micromark@4.0.2)
       '@swifty.js/docs':
         specifier: '>=0.0.10'
-        version: 0.0.10(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(tailwindcss@4.3.3)(vite@8.2.1(@types/node@25.9.5)(jiti@2.7.0)(terser@5.49.2)(yaml@2.9.0))
+        version: 0.0.10(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(tailwindcss@4.3.3)(vite@5.4.21(@types/node@25.9.5)(lightningcss@1.33.0)(terser@5.49.2))
       react:
         specifier: '>=18.0.0'
         version: 19.2.8
@@ -146,7 +146,7 @@ importers:
         version: 6.0.3
       vitest:
         specifier: ^4.1.10
-        version: 4.1.10(@types/node@25.9.5)(happy-dom@20.11.1)(jsdom@30.0.1)(vite@8.2.1(@types/node@25.9.5)(jiti@2.7.0)(terser@5.49.2)(yaml@2.9.0))
+        version: 4.1.10(@types/node@25.9.5)(happy-dom@20.11.1)(jsdom@30.0.1)(vite@5.4.21(@types/node@25.9.5)(lightningcss@1.33.0)(terser@5.49.2))
 
 packages:
 
@@ -6266,6 +6266,23 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
 
+  '@lark.js/docs@0.0.16(@tailwindcss/typography@0.5.20(tailwindcss@4.3.3))(tailwindcss@4.3.3)(vite@5.4.21(@types/node@25.9.5)(lightningcss@1.33.0)(terser@5.49.2))':
+    dependencies:
+      '@lark.js/mvc': 0.0.23(vite@5.4.21(@types/node@25.9.5)(lightningcss@1.33.0)(terser@5.49.2))
+      '@tailwindcss/typography': 0.5.20(tailwindcss@4.3.3)
+      ejs: 3.1.10
+      js-yaml: 5.2.3
+      lucide-static: 1.31.0
+      markdown-it: 14.3.0
+      markdown-it-container: 4.0.0
+      mermaid: 11.16.1
+      minisearch: 7.2.0
+      shiki: 4.4.3
+      tailwindcss: 4.3.3
+      zod: 4.4.3
+    transitivePeerDependencies:
+      - vite
+
   '@lark.js/docs@0.0.16(@tailwindcss/typography@0.5.20(tailwindcss@4.3.3))(tailwindcss@4.3.3)(vite@8.2.1(@types/node@25.9.5)(jiti@2.7.0)(terser@5.49.2)(yaml@2.9.0))':
     dependencies:
       '@lark.js/mvc': 0.0.23(vite@8.2.1(@types/node@25.9.5)(jiti@2.7.0)(terser@5.49.2)(yaml@2.9.0))
@@ -6282,6 +6299,13 @@ snapshots:
       zod: 4.4.3
     transitivePeerDependencies:
       - vite
+
+  '@lark.js/mvc@0.0.23(vite@5.4.21(@types/node@25.9.5)(lightningcss@1.33.0)(terser@5.49.2))':
+    dependencies:
+      '@babel/parser': 7.29.8
+      '@babel/types': 7.29.8
+      htmlparser2: 12.0.0
+      vite: 5.4.21(@types/node@25.9.5)(lightningcss@1.33.0)(terser@5.49.2)
 
   '@lark.js/mvc@0.0.23(vite@8.2.1(@types/node@25.9.5)(jiti@2.7.0)(terser@5.49.2)(yaml@2.9.0))':
     dependencies:
@@ -6685,7 +6709,7 @@ snapshots:
       react-dom: 19.2.8(react@19.2.8)
       react-lazy-with-preload: 2.2.1
       react-render-to-markdown: 19.1.0(react@19.2.8)
-      react-router-dom: 7.18.2(react-dom@19.2.8)(react@19.2.8)
+      react-router-dom: 7.18.2(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       rehype-external-links: 3.0.0
       rehype-raw: 7.0.0
       remark-cjk-friendly: 2.3.1(@types/mdast@4.0.4)(micromark-util-types@2.0.2)(micromark@4.0.2)(unified@11.0.5)
@@ -6812,6 +6836,29 @@ snapshots:
   '@swc/helpers@0.5.23':
     dependencies:
       tslib: 2.8.1
+
+  '@swifty.js/docs@0.0.10(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(tailwindcss@4.3.3)(vite@5.4.21(@types/node@25.9.5)(lightningcss@1.33.0)(terser@5.49.2))':
+    dependencies:
+      '@tailwindcss/typography': 0.5.20(tailwindcss@4.3.3)
+      '@vitejs/plugin-react': 4.7.0(vite@5.4.21(@types/node@25.9.5)(lightningcss@1.33.0)(terser@5.49.2))
+      class-variance-authority: 0.7.1
+      clsx: 2.1.1
+      ejs: 3.1.10
+      js-yaml: 5.2.3
+      lucide-react: 1.31.0(react@19.2.8)
+      markdown-it: 14.3.0
+      markdown-it-container: 4.0.0
+      mermaid: 11.16.1
+      minisearch: 7.2.0
+      react: 19.2.8
+      react-dom: 19.2.8(react@19.2.8)
+      shiki: 4.4.3
+      tailwind-merge: 3.6.0
+      tailwindcss: 4.3.3
+      zod: 4.4.3
+    transitivePeerDependencies:
+      - supports-color
+      - vite
 
   '@swifty.js/docs@0.0.10(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(tailwindcss@4.3.3)(vite@8.2.1(@types/node@25.9.5)(jiti@2.7.0)(terser@5.49.2)(yaml@2.9.0))':
     dependencies:
@@ -7248,6 +7295,18 @@ snapshots:
       d3-selection: 3.0.0
       d3-transition: 3.0.1(d3-selection@3.0.0)
 
+  '@vitejs/plugin-react@4.7.0(vite@5.4.21(@types/node@25.9.5)(lightningcss@1.33.0)(terser@5.49.2))':
+    dependencies:
+      '@babel/core': 7.29.7
+      '@babel/plugin-transform-react-jsx-self': 7.29.7(@babel/core@7.29.7)
+      '@babel/plugin-transform-react-jsx-source': 7.29.7(@babel/core@7.29.7)
+      '@rolldown/pluginutils': 1.0.0-beta.27
+      '@types/babel__core': 7.20.5
+      react-refresh: 0.17.0
+      vite: 5.4.21(@types/node@25.9.5)(lightningcss@1.33.0)(terser@5.49.2)
+    transitivePeerDependencies:
+      - supports-color
+
   '@vitejs/plugin-react@4.7.0(vite@8.2.1(@types/node@25.9.5)(jiti@2.7.0)(terser@5.49.2)(yaml@2.9.0))':
     dependencies:
       '@babel/core': 7.29.7
@@ -7285,6 +7344,14 @@ snapshots:
       '@vitest/utils': 4.1.10
       chai: 6.2.2
       tinyrainbow: 3.1.1
+
+  '@vitest/mocker@4.1.10(vite@5.4.21(@types/node@25.9.5)(lightningcss@1.33.0)(terser@5.49.2))':
+    dependencies:
+      '@vitest/spy': 4.1.10
+      estree-walker: 3.0.3
+      magic-string: 0.30.21
+    optionalDependencies:
+      vite: 5.4.21(@types/node@25.9.5)(lightningcss@1.33.0)(terser@5.49.2)
 
   '@vitest/mocker@4.1.10(vite@8.2.1(@types/node@25.9.5)(jiti@2.7.0)(terser@5.49.2)(yaml@2.9.0))':
     dependencies:
@@ -9900,13 +9967,13 @@ snapshots:
       react: 19.2.8
       react-reconciler: 0.33.0(react@19.2.8)
 
-  react-router-dom@7.18.2(react-dom@19.2.8)(react@19.2.8):
+  react-router-dom@7.18.2(react-dom@19.2.8(react@19.2.8))(react@19.2.8):
     dependencies:
       react: 19.2.8
       react-dom: 19.2.8(react@19.2.8)
-      react-router: 7.18.2(react-dom@19.2.8)(react@19.2.8)
+      react-router: 7.18.2(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
 
-  react-router@7.18.2(react-dom@19.2.8)(react@19.2.8):
+  react-router@7.18.2(react-dom@19.2.8(react@19.2.8))(react@19.2.8):
     dependencies:
       cookie: 1.1.1
       react: 19.2.8
@@ -10841,6 +10908,35 @@ snapshots:
       - terser
       - typescript
       - universal-cookie
+
+  vitest@4.1.10(@types/node@25.9.5)(happy-dom@20.11.1)(jsdom@30.0.1)(vite@5.4.21(@types/node@25.9.5)(lightningcss@1.33.0)(terser@5.49.2)):
+    dependencies:
+      '@vitest/expect': 4.1.10
+      '@vitest/mocker': 4.1.10(vite@5.4.21(@types/node@25.9.5)(lightningcss@1.33.0)(terser@5.49.2))
+      '@vitest/pretty-format': 4.1.10
+      '@vitest/runner': 4.1.10
+      '@vitest/snapshot': 4.1.10
+      '@vitest/spy': 4.1.10
+      '@vitest/utils': 4.1.10
+      es-module-lexer: 2.3.1
+      expect-type: 1.4.0
+      magic-string: 0.30.21
+      obug: 2.1.4
+      pathe: 2.0.3
+      picomatch: 4.0.5
+      std-env: 4.2.0
+      tinybench: 2.9.0
+      tinyexec: 1.3.0
+      tinyglobby: 0.2.17
+      tinyrainbow: 3.1.1
+      vite: 5.4.21(@types/node@25.9.5)(lightningcss@1.33.0)(terser@5.49.2)
+      why-is-node-running: 2.3.0
+    optionalDependencies:
+      '@types/node': 25.9.5
+      happy-dom: 20.11.1
+      jsdom: 30.0.1
+    transitivePeerDependencies:
+      - msw
 
   vitest@4.1.10(@types/node@25.9.5)(happy-dom@20.11.1)(jsdom@30.0.1)(vite@8.2.1(@types/node@25.9.5)(jiti@2.7.0)(terser@5.49.2)(yaml@2.9.0)):
     dependencies:
