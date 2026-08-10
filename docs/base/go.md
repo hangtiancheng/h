@@ -787,7 +787,7 @@ state 的结构
 |    (29 bit)      |   (1 bit)     |  (1 bit)   |  (1 bit)    |
 +------------------+---------------+------------+-------------+
         |               |                  |                 |
-        v               v                  v                 v
+        V               V                  V                 V
 阻塞等待锁的 G 数量  该 mutex 是否饥饿  是否有 G          该 mutex 是否已被锁定
 G 解锁时根据该值     0: 未饥饿          已被唤醒          0: 没有锁定
 判断是否需要释放     1: 饥饿            0: 没有 G 被唤醒  1: 已被锁定
@@ -796,33 +796,21 @@ sema 信号量                             1: 已有 G 被唤醒
 
 <!-- cSpell: words Semacquire Semrelease semtable semroot -->
 
-```mermaid
-%%{init: {'themeVariables': {'fontFamily': 'Swifty'}}}%%
-flowchart TD
-  Lock["Lock (阻塞 goroutine)"] --> Semacquire["runtime_Semacquire"]
-  UnLock["UnLock (唤醒 goroutine)"] --> Semrelease["runtime_Semrelease"]
-
-  Semacquire --> HashLookup["通过 sema 变量地址的 hash 值从 semtable 中找到 semroot"]
-  Semrelease --> HashLookup
-
-  HashLookup --> SudogLookup["通过 sema 变量地址从 semroot 中找到 sudog"]
-
-  SudogLookup --> BlockG["将 g 加入 sudog 等待队列并阻塞 g"]
-  SudogLookup --> WakeG["从 sudog 等待队列中取出 g 并唤醒"]
-
-  classDef green fill:#dcfce7,stroke:#16a34a,color:#000
-  classDef orange fill:#fef3c7,stroke:#d97706,color:#000
-  classDef purple fill:#f3e8ff,stroke:#9333ea,color:#000
-  classDef blue fill:#dbeafe,stroke:#2563eb,color:#000
-
-  class Lock green
-  class UnLock orange
-  class Semacquire purple
-  class Semrelease blue
-  class HashLookup orange
-  class SudogLookup green
-  class BlockG purple
-  class WakeG blue
+```txt
+Lock (阻塞 goroutine)                UnLock (唤醒 goroutine)
+        │                                      │
+        V                                      V
+runtime_Semacquire                    runtime_Semrelease
+        │                                      │
+        └──────────────────┬───────────────────┘
+                           V
+  通过 sema 变量地址的 hash 值从 semtable 中找到 semroot
+                           │
+                           V
+       通过 sema 变量地址从 semroot 中找到 sudog
+                    │                  │
+                    V                  V
+  将 g 加入 sudog 等待队列并阻塞 g   从 sudog 等待队列中取出 g 并唤醒
 ```
 
 ### Mutex 的两种模式

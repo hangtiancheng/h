@@ -760,16 +760,16 @@ select name from `users` where id = 1; -- jane
 update `users` set name = 'john' where id = 1;
 ```
 
-- 如果将 redo log 持久化到磁盘后, mysql 宕机, binlog 还未写入
+- 如果将 redo log 持久化到磁盘后, mysql 宕机, binlog 还未持久化到磁盘
   - 故障恢复时, 使用 redo log 可以将 buffer pool 中 id = 1 的行数据的 name 字段恢复到 john, 主库 id = 1 的行数据的 name 字段是新值 john
   - 主从架构中, binlog 会被复制到从库, 由于 binlog 未记录该更新语句, 导致从库 id = 1 的行数据的 name 字段是旧值 jane, 与主库不一致
-- 如果将 binlog 持久化到磁盘后, mysql 宕机, redo log 还未写入
+- 如果将 binlog 持久化到磁盘后, mysql 宕机, redo log 还未持久化到磁盘
   - 故障恢复时, 由于 redo log 未记录该更新语句, 导致主库 id = 1 的行数据的 name 字段是旧值 jane
   - 主从架构中, binlog 会被复制到从库, binlog 记录该更新语句, 从库 id = 1 的行数据的 name 字段是新值 john, 与主库不一致
 
-持久化 redo log 和 binlog 两份日志时, 如果半成功, 则会导致主从的数据不一致: redo log 影响主库的数据, binlog 影响从库的数据, redo log 和 binlog 必须保证一致性
+持久化 redo log 和 binlog 两份日志时, 如果半成功, 则会导致主从的数据不一致: redo log 影响主库的数据, binlog 影响从库的数据, redo log 和 binlog 必须保证内容一致
 
-mysql 使用分布式事务:「两阶段提交」
+> mysql 使用「两阶段提交」
 
 两阶段提交将事务拆分为 2 个阶段: prepare 准备阶段和 commit 提交阶段, 每个阶段都由 coordinator 协调者和 participant 参与者共同完成
 
@@ -780,13 +780,24 @@ mysql 使用内部 XA 事务, coordinator 协调者是 binlog, participant 参�
 - prepare 准备阶段
   1. 将 XID (内部 XA 事务的 ID) 写入 redo log
   2. 将 redo log 事务状态设置为 prepare
-  3. 将 redo log 持久化到磁盘 (innodb_flush_log_at_trx_commit = 1)
+  3. 将 redo log 持久化到磁盘 (`innodb_flush_log_at_trx_commit = 1`) <- 崩溃时刻 1: redo log 已持久化到磁盘, binlog 未持久化到磁盘
 - commit 提交阶段
   1. 将 XID (内部 XA 事务的 ID) 写入 binlog
-  2. 将 binlog 持久化到磁盘 (sync_binlog = 1)
-  3. 调用 InnoDB 引擎的提交事务接口, 将 redo log 事务状态设置为 commit
+  2. 将 binlog 持久化到磁盘 (`sync_binlog = 1`) <- 崩溃时刻 2: redo log 和 binlog 都已持久化到磁盘, 但未设置 redo log 事务状态为 commit
+  3. 调用 InnoDB 引擎的提交事务接口, 设置 redo log 事务状态为 commit (只需要写入脏页 page cache, 不需要持久化到磁盘)
 
-- 如果将 redo log 持久化到磁盘后, mysql 宕机, binlog 还未写入
+- 崩溃时刻 1: redo log 已持久化到磁盘, binlog 未持久化到磁盘时, mysql 宕机, 此时 redo log 的事务状态是 prepare
+  - 故障恢复时, 如果磁盘的 binlog 中没有当前内部 XA 事务的 XID, 则说明 redo log 已刷盘, binlog 未刷盘, 回滚事务
+- 崩溃时刻 2: redo log 和 binlog 都已持久化到磁盘, 但未设置 redo log 事务状态为 commit 时, mysql 宕机, 此时 redo log 的事务状态仍然是 prepare
+  - 故障恢复时, 如果磁盘的 binlog 中有当前内部 XA 事务的 XID, 则说明 redo log 和 binlog 都已刷盘, 提交事务
+- 使用两阶段提交, 不存在「如果将 binlog 持久化到磁盘后, mysql 宕机, redo log 还未持久化到磁盘」的情况
+
+两阶段提交以磁盘的 binlog 中是否有当前内部 XA 事务的 XID 作为提交事务/回滚事务的标识
+
+### 两阶段提交存在的问题
+
+1. 磁盘 IO 次数多: 对于 `innodb_flush_log_at_trx_commit = 1` 和 `sync_binlog = 1`, 每个事务提交都有 2 次刷盘 (fsync), 一次是 redo log 刷盘, 一次是 binlog 刷盘
+2. 锁竞争激烈: 两阶段提交可以保证「单事务」redo log 和 binlog 两份日志的内容一致, 但是「多事务」的场景下, 不能保证两份日志的多事务提交顺序也一致, 需要加锁保证提交的原子性, 进而保证多事务的场景下, 两份日志的多事务提交顺序也一致
 
 ## syntax
 
