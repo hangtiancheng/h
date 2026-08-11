@@ -813,20 +813,6 @@ mysql 引入 binlog 组提交机制 (group commit), 多事务场景下, 可以�
 
 prepare 阶段不再执行多个事务的 redo log 刷盘, 推迟到 binlog 组提交的 flush 子阶段
 
-### 执行 `update users set name = 'whoami' where id = 1` 的流程
-
-1. 执行器调用存储引擎的接口, 通过主键索引树查找 id = 1 的行记录
-   - 如果 id = 1 的行记录所在的数据页在 buffer pool 中, 则直接返回给执行器更新
-   - 如果 id = 1 的行记录所在的数据页不在 buffer pool 中, 则将数据页从磁盘读入到 buffer pool, 再返回给执行器更新
-2. 执行器拿到聚簇索引记录后, 判断更新前的记录和更新后的记录是否相同
-   - 如果相同, 则直接返回
-   - 如果不同, 则传递更新前的记录和更新后的记录给 InnoDB 存储引擎, 通知 InnoDB 存储引擎执行更新记录的操作
-3. 开启事务, InnoDB 更新记录前, 先生成一条 undo log, 写入 buffer pool 中的 undo 页面
-4. InnoDB 更新记录, 先更新内存, 并标记为脏页 (page cache), 再将记录写入 redo log; 为了减少磁盘 IO 次数, 不是立刻将 page cache 写入磁盘, 而是后续由后台线程选择合适的时机将 page cache 写入磁盘 (WAL)
-5. 更新记录后, 将该 update 语句对应的 binlog 写入 binlog cache, 此时不会刷盘, 事务提交时才会将该 binlog 进行刷盘
-6. 事务提交
-   - prepare 阶段: 将 redo log 对应的
-
 ## SQL
 
 ### 创建表, 修改表
