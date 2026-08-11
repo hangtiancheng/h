@@ -34,10 +34,10 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@lark.js/docs": "^0.0.16",
+    "@lark.js/docs": "catalog:",
     "@rspress/core": "^2.0.19",
-    "@swifty.js/anti-copy": "workspace:^",
-    "@swifty.js/docs": "^0.0.11",
+    "@swifty.js/anti-copy": "catalog:",
+    "@swifty.js/docs": "catalog:",
     "@tailwindcss/typography": "^0.5.20",
     "@tailwindcss/vite": "^4.3.3",
     "@types/node": "^25.9.5",
