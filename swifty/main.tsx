@@ -40,9 +40,6 @@ createRoot(document.getElementById("app")!).render(
 Unauthorized reproduction or distribution of this content is prohibited without prior written permission.`
             }
             devtools
-            onViolation={(e) =>
-              console.warn("[anti-copy]", e.type, e.key ?? "")
-            }
           />
         )}
         <DocsLayout />
