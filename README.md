@@ -57,3 +57,13 @@ const input = async () => String((await iter.next()).value);
   console.log(line);
 })();
 ```
+
+```bash
+npx skills add copilotkit/copilotkit@a2ui-renderer
+npx skills add agenui/agenui@a2ui-generation
+npx skills add a2ui-project/a2ui@a2ui-sdk-design
+npx skills add a2ui-project/a2ui@a2ui-agent-maintenance
+npx skills add a2ui-project/a2ui@a2ui-audit
+npx skills add a2ui-project/a2ui@a2ui-doc-sync-check
+npx skills add a2ui-project/a2ui@a2ui-test-quality-check
+```
