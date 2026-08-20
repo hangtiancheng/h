@@ -58,12 +58,12 @@ const input = async () => String((await iter.next()).value);
 })();
 ```
 
-```bash
-npx skills add copilotkit/copilotkit@a2ui-renderer
-npx skills add agenui/agenui@a2ui-generation
-npx skills add a2ui-project/a2ui@a2ui-sdk-design
-npx skills add a2ui-project/a2ui@a2ui-agent-maintenance
-npx skills add a2ui-project/a2ui@a2ui-audit
-npx skills add a2ui-project/a2ui@a2ui-doc-sync-check
-npx skills add a2ui-project/a2ui@a2ui-test-quality-check
-```
+JavaScript 常常被戏称为一门偶然成功的玩具语言
+
+而实际上, 她出身名门, 更是成长在聚光灯之下
+
+纵观历史, 有资格被标准化的编程语言甚少, 她因此成为多方角力的战场, 却也有幸同时得到业界与学界先驱的亲传
+
+时至今日, 我们甚至难言是它背负了太多妥协, 还是这些妥协才成就了她呢
+
+以史为鉴, 或许你会有自己的答案
