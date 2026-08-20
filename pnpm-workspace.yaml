@@ -3,5 +3,5 @@ allowBuilds:
 
 catalog:
   "@swifty.js/anti-copy": "^0.0.2"
-  "@swifty.js/docs": "^0.0.11"
-  "@lark.js/docs": "^0.0.16"
+  "@swifty.js/docs": "^0.0.12"
+  "@lark.js/docs": "^0.0.19"
