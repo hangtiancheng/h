@@ -1,10 +1,14 @@
 # homepage
 
-```bash
-vim ~/.claude/CLAUDE.md
+JavaScript 常常被戏称为一门偶然成功的玩具语言
 
-# 生成的 markdown 中不要有粗体、不要有表情符号
-```
+而实际上, 她出身名门, 更是成长在聚光灯之下
+
+纵观历史, 有资格被标准化的编程语言甚少, 她因此成为多方角力的战场, 却也有幸同时得到业界与学界先驱的亲传
+
+时至今日, 我们甚至难言是她背负了太多妥协, 还是这些妥协才成就了她呢
+
+以史为鉴, 或许你会有自己的答案
 
 - [字符串 (KMP/Z函数/Manacher/字符串哈希/AC自动机/后缀数组)](https://leetcode.cn/discuss/post/3144832/fen-xiang-gun-ti-dan-zi-fu-chuan-kmpzhan-ugt4/)
 - [链表、二叉树与回溯 (前后指针/快慢指针/DFS/BFS/直径/LCA/一般树)](https://leetcode.cn/discuss/post/3142882/fen-xiang-gun-ti-dan-lian-biao-er-cha-sh-6srp/)
@@ -58,12 +62,47 @@ const input = async () => String((await iter.next()).value);
 })();
 ```
 
-JavaScript 常常被戏称为一门偶然成功的玩具语言
+### Go
 
-而实际上, 她出身名门, 更是成长在聚光灯之下
+```go
+package main
 
-纵观历史, 有资格被标准化的编程语言甚少, 她因此成为多方角力的战场, 却也有幸同时得到业界与学界先驱的亲传
+import (
+	"bufio"
+	"fmt"
+	"os"
+)
 
-时至今日, 我们甚至难言是它背负了太多妥协, 还是这些妥协才成就了她呢
+func main() {
+	in := bufio.NewScanner(os.Stdin)
+	in.Split(bufio.ScanWords)
 
-以史为鉴, 或许你会有自己的答案
+	for in.Scan() {
+		fmt.Println(in.Text())
+	}
+}
+```
+
+```go
+package main
+
+import (
+	"bufio"
+	"os"
+	"strconv"
+)
+
+var in = bufio.NewScanner(os.Stdin)
+
+func nextInt() int {
+	in.Scan()
+	n, _ := strconv.Atoi(in.Text())
+	return n
+}
+
+func main() {
+	in.Split(bufio.ScanWords)
+	n := nextInt()
+	_ = n
+}
+```

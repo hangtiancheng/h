@@ -26,7 +26,7 @@
     "preview:swifty": "vite preview --mode=swifty",
     "prepare": "husky && pnpm --filter @swifty.js/anti-copy build",
     "lint": "eslint --fix ./src",
-    "format": "prettier -w ./",
+    "format": "prettier -w ./ --experimental-cli",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "git:commit": "git add -A && git commit -m \"feat: Introduce new features\"",
     "git:push": "pnpm git:commit && git push origin main",

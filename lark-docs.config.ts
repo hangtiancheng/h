@@ -4,7 +4,6 @@ export default defineConfig({
   docs: "docs",
   baseUrl: "/h/lark-docs/",
   title: "Lark.js Homepage",
-  // description: "Lark.js Homepage",
   nav: [
     { text: "Base", link: "/base/" },
     { text: "Frontend", link: "/frontend/" },
