@@ -137,7 +137,7 @@ foreach(__src IN LISTS __entry_sources)
   # Emit ./build/path/to/main from ./src/path/to/main.cc
   set_target_properties("${__target_name}" PROPERTIES
     OUTPUT_NAME "${__stem}"
-    RUNTIME_OUTPUT_DIRECTORY "${_out_dir}")
+    RUNTIME_OUTPUT_DIRECTORY "${__out_dir}")
 
   # Let each entry point include headers relative to the scan root and to
   # its own directory, so `#include "lib/foo.h"` and `#include "foo.h"` work.
