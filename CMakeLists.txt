@@ -174,7 +174,8 @@ file(GLOB_RECURSE __header_files
   "${__scan_root}/*.h"
   "${__scan_root}/*.hh"
   "${__scan_root}/*.hpp"
-  "${__scan_root}/*.hxx")
+  "${__scan_root}/*.hxx"
+  "${__scan_root}/*.h++")
 
 set(__format_files ${__all_sources} ${__header_files})
 
