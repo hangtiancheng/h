@@ -7,14 +7,17 @@ settings:
 catalogs:
   default:
     '@lark.js/docs':
-      specifier: ^0.0.19
-      version: 0.0.19
+      specifier: ^0.0.20
+      version: 0.0.20
     '@swifty.js/anti-copy':
-      specifier: ^0.0.2
-      version: 0.0.2
+      specifier: ^0.0.3
+      version: 0.0.3
     '@swifty.js/docs':
       specifier: ^0.0.12
       version: 0.0.12
+
+overrides:
+  '@lark.js/mvc': ^0.0.27
 
 importers:
 
@@ -25,10 +28,10 @@ importers:
         version: 10.0.1(eslint@10.8.1(jiti@2.7.0))
       '@lark.js/docs':
         specifier: 'catalog:'
-        version: 0.0.19(@tailwindcss/typography@0.5.20(tailwindcss@4.3.3))(tailwindcss@4.3.3)(vite@8.2.1(@types/node@25.9.5)(jiti@2.7.0)(terser@5.49.2)(yaml@2.9.0))
+        version: 0.0.20(@tailwindcss/typography@0.5.20(tailwindcss@4.3.3))(tailwindcss@4.3.3)(vite@8.2.1(@types/node@25.9.5)(jiti@2.7.0)(terser@5.49.2)(yaml@2.9.0))
       '@swifty.js/anti-copy':
         specifier: 'catalog:'
-        version: 0.0.2(@lark.js/mvc@0.0.26(vite@8.2.1(@types/node@25.9.5)(jiti@2.7.0)(terser@5.49.2)(yaml@2.9.0)))(@rspress/core@2.0.19(@rspack/core@2.1.8(@swc/helpers@0.5.23))(micromark-util-types@2.0.2)(micromark@4.0.2))(@swifty.js/docs@0.0.12(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(tailwindcss@4.3.3)(vite@8.2.1(@types/node@25.9.5)(jiti@2.7.0)(terser@5.49.2)(yaml@2.9.0)))(react@19.2.8)(vitepress@1.6.4(@algolia/client-search@5.56.0)(@types/node@25.9.5)(@types/react@19.2.18)(lightningcss@1.33.0)(nprogress@0.2.0)(postcss@8.5.26)(preact-render-to-string@6.7.0(preact@10.29.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(search-insights@2.17.3)(terser@5.49.2)(typescript@6.0.3))(vue@3.5.41(typescript@6.0.3))
+        version: 0.0.3(@lark.js/mvc@0.0.27(vite@8.2.1(@types/node@25.9.5)(jiti@2.7.0)(terser@5.49.2)(yaml@2.9.0)))(@rspress/core@2.0.19(@rspack/core@2.1.8(@swc/helpers@0.5.23))(micromark-util-types@2.0.2)(micromark@4.0.2))(@swifty.js/docs@0.0.12(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(tailwindcss@4.3.3)(vite@8.2.1(@types/node@25.9.5)(jiti@2.7.0)(terser@5.49.2)(yaml@2.9.0)))(react@19.2.8)(vitepress@1.6.4(@algolia/client-search@5.56.0)(@types/node@25.9.5)(@types/react@19.2.18)(lightningcss@1.33.0)(nprogress@0.2.0)(postcss@8.5.26)(preact-render-to-string@6.7.0(preact@10.29.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(search-insights@2.17.3)(terser@5.49.2)(typescript@6.0.3))(vue@3.5.41(typescript@6.0.3))
       '@swifty.js/docs':
         specifier: 'catalog:'
         version: 0.0.12(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(tailwindcss@4.3.3)(vite@8.2.1(@types/node@25.9.5)(jiti@2.7.0)(terser@5.49.2)(yaml@2.9.0))
@@ -74,6 +77,9 @@ importers:
       prettier-plugin-tailwindcss:
         specifier: ^0.8.1
         version: 0.8.1(prettier@3.9.6)
+      react:
+        specifier: ^19.2.8
+        version: 19.2.8
       react-dom:
         specifier: ^19.2.8
         version: 19.2.8(react@19.2.8)
@@ -1044,15 +1050,15 @@ packages:
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
 
-  '@lark.js/docs@0.0.19':
-    resolution: {integrity: sha512-UFBIJqvorditrizQuXlQEQ3SEmlptXtXW5gKevOiubqiaRVesXRarzdPyltBLdCaezMrSiOh0Zz6udeyh63VMg==}
+  '@lark.js/docs@0.0.20':
+    resolution: {integrity: sha512-c8724v8em0EqH4BPLZDyiVWKkzD8wLbyFlC+0ciQILaCEXeD3fgakBQHo9snMWyca8KU2i6SOZETYPjM8co2Dg==}
     engines: {node: '>=20'}
     peerDependencies:
       '@tailwindcss/typography': ^0.5.0
       tailwindcss: ^4.0.0
 
-  '@lark.js/mvc@0.0.26':
-    resolution: {integrity: sha512-N2Mw+M2P4s+ZTH8Delw7dildtKmSK0Yqf240FLYU5aLrDGBX/Yla7RMAd9WJWLAS3aMzb5rMoFIe7bSQvd3/yg==}
+  '@lark.js/mvc@0.0.27':
+    resolution: {integrity: sha512-rZAjc9uRdtsAGIawyp18UdrbqKXil//7LWzwETuDoUctNrcQiu287xyKQV3bJz8fKI8uMwsuK//LV77oYd5R8g==}
     peerDependencies:
       vite: ^8.0.14
 
@@ -1544,10 +1550,10 @@ packages:
   '@swc/helpers@0.5.23':
     resolution: {integrity: sha512-5lSsMOTXURePglDfvuAQUqkGek9Hg2kksOYay2m0+XR++b2NWYL/4sWyuvVBIs8oKnJaxkdi9whaL/sqN13afw==}
 
-  '@swifty.js/anti-copy@0.0.2':
-    resolution: {integrity: sha512-duVzQo20EcrOL2pQ+FBTCHDySHRXjc1JW4aVb7KKl2KWuE+XZsMyfRvVcdfRjxRZX+3QQ4/SottuPNfhhUhJXg==}
+  '@swifty.js/anti-copy@0.0.3':
+    resolution: {integrity: sha512-HndOby557VCMEugQruhFO34TiWaUpW9Dre12MBEVQl/mekLMuoTxhI+cyVzfEBJP72Bv6513UHeRv2nvxAcXbA==}
     peerDependencies:
-      '@lark.js/mvc': '>=0.0.24'
+      '@lark.js/mvc': ^0.0.27
       '@rspress/core': '>=2.0.0'
       '@swifty.js/docs': '>=0.0.11'
       react: ^18.0.0 || ^19.0.0
@@ -5856,9 +5862,9 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
 
-  '@lark.js/docs@0.0.19(@tailwindcss/typography@0.5.20(tailwindcss@4.3.3))(tailwindcss@4.3.3)(vite@8.2.1(@types/node@25.9.5)(jiti@2.7.0)(terser@5.49.2)(yaml@2.9.0))':
+  '@lark.js/docs@0.0.20(@tailwindcss/typography@0.5.20(tailwindcss@4.3.3))(tailwindcss@4.3.3)(vite@8.2.1(@types/node@25.9.5)(jiti@2.7.0)(terser@5.49.2)(yaml@2.9.0))':
     dependencies:
-      '@lark.js/mvc': 0.0.26(vite@8.2.1(@types/node@25.9.5)(jiti@2.7.0)(terser@5.49.2)(yaml@2.9.0))
+      '@lark.js/mvc': 0.0.27(vite@8.2.1(@types/node@25.9.5)(jiti@2.7.0)(terser@5.49.2)(yaml@2.9.0))
       '@tailwindcss/typography': 0.5.20(tailwindcss@4.3.3)
       ejs: 3.1.10
       js-yaml: 5.2.3
@@ -5873,7 +5879,7 @@ snapshots:
     transitivePeerDependencies:
       - vite
 
-  '@lark.js/mvc@0.0.26(vite@8.2.1(@types/node@25.9.5)(jiti@2.7.0)(terser@5.49.2)(yaml@2.9.0))':
+  '@lark.js/mvc@0.0.27(vite@8.2.1(@types/node@25.9.5)(jiti@2.7.0)(terser@5.49.2)(yaml@2.9.0))':
     dependencies:
       '@babel/parser': 7.29.8
       '@babel/types': 7.29.8
@@ -6343,9 +6349,9 @@ snapshots:
       tslib: 2.8.1
     optional: true
 
-  '@swifty.js/anti-copy@0.0.2(@lark.js/mvc@0.0.26(vite@8.2.1(@types/node@25.9.5)(jiti@2.7.0)(terser@5.49.2)(yaml@2.9.0)))(@rspress/core@2.0.19(@rspack/core@2.1.8(@swc/helpers@0.5.23))(micromark-util-types@2.0.2)(micromark@4.0.2))(@swifty.js/docs@0.0.12(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(tailwindcss@4.3.3)(vite@8.2.1(@types/node@25.9.5)(jiti@2.7.0)(terser@5.49.2)(yaml@2.9.0)))(react@19.2.8)(vitepress@1.6.4(@algolia/client-search@5.56.0)(@types/node@25.9.5)(@types/react@19.2.18)(lightningcss@1.33.0)(nprogress@0.2.0)(postcss@8.5.26)(preact-render-to-string@6.7.0(preact@10.29.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(search-insights@2.17.3)(terser@5.49.2)(typescript@6.0.3))(vue@3.5.41(typescript@6.0.3))':
+  '@swifty.js/anti-copy@0.0.3(@lark.js/mvc@0.0.27(vite@8.2.1(@types/node@25.9.5)(jiti@2.7.0)(terser@5.49.2)(yaml@2.9.0)))(@rspress/core@2.0.19(@rspack/core@2.1.8(@swc/helpers@0.5.23))(micromark-util-types@2.0.2)(micromark@4.0.2))(@swifty.js/docs@0.0.12(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(tailwindcss@4.3.3)(vite@8.2.1(@types/node@25.9.5)(jiti@2.7.0)(terser@5.49.2)(yaml@2.9.0)))(react@19.2.8)(vitepress@1.6.4(@algolia/client-search@5.56.0)(@types/node@25.9.5)(@types/react@19.2.18)(lightningcss@1.33.0)(nprogress@0.2.0)(postcss@8.5.26)(preact-render-to-string@6.7.0(preact@10.29.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(search-insights@2.17.3)(terser@5.49.2)(typescript@6.0.3))(vue@3.5.41(typescript@6.0.3))':
     optionalDependencies:
-      '@lark.js/mvc': 0.0.26(vite@8.2.1(@types/node@25.9.5)(jiti@2.7.0)(terser@5.49.2)(yaml@2.9.0))
+      '@lark.js/mvc': 0.0.27(vite@8.2.1(@types/node@25.9.5)(jiti@2.7.0)(terser@5.49.2)(yaml@2.9.0))
       '@rspress/core': 2.0.19(@rspack/core@2.1.8(@swc/helpers@0.5.23))(micromark-util-types@2.0.2)(micromark@4.0.2)
       '@swifty.js/docs': 0.0.12(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(tailwindcss@4.3.3)(vite@8.2.1(@types/node@25.9.5)(jiti@2.7.0)(terser@5.49.2)(yaml@2.9.0))
       react: 19.2.8
