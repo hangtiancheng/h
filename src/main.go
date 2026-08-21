@@ -1,48 +1,76 @@
 package main
 
-func maximumLengthSubstring(s string) int {
-	cnt := make(map[byte]int)
-	n := len(s)
-	ans := 0
+import "fmt"
+
+func maxSubarrayLength(nums []int, k int) int {
 	l, r := 0, 0
-	for l <= r && r < n {
-		c := s[r]
+	n := len(nums)
+	ans := 0
+	cnt := map[int]int{}
 
-		cnt[c]++
-		if cnt[c] > 2 {
+	for ; l <= r && r < n; r++ {
+		num := nums[r]
 
-			for cnt[c] > 2 {
-				c2 := s[l]
-				cnt[c2]--
-				l++
-			}
+		if cnt[num] == k {
+			ans = max(ans, r-l)
 		}
-		r++
 
-		ans = max(ans, r-l)
+		cnt[num]++
+		for ; l <= r && cnt[num] > k; l++ {
+			num2 := nums[l]
+			cnt[num2]--
+		}
 	}
 
-	return max(ans, r-l)
+	ans = max(ans, r-l)
+	return ans
 }
 
-func missingInteger(nums []int) int {
-	n := len(nums)
-	pre := nums[0]
-	for i := 1; i < n; i++ {
-		if nums[i] == nums[i-1]+1 {
-			pre += nums[i]
+func validSequence(word1 string, word2 string) []int {
+	m := len(word1)
+
+	n := len(word2)
+
+	suf := make([]int, m+1)
+	j := n - 1
+	for i := m - 1; i >= 0; i-- {
+		if j >= 0 && word1[i] == word2[j] {
+			j--
+			suf[i] = suf[i+1] + 1
 		} else {
-			break
+			suf[i] = suf[i+1]
 		}
-	}
-	s := map[int]struct{}{}
-	for _, num := range nums {
-		s[num] = struct{}{}
 	}
 
-	for i := pre; ; i++ {
-		if _, ok := s[i]; !ok {
-			return i
+	fmt.Println(suf)
+
+	changed := false
+	ans := []int{}
+	k := 0
+
+	for i := range m {
+		if k == n {
+			break
+		}
+
+		if word1[i] == word2[k] {
+			ans = append(ans, i)
+			k++
+			continue
+		}
+
+		// word1[i] != word2[k]
+		if !changed {
+			if k+1+suf[i+1] >= n {
+				changed = true
+				ans = append(ans, i)
+				k++
+			}
 		}
 	}
+
+	if k == n {
+		return ans
+	}
+	return []int{}
 }
