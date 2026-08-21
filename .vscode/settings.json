@@ -25,6 +25,7 @@
     "eface",
     "embstr",
     "endforeach",
+    "endwhile",
     "epoll",
     "esbuild",
     "filesort",
