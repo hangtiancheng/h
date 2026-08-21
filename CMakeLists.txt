@@ -4,18 +4,17 @@ project(homepage LANGUAGES C CXX)
 
 if(NOT CMAKE_GENERATOR STREQUAL "Ninja")
   message(FATAL_ERROR
-    "this project requires the Ninja generator, got '${CMAKE_GENERATOR}'.\n"
-    "Remove the build directory and re-run: cmake -S . -B build -G Ninja")
+    "this project requires the Ninja generator, got '${CMAKE_GENERATOR}', remove the build directory and re-run: cmake -S . -B build -G Ninja")
 endif()
 
 # ---------------------------------------------------------------------------
 # Options
 # ---------------------------------------------------------------------------
 # Directory (relative to this file) that is recursively scanned for sources.
-set(SRC_DIR "src" CACHE STRING "Directory scanned for source files")
+set(SRC_DIR "src" CACHE STRING "directory scanned for source files")
 
 # File extensions that are treated as translation units.
-set(SRC_EXTENSIONS ".c;.cc;.cpp;.cxx;.c++" CACHE STRING "Source file extensions to scan")
+set(SRC_EXTENSIONS ".c;.cc;.cpp;.cxx;.c++" CACHE STRING "source file extensions to scan")
 
 # Ninja is single-config, so an unset build type means no -O and no -g.
 if(NOT CMAKE_BUILD_TYPE)
@@ -74,9 +73,9 @@ set(__entry_sources "")
 set(__common_sources "")
 
 foreach(__src IN LISTS __all_sources)
-  file(READ "${__src}" _contents)
+  file(READ "${__src}" __contents)
 
-  if(_contents MATCHES "${__main_regex}")
+  if(__contents MATCHES "${__main_regex}")
     list(APPEND __entry_sources "${__src}")
   else()
     list(APPEND __common_sources "${__src}")
