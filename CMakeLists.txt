@@ -1,15 +1,15 @@
 cmake_minimum_required(VERSION 3.20)
 
-project(demo LANGUAGES C CXX)
+project(homepage LANGUAGES C CXX)
 
 # ---------------------------------------------------------------------------
 # Options
 # ---------------------------------------------------------------------------
 # Directory (relative to this file) that is recursively scanned for sources.
-set(DEMO_SRC_DIR "src" CACHE STRING "Directory scanned for source files")
+set(SRC_DIR "src" CACHE STRING "Directory scanned for source files")
 
 # File extensions that are treated as translation units.
-set(DEMO_SRC_EXTENSIONS ".cc;.cpp;.cxx;.c++" CACHE STRING "Source file extensions to scan")
+set(SRC_EXTENSIONS ".cc;.cpp;.cxx;.c++" CACHE STRING "Source file extensions to scan")
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -31,12 +31,12 @@ else()
 endif()
 
 # ---------------------------------------------------------------------------
-# Collect candidate source files under DEMO_SRC_DIR.
+# Collect candidate source files under SRC_DIR.
 # ---------------------------------------------------------------------------
-set(_scan_root "${CMAKE_CURRENT_SOURCE_DIR}/${DEMO_SRC_DIR}")
+set(_scan_root "${CMAKE_CURRENT_SOURCE_DIR}/${SRC_DIR}")
 
 set(_glob_patterns "")
-foreach(_ext IN LISTS DEMO_SRC_EXTENSIONS)
+foreach(_ext IN LISTS SRC_EXTENSIONS)
   list(APPEND _glob_patterns "${_scan_root}/*${_ext}")
 endforeach()
 
@@ -60,8 +60,8 @@ foreach(_src IN LISTS _all_sources)
     # Path of the source relative to the scan root, e.g. "hello/main.cc".
     file(RELATIVE_PATH _rel "${_scan_root}" "${_src}")
 
-    get_filename_component(_rel_dir "${_rel}" DIRECTORY)   # "hello" (or "")
-    get_filename_component(_stem "${_rel}" NAME_WE)        # "main"
+    get_filename_component(_rel_dir "${_rel}" DIRECTORY) # "hello" (or "")
+    get_filename_component(_stem "${_rel}" NAME_WE) # "main"
 
     # Unique, valid target name derived from the relative path.
     if(_rel_dir STREQUAL "")
@@ -86,13 +86,13 @@ foreach(_src IN LISTS _all_sources)
       "${_scan_root}"
       "${_src_dir}")
 
-    message(STATUS "demo: entry point ${_rel} -> ${_out_dir}/${_stem}")
+    message(STATUS "${_rel} -> ${_out_dir}/${_stem}")
     math(EXPR _executable_count "${_executable_count} + 1")
   endif()
 endforeach()
 
 if(_executable_count EQUAL 0)
-  message(WARNING "demo: no source with an `int main()` found under ${_scan_root}")
+  message(WARNING "no `int main()` found under ${_scan_root}")
 else()
-  message(STATUS "demo: configured ${_executable_count} executable(s)")
+  message(STATUS "${_executable_count} executable(s)")
 endif()
