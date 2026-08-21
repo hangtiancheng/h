@@ -1,7 +1,6 @@
 ---
 # https://vitepress.dev/reference/default-theme-home-page
 layout: home
-# https://rspress.rs/api/config/config-frontmatter#pagetype
 pageType: home
 copyable: true
 
@@ -34,6 +33,5 @@ features:
 
 > Welcome to Swifty Homepage
 
-- [rspress](https://hangtiancheng.github.io/h/rspress)
 - [lark-docs](https://hangtiancheng.github.io/h/lark-docs)
 - [swifty-docs](https://hangtiancheng.github.io/h/swifty-docs)

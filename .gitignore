@@ -194,9 +194,6 @@ rules.ninja
 
 **/.vitepress/cache/
 
-dist-rspress/
-**/dist-rspress/
-
 tsconfig.tsbuildinfo
 **/tsconfig.tsbuildinfo
 

@@ -55,12 +55,6 @@ jobs:
         run: |
           mkdir -p ./.vitepress/dist/lark-docs
           cp -r ./dist-lark/* ./.vitepress/dist/lark-docs/
-      - name: Build with rspress
-        run: pnpm build:rspress
-      - name: Merge rspress site into /h/rspress/
-        run: |
-          mkdir -p ./.vitepress/dist/rspress
-          cp -r ./dist-rspress/* ./.vitepress/dist/rspress/
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
