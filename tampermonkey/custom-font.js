@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Custom font
-// @namespace    http://github.com/hangtiancheng
-// @version      1.0.0
+// @namespace    http://github.com/hangtiancheng/h
+// @version      0.0.1
 // @description  Custom font
 // @author       Swifty
 // @match        *://*/*
