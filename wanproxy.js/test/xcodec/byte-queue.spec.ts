@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { ByteQueue } from "../../src/xcodec/index.js";
+import { ByteQueue } from "@/xcodec/index.js";
 
 describe("ByteQueue", () => {
   it("appends, peeks, reads, skips, snapshots, and clears", () => {

@@ -3,8 +3,8 @@ import { connect, createServer, type Server, type Socket } from "node:net";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { MonitorServer } from "../../src/monitor/index.js";
-import { ProxyFleet } from "../../src/proxy/index.js";
+import { MonitorServer } from "@/monitor/index.js";
+import { ProxyFleet } from "@/proxy/index.js";
 
 const FleetStatusSchema = z.object({
   generatedAt: z.string(),

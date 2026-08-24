@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createVersionLabel, packageName } from "../../src/index.js";
+import { createVersionLabel, packageName } from "@/index.js";
 
 describe("project foundation", () => {
   it("exports package metadata", () => {

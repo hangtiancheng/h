@@ -4,7 +4,7 @@ import {
   BackrefWindow,
   XCODEC_SEGMENT_LENGTH,
   XCODEC_WINDOW_COUNT,
-} from "../../src/xcodec/index.js";
+} from "@/xcodec/index.js";
 
 function segment(byte: number): Uint8Array {
   return new Uint8Array(XCODEC_SEGMENT_LENGTH).fill(byte);

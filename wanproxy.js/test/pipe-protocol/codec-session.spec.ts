@@ -4,13 +4,13 @@ import {
   encodePipeFrame,
   type PipeControlFrame,
   readPipeFrame,
-} from "../../src/pipe-protocol/index.js";
+} from "@/pipe-protocol/index.js";
 import {
   ByteQueue,
   MemoryCache,
   XCODEC_SEGMENT_LENGTH,
   XCodecHash,
-} from "../../src/xcodec/index.js";
+} from "@/xcodec/index.js";
 
 function segment(byte: number): Uint8Array {
   return new Uint8Array(XCODEC_SEGMENT_LENGTH).fill(byte);

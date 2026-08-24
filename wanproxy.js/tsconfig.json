@@ -4,7 +4,10 @@
     "declarationMap": true,
     "exactOptionalPropertyTypes": true,
     "isolatedModules": true,
-    "lib": ["ES2022"],
+    "lib": ["ESNext"],
+    "paths": {
+      "@/*": ["./src/*"]
+    },
     "module": "NodeNext",
     "moduleDetection": "force",
     "moduleResolution": "NodeNext",

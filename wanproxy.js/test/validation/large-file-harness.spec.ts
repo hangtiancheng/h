@@ -7,7 +7,7 @@ import {
   hashFile,
   parseLargeFileHarnessOptions,
   verifyXCodecFile,
-} from "../../src/validation/index.js";
+} from "@/validation/index.js";
 
 async function withTempDirectory<T>(
   run: (directory: string) => Promise<T>,

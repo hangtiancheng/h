@@ -6,13 +6,13 @@ import {
   createXCodecDecodeTransform,
   createXCodecEncodeTransform,
   createXCodecTransform,
-} from "../../src/pipeline/index.js";
-import { concatByteArrays } from "../../src/xcodec/byte-array.js";
+} from "@/pipeline/index.js";
+import { concatByteArrays } from "@/xcodec/byte-array.js";
 import {
   encodeFrame,
   XCODEC_MAGIC,
   XCODEC_SEGMENT_LENGTH,
-} from "../../src/xcodec/index.js";
+} from "@/xcodec/index.js";
 
 function deterministicBytes(length: number): Uint8Array {
   return Uint8Array.from({ length }, (_, index) => (index * 29 + 11) & 0xff);

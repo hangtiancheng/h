@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { XCODEC_SEGMENT_LENGTH, XCodecHash } from "../../src/xcodec/index.js";
+import { XCODEC_SEGMENT_LENGTH, XCodecHash } from "@/xcodec/index.js";
 
 const CHAR_KAT_HEX = [
   "000000008020040082004000004008000400800080600c008200400000801000",

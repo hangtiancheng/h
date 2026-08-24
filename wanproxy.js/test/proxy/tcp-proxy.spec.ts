@@ -2,12 +2,8 @@ import { once } from "node:events";
 import { connect, createServer, type Server, type Socket } from "node:net";
 import { describe, expect, it } from "vitest";
 
-import {
-  ProxyFleet,
-  relayTcpSockets,
-  TcpProxyServer,
-} from "../../src/proxy/index.js";
-import { concatByteArrays } from "../../src/xcodec/index.js";
+import { ProxyFleet, relayTcpSockets, TcpProxyServer } from "@/proxy/index.js";
+import { concatByteArrays } from "@/xcodec/index.js";
 
 function payload(length: number): Uint8Array {
   return Uint8Array.from({ length }, (_, index) => (index * 17 + 23) & 0xff);

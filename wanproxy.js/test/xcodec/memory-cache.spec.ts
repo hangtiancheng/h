@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { MemoryCache, XCODEC_SEGMENT_LENGTH } from "../../src/xcodec/index.js";
+import { MemoryCache, XCODEC_SEGMENT_LENGTH } from "@/xcodec/index.js";
 
 function segment(byte: number): Uint8Array {
   return new Uint8Array(XCODEC_SEGMENT_LENGTH).fill(byte);

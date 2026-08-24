@@ -4,7 +4,7 @@ import {
   decodeUint64BE,
   encodeUint64BE,
   formatUint64Hex,
-} from "../../src/xcodec/index.js";
+} from "@/xcodec/index.js";
 
 describe("uint64 helpers", () => {
   it("encodes and decodes big-endian values", () => {

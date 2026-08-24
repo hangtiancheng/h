@@ -5,8 +5,8 @@ import {
   PIPE_OP_FRAME,
   PIPE_OP_HELLO,
   readPipeFrame,
-} from "../../src/pipe-protocol/index.js";
-import { ByteQueue, XCODEC_SEGMENT_LENGTH } from "../../src/xcodec/index.js";
+} from "@/pipe-protocol/index.js";
+import { ByteQueue, XCODEC_SEGMENT_LENGTH } from "@/xcodec/index.js";
 
 function queueFrom(bytes: Uint8Array): ByteQueue {
   const queue = new ByteQueue();

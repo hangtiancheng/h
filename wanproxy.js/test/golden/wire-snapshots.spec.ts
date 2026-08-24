@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import { CodecSession } from "../../src/pipe-protocol/codec-session.js";
-import { encodePipeFrame } from "../../src/pipe-protocol/control-frame.js";
-import { encodeFrame } from "../../src/xcodec/frame-codec.js";
+import { CodecSession } from "@/pipe-protocol/codec-session.js";
+import { encodePipeFrame } from "@/pipe-protocol/control-frame.js";
+import { encodeFrame } from "@/xcodec/frame-codec.js";
 
 function hex(bytes: Uint8Array): string {
   return Buffer.from(bytes).toString("hex");

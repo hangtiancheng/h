@@ -5,7 +5,7 @@ import {
   encodeFrame,
   XCODEC_MAGIC,
   XCODEC_SEGMENT_LENGTH,
-} from "../../src/xcodec/index.js";
+} from "@/xcodec/index.js";
 
 describe("dumpXCodecFrames", () => {
   it("formats known frames", () => {

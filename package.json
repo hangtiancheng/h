@@ -12,7 +12,6 @@
   "author": "https://github.com/hangtiancheng",
   "type": "module",
   "scripts": {
-    "scriptc": "cd wanproxy.js && scriptc build ./src/index.ts -o ./build/wanproxy",
     "dev": "vitepress dev",
     "build": "vitepress build",
     "preview": "vitepress preview",

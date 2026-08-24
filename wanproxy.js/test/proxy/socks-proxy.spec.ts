@@ -2,8 +2,8 @@ import { once } from "node:events";
 import { connect, createServer, type Server, type Socket } from "node:net";
 import { describe, expect, it } from "vitest";
 
-import { SocksProxyServer } from "../../src/proxy/index.js";
-import { concatByteArrays } from "../../src/xcodec/index.js";
+import { SocksProxyServer } from "@/proxy/index.js";
+import { concatByteArrays } from "@/xcodec/index.js";
 
 async function listen(server: Server): Promise<number> {
   server.listen(0, "127.0.0.1");

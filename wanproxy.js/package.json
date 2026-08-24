@@ -6,7 +6,7 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
-    "wanproxy-js": "./dist/cli/index.js"
+    "wanproxy": "./dist/cli/index.js"
   },
   "files": [
     "dist",
@@ -14,6 +14,7 @@
     "dist-tsup"
   ],
   "scripts": {
+    "scriptc": "scriptc build ./src/index.ts -o ./build/wanproxy",
     "build": "tsc -p tsconfig.build.json",
     "build:rollup": "rollup -c ./rollup.config.ts",
     "build:tsup": "tsup --config ./tsup.config.ts",

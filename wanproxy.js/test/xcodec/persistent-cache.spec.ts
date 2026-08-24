@@ -10,8 +10,8 @@ import {
   PersistentXCodecCache,
   XCODEC_SEGMENT_LENGTH,
   XCodecHash,
-} from "../../src/xcodec/index.js";
-import { formatUint64Hex } from "../../src/xcodec/uint64.js";
+} from "@/xcodec/index.js";
+import { formatUint64Hex } from "@/xcodec/uint64.js";
 
 function segment(seed: number): Uint8Array {
   return Uint8Array.from(

@@ -9,7 +9,7 @@ import {
   XCODEC_OP_ESCAPE,
   XCODEC_SEGMENT_LENGTH,
   type XCodecFrame,
-} from "../../src/xcodec/index.js";
+} from "@/xcodec/index.js";
 
 function queueFrom(bytes: Uint8Array): ByteQueue {
   const queue = new ByteQueue();

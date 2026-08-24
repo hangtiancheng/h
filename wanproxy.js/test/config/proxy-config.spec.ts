@@ -7,7 +7,7 @@ import {
   formatEndpoint,
   loadWanproxyConfig,
   parseWanproxyConfig,
-} from "../../src/config/index.js";
+} from "@/config/index.js";
 
 describe("WANProxy zod config", () => {
   it("parses TCP proxy config and applies codec defaults", () => {

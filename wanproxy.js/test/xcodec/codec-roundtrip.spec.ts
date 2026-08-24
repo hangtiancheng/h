@@ -10,7 +10,7 @@ import {
   XCodecDecoder,
   XCodecEncoder,
   XCodecHash,
-} from "../../src/xcodec/index.js";
+} from "@/xcodec/index.js";
 
 function repeatedSegment(byte: number, count: number): Uint8Array {
   return new Uint8Array(XCODEC_SEGMENT_LENGTH * count).fill(byte);

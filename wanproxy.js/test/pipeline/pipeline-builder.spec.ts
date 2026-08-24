@@ -1,14 +1,14 @@
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { describe, expect, it } from "vitest";
-import { CodecSession } from "../../src/pipe-protocol/index.js";
+import { CodecSession } from "@/pipe-protocol/index.js";
 import {
   buildCodecPipeline,
   createSessionDecodeTransform,
   createSessionEncodeTransform,
   resolvePipelineSteps,
-} from "../../src/pipeline/index.js";
-import { concatByteArrays } from "../../src/xcodec/index.js";
+} from "@/pipeline/index.js";
+import { concatByteArrays } from "@/xcodec/index.js";
 
 function deterministicBytes(length: number): Uint8Array {
   return Uint8Array.from({ length }, (_, index) => (index * 13 + 19) & 0xff);

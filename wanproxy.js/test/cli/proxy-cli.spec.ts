@@ -3,11 +3,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { PassThrough } from "node:stream";
 import { describe, expect, it } from "vitest";
-import {
-  formatProxyCliError,
-  startConfiguredProxy,
-} from "../../src/cli/proxy-cli.js";
-import { parseProxyCliArgs } from "../../src/cli/proxy-cli-args.js";
+import { formatProxyCliError, startConfiguredProxy } from "@/cli/proxy-cli.js";
+import { parseProxyCliArgs } from "@/cli/proxy-cli-args.js";
 
 describe("proxy CLI", () => {
   it("parses positional and named config paths", () => {
