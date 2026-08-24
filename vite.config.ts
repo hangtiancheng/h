@@ -6,7 +6,7 @@ import {
   swiftyDocsPlugin,
   docsGuardPlugin as swiftyDocsGuardPlugin,
 } from "@swifty.js/docs/vite";
-import swiftyDocsConfig from "./swifty-docs.config.js";
+import swiftyDocsConfig from "./docs.config.js";
 
 function pwaPlugin(base: string): PluginOption {
   return VitePWA({
