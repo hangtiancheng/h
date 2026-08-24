@@ -1,7 +1,2 @@
 allowBuilds:
   esbuild: true
-
-catalog:
-  "@swifty.js/anti-copy": "^0.0.5"
-  "@swifty.js/sentry": "^0.0.5"
-  "@swifty.js/docs": "^0.0.12"
