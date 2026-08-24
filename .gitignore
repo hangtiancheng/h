@@ -209,5 +209,8 @@ dist-swifty/
 .playwright-cli/
 **/.playwright-cli/
 
-.qoder/
-**/.qoder/
+dist-rollup/
+**/dist-rollup/
+
+dist-tsup/
+**/dist-tsup/

@@ -18,17 +18,9 @@
     "build:rollup": "rollup -c ./rollup.config.ts",
     "build:tsup": "tsup --config ./tsup.config.ts",
     "typecheck": "tsc --noEmit",
-    "format": "biome format --write .",
-    "check": "biome check --write .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage",
-    "git:commit": "git add -A && git commit -m \"feat: Introduce new features\"",
-    "git:push": "pnpm git:commit && git push origin main",
-    "git:push:force": "git push -f origin main --set-upstream",
-    "git:remote": "git remote add origin git@github.com:hangtiancheng/wanproxy-js.git",
-    "git:init": "rm -rf ./.git && git init",
-    "git:reset": "pnpm git:init && pnpm git:remote && pnpm git:commit && pnpm git:push:force"
+    "test:coverage": "vitest run --coverage"
   },
   "keywords": [
     "wanproxy",
@@ -42,17 +34,16 @@
     "node": ">=20.0.0"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.4.15",
     "@rollup/plugin-typescript": "^12.3.0",
-    "@types/node": "^25.9.1",
-    "@vitest/coverage-v8": "^4.0.14",
-    "rollup": "^4.60.4",
+    "@types/node": "^25.9.5",
+    "@vitest/coverage-v8": "^4.1.11",
+    "rollup": "^4.62.5",
     "tslib": "^2.8.1",
     "tsup": "^8.5.1",
     "typescript": "^5.9.3",
-    "vitest": "^4.0.14"
+    "vitest": "^4.1.11"
   },
   "dependencies": {
-    "zod": "^4.1.13"
+    "zod": "^4.4.3"
   }
 }
