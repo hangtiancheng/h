@@ -6,12 +6,7 @@ import {
   swiftyDocsPlugin,
   docsGuardPlugin as swiftyDocsGuardPlugin,
 } from "@swifty.js/docs/vite";
-import {
-  larkDocsPlugin,
-  docsGuardPlugin as larkDocsGuardPlugin,
-} from "@lark.js/docs/vite";
 import swiftyDocsConfig from "./swifty-docs.config.js";
-import larkDocsConfig from "./lark-docs.config.js";
 
 function pwaPlugin(base: string): PluginOption {
   return VitePWA({
@@ -78,33 +73,7 @@ function pwaPlugin(base: string): PluginOption {
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
-export default defineConfig(({ mode, command }) => {
-  if (mode === "lark") {
-    return {
-      root: resolve(import.meta.dirname, "lark"),
-      base: "/h/lark-docs/",
-      publicDir: resolve(import.meta.dirname, "public"),
-      plugins: [
-        larkDocsPlugin({ config: larkDocsConfig }),
-        ...(command === "build" ? [larkDocsGuardPlugin()] : []),
-        tailwindcss(),
-        pwaPlugin("/h/lark-docs/"),
-      ],
-      resolve: {
-        alias: {
-          "@lark-docs/generated": resolve(
-            import.meta.dirname,
-            ".lark-docs/generated",
-          ),
-        },
-      },
-      build: {
-        outDir: resolve(import.meta.dirname, "dist-lark"),
-        emptyOutDir: true,
-      },
-    };
-  }
-
+export default defineConfig(({ command }) => {
   return {
     root: resolve(import.meta.dirname, "swifty"),
     base: "/h/swifty-docs/",

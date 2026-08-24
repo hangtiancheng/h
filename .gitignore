@@ -199,16 +199,12 @@ tsconfig.tsbuildinfo
 
 .swifty/
 .swifty-docs/
-.lark-docs/
 
 dist-docs/
 **/dist-docs/
 
 dist-swifty/
 **/dist-swifty/
-
-dist-lark/
-**/dist-lark/
 
 .playwright-cli/
 **/.playwright-cli/

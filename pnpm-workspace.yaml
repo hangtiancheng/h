@@ -2,9 +2,6 @@ allowBuilds:
   esbuild: true
 
 catalog:
-  "@swifty.js/anti-copy": "^0.0.3"
+  "@swifty.js/anti-copy": "^0.0.5"
+  "@swifty.js/sentry": "^0.0.5"
   "@swifty.js/docs": "^0.0.12"
-  "@lark.js/docs": "^0.0.20"
-
-overrides:
-  "@lark.js/mvc": "^0.0.27"

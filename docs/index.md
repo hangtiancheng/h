@@ -33,5 +33,4 @@ features:
 
 > Welcome to Swifty Homepage
 
-- [lark-docs](https://hangtiancheng.github.io/h/lark-docs)
 - [swifty-docs](https://hangtiancheng.github.io/h/swifty-docs)
