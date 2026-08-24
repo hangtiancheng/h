@@ -98,14 +98,12 @@ message_stop                           -> stream_end
 ## 请求的 system, messages, tools
 
 - system 参数存放用户信息和环境信息, 包括: 你是谁、操作系统是什么、工作目录是什么
-- messages 参数存放对话历史、上下文窗口
+- messages 参数存放对话历史
 - tools 参数存放工具描述
 
 ### OpenAI 兼容
 
 OpenAI 没有 prompt cache 的 cache_control, cache_read 通过 `usage.input_tokens_details.cached_tokens` 返回
-
-<!-- 源码: src/llm/openai.ts (OpenAI cache_read 解析) -->
 
 ## token
 
@@ -113,12 +111,10 @@ token 是 LLM 的计费单位, 每个英文单词约 1-2 个 token, 每个汉字
 
 Claude API 的计费分为
 
-- inputTokens: 未命中 prompt cache 的输入 token 数, 即发送给 LLM 的内容, 即 system_prompt, tools 描述和 messages 中未命中 prompt cache 的输入
+- inputTokens: 未命中 prompt cache 的输入 token 数, 即发送给 LLM 的内容, 即 system prompt, tools 描述和 messages 中未命中 prompt cache 的输入
 - outputTokens: 输出 token 数, 即 LLM 生成的内容, 输出 token 比输入 token 贵的多
 - cacheReadInputTokens: 命中 prompt cache 的输入 token 数, 价格远低于普通 input_tokens
 - cacheCreationInputTokens: 创建 prompt cache 的输入 token 数, 价格略高于普通 input_tokens
-
-<!-- 源码: src/llm/events.ts (UsageInfo 接口, 包含 4 个 token 字段) -->
 
 ### 历史越长、输入越贵
 

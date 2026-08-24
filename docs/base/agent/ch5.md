@@ -139,9 +139,7 @@ LLM 看到 `<system-reminder />`, 就知道标签间的内容是当指令对待,
 
 usage 字段包含 4 个 token 计数 (Anthropic):
 
-<!-- 源码: src/llm/anthropic.ts -->
-
-- inputTokens: 未命中 prompt cache 的输入 token 数, 即发送给 LLM 的内容, 即 system_prompt, tools 描述和 messages 中未命中 prompt cache 的输入
+- inputTokens: 未命中 prompt cache 的输入 token 数, 即发送给 LLM 的内容, 即 system prompt, tools 描述和 messages 中未命中 prompt cache 的输入
 - outputTokens: 输出 token 数, 即 LLM 生成的内容, 输出 token 比输入 token 贵的多
 - cacheReadInputTokens: 命中 prompt cache 的输入 token 数, 价格远低于普通 input_tokens
 - cacheCreationInputTokens: 创建 prompt cache 的输入 token 数, 价格略高于普通 input_tokens
@@ -158,9 +156,6 @@ usage 字段包含 4 个 token 计数 (Anthropic):
 input_tokens + cache_read_tokens + cache_creation_tokens
   = system_tokens + tools_tokens + messages_tokens
 ```
-
-<!-- 源码: src/llm/anthropic.ts (let cacheReadInputTokens = 0; let cacheCreationInputTokens = 0;) -->
-<!-- 源码: src/llm/anthropic.ts (从 message_start.usage 读取 cache_read_input_tokens / cache_creation_input_tokens) -->
 
 Prompt 设计在 3 个方面影响成本
 

@@ -89,6 +89,7 @@
     "oxfmt",
     "Println",
     "processlist",
+    "qpos",
     "RDONLY",
     "Renderless",
     "retargeted",
