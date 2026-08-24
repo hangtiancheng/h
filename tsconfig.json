@@ -16,5 +16,5 @@
       "@swifty-docs/generated": ["./.swifty-docs/generated"]
     }
   },
-  "include": ["swifty", "docs.config.ts", "vite.config.ts"]
+  "include": ["swifty", "wanproxy.js", "docs.config.ts", "vite.config.ts"]
 }

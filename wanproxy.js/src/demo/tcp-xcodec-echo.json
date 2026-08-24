@@ -1,0 +1,13 @@
+{
+  "monitor": {
+    "listen": { "host": "127.0.0.1", "port": 8401 }
+  },
+  "proxies": [
+    {
+      "codec": { "mode": "xcodec", "role": "incoming" },
+      "listen": { "host": "127.0.0.1", "port": 8310 },
+      "name": "tcp-xcodec-echo",
+      "upstream": { "host": "127.0.0.1", "port": 8311 }
+    }
+  ]
+}

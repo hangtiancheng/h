@@ -1,0 +1,154 @@
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+pnpm-debug.log*
+
+# Node.js diagnostic reports
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+# Process files
+*.pid
+*.seed
+*.pid.lock
+
+# macOS
+.DS_Store
+**/.DS_Store
+
+# IDE files
+.idea/
+**/.idea/
+*.iml
+
+# Environment files
+.env
+.env.*
+!.env.example
+!**/.env.example
+
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Package manager caches
+.npm/
+.pnpm-store/
+**/.pnpm-store/
+.pnp
+.pnp.*
+.yarn/cache/
+.yarn/unplugged/
+.yarn/build-state.yml
+.yarn/install-state.gz
+
+# Tool caches
+.eslintcache
+**/.eslintcache
+.stylelintcache
+**/.stylelintcache
+.parcel-cache/
+**/.parcel-cache/
+.turbo/
+**/.turbo/
+.nx/
+**/.nx/
+.vite/
+**/.vite/
+.cache/
+**/.cache/
+
+# Build outputs
+coverage/
+**/coverage/
+dist/
+**/dist/
+dist-ssr/
+**/dist-ssr/
+build/
+**/build/
+out/
+**/out/
+bin/
+**/bin/
+output/
+**/output/
+tmp/
+**/tmp/
+temp/
+**/temp/
+upload/
+**/upload/
+
+# Framework outputs
+.next/
+**/.next/
+.nuxt/
+**/.nuxt/
+storybook-static/
+**/storybook-static/
+.docusaurus/
+**/.docusaurus/
+
+# Python
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*.pyd
+.Python
+.pytest_cache/
+**/.pytest_cache/
+.mypy_cache/
+**/.mypy_cache/
+.ruff_cache/
+**/.ruff_cache/
+.coverage
+.coverage.*
+coverage.xml
+.venv/
+**/.venv/
+venv/
+**/venv/
+env/
+**/env/
+
+# Native binaries
+*.exe
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# C++ build files
+CMakeFiles/
+**/CMakeFiles/
+CMakeCache.txt
+**/CMakeCache.txt
+cmake_install.cmake
+**/cmake_install.cmake
+CTestTestfile.cmake
+**/CTestTestfile.cmake
+Testing/
+**/Testing/
+compile_commands.json
+**/compile_commands.json
+cmake-build-*/
+**/cmake-build-*/
+.ninja_deps
+.ninja_log
+build.ninja
+rules.ninja
+cmake-cache/
+
+# Editors
+*.swp
+*.swo
+
+# Rollup
+stats.html
+**/stats.html
+
+dist-rollup/
+dist-tsup/

@@ -12,6 +12,7 @@
   "author": "https://github.com/hangtiancheng",
   "type": "module",
   "scripts": {
+    "scriptc": "cd wanproxy.js && scriptc build ./src/index.ts -o ./build/wanproxy",
     "dev": "vitepress dev",
     "build": "vitepress build",
     "preview": "vitepress preview",
@@ -19,7 +20,7 @@
     "build:swifty": "vite build --mode=swifty",
     "preview:swifty": "vite preview --mode=swifty",
     "prepare": "husky && pnpm --filter @swifty.js/anti-copy build",
-    "lint": "eslint --fix ./src",
+    "lint": "eslint --fix ./",
     "format": "prettier -w ./ --experimental-cli",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "git:commit": "git add -A && git commit -m \"feat: Introduce new features\"",

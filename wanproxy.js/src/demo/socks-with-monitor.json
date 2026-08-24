@@ -1,0 +1,11 @@
+{
+  "monitor": {
+    "listen": { "host": "127.0.0.1", "port": 8402 }
+  },
+  "socksProxies": [
+    {
+      "listen": { "host": "127.0.0.1", "port": 8320 },
+      "name": "socks-demo"
+    }
+  ]
+}

@@ -22,10 +22,18 @@ console.log({
   weakSet: typeOf(new WeakSet()), // weakSet: "[object WeakSet]"
   promise: typeOf(Promise.resolve()), // promise: "[object Promise]"
   error: typeOf(new Error()), // error: "[object Error]"
-  function: typeOf(function () {}), // function: "[object Function]"
-  arrowFn: typeOf(() => {}), // arrowFn: "[object Function]"
-  asyncFn: typeOf(async function () {}), // asyncFn: "[object AsyncFunction]"
-  generatorFn: typeOf(function* () {}), // generatorFn: "[object GeneratorFunction]"
+  function: typeOf(function () {
+    /** noop */
+  }), // function: "[object Function]"
+  arrowFn: typeOf(() => {
+    /** noop */
+  }), // arrowFn: "[object Function]"
+  asyncFn: typeOf(async function () {
+    /** noop */
+  }), // asyncFn: "[object AsyncFunction]"
+  generatorFn: typeOf(function* () {
+    /** noop */
+  }), // generatorFn: "[object GeneratorFunction]"
 
   // TypedArray / Buffer
   int8Array: typeOf(new Int8Array(1)), // int8Array: "[object Int8Array]"
@@ -44,6 +52,7 @@ console.log({
   json: typeOf(JSON), // json: "[object JSON]"
 
   // 自定义类
+  // eslint-disable-next-line @typescript-eslint/no-extraneous-class
   customClass: typeOf(new (class Foo {})()), // customClass: "[object Object]"
 
   arguments: (function () {

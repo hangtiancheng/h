@@ -8,17 +8,21 @@ protected: true
 
 ```bash
 # Anthropic
-curl https://api.anthropic.com/v1/messages \
-  -H 'Content-Type: application/json'      \
-  -H 'anthropic-version: 2023-06-01'       \
-  -H "X-Api-Key: $ANTHROPIC_API_KEY"       \
+curl https://api.deepseek.com/anthropic/v1/messages \
+  -H "Content-Type: application/json"               \
+  -H "X-Api-Key: $ANTHROPIC_API_KEY"                \
   -d '{
     "max_tokens": 1024,
-    "model": "claude-sonnet-4-6",
+    "model": "deepseek-v4-flash",
     "messages": [
       {
         "role": "user",
-        "content": "Hello claude."
+        "content": [
+          {
+            "type": "text",
+            "text": "Hello, who are you?"
+          }
+        ]
       }
     ]
   }'
@@ -30,34 +34,39 @@ curl https://api.anthropic.com/v1/messages \
 
 ```json
 {
-  "id": "msg_abcdefghijklmn0123456789",
+  "id": "<uuid-v4>", // equals to signature
   "type": "message",
   "role": "assistant",
+  "model": "deepseek-v4-flash",
   "content": [
     {
+      "type": "thinking",
+      "thinking": "We need answer user. Need be Claude. But need follow? User asks hello who are you. We respond.",
+      "signature": "<uuid-v4>" // equals to id
+    },
+    {
       "type": "text",
-      "text": "Hello! How can I assist you today?"
+      "text": "Hello! I’m Claude, an AI assistant created by Anthropic. How can I help you today?"
     }
   ],
-  "model": "claude-sonnet-4-6",
   "stop_reason": "end_turn",
+  "stop_sequence": null,
   "usage": {
-    "input_tokens": 10,
-    "output_tokens": 12,
+    "input_tokens": 89,
+    "cache_creation_input_tokens": 0,
     "cache_read_input_tokens": 0,
-    "cache_creation_input_tokens": 0
+    "output_tokens": 46,
+    "service_tier": "standard"
   }
 }
 ```
 
-- 请求的 messages: 每条 message 有 role 和 content 两个字段, role (API 请求场景下) 只有两个值: user 和 assistant; messages 数组中, 最好保持 user 和 assistant 两个 role 交替出现; 如果连续传递两条 user 消息, API 不会报错, 会自动合并为一条 user 消息
+- 请求的 messages: 每条 message 有 role 和 content 两个字段, role (API 场景下) 只有两个值: user 和 assistant; messages 数组中, 最好保持 user 和 assistant 两个 role 交替出现; 如果连续传递两条 user 消息, API 不会报错, 会自动合并为一条 user 消息
 - LLM 返回一个工具调用 (tool_use) 请求, 这是 assistant 消息; 用户调用工具拿到结果, 该工具调用结果需要作为 user 消息发送; 如果错误的将工具调用结果作为 assistant 消息发送, 则会导致连续两条 assistant 消息, API 会直接报错
 - 响应的 content 字段是一个数组: LLM 的响应可能包含多种内容, 每种内容是一个独立的 content block, 类型可能是 text、tool_use 等
 - 流式响应基于 SSE (Server-Sent Events), 本质是 HTTP 长连接
 
 Claude 的流式事件有固定顺序
-
-<!-- 源码: src/llm/anthropic.ts (SSE 事件处理) -->
 
 ```txt
 message_start 整个响应开始, 携带 input_tokens 输入 token 数、cache_read_input_tokens、cache_creation_input_tokens
@@ -92,75 +101,7 @@ message_stop                           -> stream_end
 - messages 参数存放对话历史、上下文窗口
 - tools 参数存放工具描述
 
-<!-- 源码: src/llm/anthropic.ts -->
-<!-- 源码: src/tools/read-file.ts (ReadFile 工具定义、描述) -->
-
-```json
-{
-  "model": "claude-sonnet-4-6",
-  "max_tokens": 4096,
-  "system": [
-    {
-      "type": "text",
-      "text": "You are Swifty, a terminal AI programming assistant.\n\n# Environment\nOperating System: MacOS\nWorking Directory: /path/to/cwd\nCurrent Time: 2026-06-22",
-      "cache_control": { "type": "ephemeral" }
-    }
-  ],
-  "messages": [
-    { "role": "user", "content": "Explain the contents of ./app.ts." },
-    {
-      "role": "assistant",
-      "content": "Sure, let me read the contents of ./app.ts.\nfunction main() {\n  console.log(\"javascript newbie\")\n}"
-    },
-    { "role": "user", "content": "What functions are in this file?" }
-  ],
-  "tools": [
-    {
-      "name": "ReadFile",
-      "description": "Read a file and return its contents with line numbers.\n\nUsage Notes\n\n- The file_path should be an absolute path when possible.\n- By default reads up to 2000 lines from the beginning of the file.\n- Use offset and limit to read specific parts of large files.",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "file_path": {
-            "type": "string",
-            "description": "Absolute path to the file"
-          },
-          "offset": {
-            "type": "integer",
-            "description": "Line number to start from (0-based)",
-            "default": 0
-          },
-          "limit": {
-            "type": "integer",
-            "description": "Max lines to read",
-            "default": 2000
-          }
-        },
-        "required": ["file_path"]
-      }
-    }
-  ]
-}
-```
-
-<!-- 源码: src/llm/anthropic.ts (最后一个 tool 标记 cache_control) -->
-
 ### OpenAI 兼容
-
-<!-- 源码: src/llm/openai.ts (OpenAIClient.stream) -->
-
-```json
-{
-  "model": "gpt-4.1",
-  "max_output_tokens": 4096, // 使用 max_output_tokens 而不是 max_tokens
-  "input": [
-    // 使用 input 而不是 messages
-    { "role": "system", "content": "You are a helpful assistant." },
-    { "role": "user", "content": "Hello" }
-  ],
-  "stream": true
-}
-```
 
 OpenAI 没有 prompt cache 的 cache_control, cache_read 通过 `usage.input_tokens_details.cached_tokens` 返回
 
