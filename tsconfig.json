@@ -16,5 +16,5 @@
       "@swifty-docs/generated": ["./.swifty-docs/generated"]
     }
   },
-  "include": ["app", "swifty", "docs.config.ts", "vite.config.ts"]
+  "include": ["swifty", "docs.config.ts", "vite.config.ts"]
 }
