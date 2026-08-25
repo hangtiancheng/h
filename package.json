@@ -18,7 +18,7 @@
     "dev:swifty": "DOCS_PASSWORD=pass vite --mode=swifty",
     "build:swifty": "vite build --mode=swifty",
     "preview:swifty": "vite preview --mode=swifty",
-    "prepare": "husky && pnpm --filter @swifty.js/anti-copy build",
+    "prepare": "husky",
     "lint": "eslint --fix ./",
     "format": "prettier -w ./ --experimental-cli",
     "typecheck": "tsc -p tsconfig.json --noEmit",

@@ -6,7 +6,7 @@ protected: true
 
 ## 告诉 LLM 有哪些工具
 
-调用 LLM API 时, 可以通过 tools 参数告诉 LLM 有哪些工具, 包括名称 name, 描述 description, 参数格式 tool schema
+调用 LLM API 时, 可以通过 tools 参数告诉 LLM 有哪些工具, 包括名称 name, 描述 description, 参数格式 input_schema
 
 <!-- 源码: src/tools/descriptions.ts, src/tools/read-file.ts -->
 
@@ -101,7 +101,7 @@ LLM 负责决策, 请求调用工具; CLI 负责执行工具调用, 将工具调
 <!-- 源码: src/tools/types.ts -->
 
 - 身份信息: name, description, schema (input_schema)
-- 元信息
+- 元信息 (提供给 UI 渲染)
   - category 分类
   - deferred? 延迟加载
   - system? 内部工具
@@ -169,6 +169,7 @@ export interface ToolResult {
 - 元信息: 只读、非破坏性, `category: read`
 - glob 查找文件名
 - 搜索结果按修改时间倒序排序, 最新修改的排在前面
+- 最多返回 200 个匹配结果
 
 ### Grep
 
@@ -178,6 +179,7 @@ export interface ToolResult {
 - 元信息: 只读、非破坏性, `category: read`
 - grep 找文件内容
 - 输出格式: 文件路径:行号:匹配的内容
+- 最多返回 100 个匹配结果
 
 <!-- 源码: src/tools/types.ts (ToolCategory = "read" | "write" | "command") -->
 
