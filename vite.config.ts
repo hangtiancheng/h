@@ -192,8 +192,6 @@ function pwaPlugin(base: string): PluginOption {
   });
 }
 
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore
 export default defineConfig(({ command }) => {
   return {
     root: resolve(import.meta.dirname, "swifty"),
