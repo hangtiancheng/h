@@ -3,13 +3,15 @@
 import type { Theme } from "vitepress";
 import DefaultTheme from "vitepress/theme-without-fonts";
 import { applyAntiCopy } from "@swifty.js/anti-copy/vitepress";
-import Mermaid from "./mermaid";
 import "./main.css";
 
 const theme: Theme = {
   extends: DefaultTheme,
   enhanceApp(ctx) {
-    ctx.app.component("Mermaid", Mermaid);
+    // customElements only exists in the browser; SSR renders the bare tag.
+    if (typeof window !== "undefined") {
+      void import("@lark.js/docs/element");
+    }
     if (import.meta.env.PROD) {
       applyAntiCopy(ctx, {
         mode: "replace",

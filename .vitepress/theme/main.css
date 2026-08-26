@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@source "../../node_modules/@lark.js/docs/dist";
+
 @theme {
   --font-sans:
     "Iosevka", "Maple Mono", Menlo, "Cascadia Code", "PingFang SC",
@@ -15,12 +17,4 @@
   --vp-c-brand-3: #ee3c20cc;
   --vp-font-family-base: var(--font-sans);
   --vp-font-family-mono: var(--font-mono);
-}
-
-.mermaid-block {
-  @apply my-4 flex justify-center;
-}
-
-.mermaid-block svg {
-  @apply h-auto max-w-full;
 }
