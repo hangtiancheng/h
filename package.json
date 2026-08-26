@@ -30,7 +30,7 @@
     "@eslint/js": "^10.0.1",
     "@lark.js/docs": "file:../lark.js/packages/lark-docs",
     "@swifty.js/anti-copy": "latest",
-    "@swifty.js/docs": "latest",
+    "@swifty.js/docs": "file:../swifty.js/packages/swifty-docs",
     "@swifty.js/sentry": "latest",
     "@tailwindcss/typography": "^0.5.20",
     "@tailwindcss/vite": "^4.3.3",
