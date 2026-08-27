@@ -6,7 +6,7 @@ import {
 } from "@lark.js/docs";
 import { VitePWA } from "vite-plugin-pwa";
 import { defineConfig } from "vitepress";
-import { excludePrivatePages, privateDocsPlugin } from "@swifty.js/docs";
+import { privateDocsPlugin } from "@swifty.js/docs";
 
 export default defineConfig({
   srcDir: "docs",
@@ -155,10 +155,6 @@ export default defineConfig({
     socialLinks: [{ icon: "github", link: "https://github.com/hangtiancheng" }],
     search: {
       provider: "local",
-      // Local search reads markdown straight from disk, so private pages
-      // must be excluded explicitly. Mirrors the default renderer and
-      // keeps `search: false` support.
-      options: { _render: excludePrivatePages },
     },
     editLink: {
       pattern: "https://github.com/hangtiancheng/h/edit/main/docs/:path",

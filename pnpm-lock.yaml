@@ -16,10 +16,10 @@ importers:
         version: 0.0.26(tailwindcss@4.3.3)(vitepress@1.6.4(@algolia/client-search@5.57.0)(@types/node@24.13.3)(lightningcss@1.33.0)(nprogress@0.2.0)(postcss@8.5.26)(preact-render-to-string@6.7.0(preact@10.29.8))(search-insights@2.17.3)(terser@5.51.0)(typescript@6.0.3))
       '@swifty.js/anti-copy':
         specifier: latest
-        version: 0.0.6(@swifty.js/docs@0.0.14(vitepress@1.6.4(@algolia/client-search@5.57.0)(@types/node@24.13.3)(lightningcss@1.33.0)(nprogress@0.2.0)(postcss@8.5.26)(preact-render-to-string@6.7.0(preact@10.29.8))(search-insights@2.17.3)(terser@5.51.0)(typescript@6.0.3)))(vitepress@1.6.4(@algolia/client-search@5.57.0)(@types/node@24.13.3)(lightningcss@1.33.0)(nprogress@0.2.0)(postcss@8.5.26)(preact-render-to-string@6.7.0(preact@10.29.8))(search-insights@2.17.3)(terser@5.51.0)(typescript@6.0.3))(vue@3.5.41(typescript@6.0.3))
+        version: 0.0.6(@swifty.js/docs@0.0.15(vitepress@1.6.4(@algolia/client-search@5.57.0)(@types/node@24.13.3)(lightningcss@1.33.0)(nprogress@0.2.0)(postcss@8.5.26)(preact-render-to-string@6.7.0(preact@10.29.8))(search-insights@2.17.3)(terser@5.51.0)(typescript@6.0.3)))(vitepress@1.6.4(@algolia/client-search@5.57.0)(@types/node@24.13.3)(lightningcss@1.33.0)(nprogress@0.2.0)(postcss@8.5.26)(preact-render-to-string@6.7.0(preact@10.29.8))(search-insights@2.17.3)(terser@5.51.0)(typescript@6.0.3))(vue@3.5.41(typescript@6.0.3))
       '@swifty.js/docs':
-        specifier: ^0.0.14
-        version: 0.0.14(vitepress@1.6.4(@algolia/client-search@5.57.0)(@types/node@24.13.3)(lightningcss@1.33.0)(nprogress@0.2.0)(postcss@8.5.26)(preact-render-to-string@6.7.0(preact@10.29.8))(search-insights@2.17.3)(terser@5.51.0)(typescript@6.0.3))
+        specifier: ^0.0.15
+        version: 0.0.15(vitepress@1.6.4(@algolia/client-search@5.57.0)(@types/node@24.13.3)(lightningcss@1.33.0)(nprogress@0.2.0)(postcss@8.5.26)(preact-render-to-string@6.7.0(preact@10.29.8))(search-insights@2.17.3)(terser@5.51.0)(typescript@6.0.3))
       '@types/node':
         specifier: ^24.13.3
         version: 24.13.3
@@ -1613,8 +1613,8 @@ packages:
       vue:
         optional: true
 
-  '@swifty.js/docs@0.0.14':
-    resolution: {integrity: sha512-vd0th1L23En09RCZrcX01ChoNDqmEfpzaZq2fYvGu5yVETKpbE+ewtZvf73dm8g886HbVvvMsQ+KsSase7mLlA==}
+  '@swifty.js/docs@0.0.15':
+    resolution: {integrity: sha512-xycPx5hv8WGMp+c3X74oqF6tr3JweCf+ONnMsJrVvR/wf6IE0bUNwgLfeiAIv2lPIIEoJqmwWvqFvv3Y6j7/6A==}
     engines: {node: '>=20'}
     peerDependencies:
       vitepress: '>=1.0.0'
@@ -2613,6 +2613,7 @@ packages:
   glob@11.1.0:
     resolution: {integrity: sha512-vuNwKSaKiqm7g0THUBu2x7ckSs3XJLXE+2ssL7/MfTGPLLcrJQ/4Uq1CjPTtO5cCIiRxqvN6Twy1qOwhL0Xjcw==}
     engines: {node: 20 || >=22}
+    deprecated: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
     hasBin: true
 
   globals@17.11.0:
@@ -5370,13 +5371,13 @@ snapshots:
 
   '@standard-schema/spec@1.1.0': {}
 
-  '@swifty.js/anti-copy@0.0.6(@swifty.js/docs@0.0.14(vitepress@1.6.4(@algolia/client-search@5.57.0)(@types/node@24.13.3)(lightningcss@1.33.0)(nprogress@0.2.0)(postcss@8.5.26)(preact-render-to-string@6.7.0(preact@10.29.8))(search-insights@2.17.3)(terser@5.51.0)(typescript@6.0.3)))(vitepress@1.6.4(@algolia/client-search@5.57.0)(@types/node@24.13.3)(lightningcss@1.33.0)(nprogress@0.2.0)(postcss@8.5.26)(preact-render-to-string@6.7.0(preact@10.29.8))(search-insights@2.17.3)(terser@5.51.0)(typescript@6.0.3))(vue@3.5.41(typescript@6.0.3))':
+  '@swifty.js/anti-copy@0.0.6(@swifty.js/docs@0.0.15(vitepress@1.6.4(@algolia/client-search@5.57.0)(@types/node@24.13.3)(lightningcss@1.33.0)(nprogress@0.2.0)(postcss@8.5.26)(preact-render-to-string@6.7.0(preact@10.29.8))(search-insights@2.17.3)(terser@5.51.0)(typescript@6.0.3)))(vitepress@1.6.4(@algolia/client-search@5.57.0)(@types/node@24.13.3)(lightningcss@1.33.0)(nprogress@0.2.0)(postcss@8.5.26)(preact-render-to-string@6.7.0(preact@10.29.8))(search-insights@2.17.3)(terser@5.51.0)(typescript@6.0.3))(vue@3.5.41(typescript@6.0.3))':
     optionalDependencies:
-      '@swifty.js/docs': 0.0.14(vitepress@1.6.4(@algolia/client-search@5.57.0)(@types/node@24.13.3)(lightningcss@1.33.0)(nprogress@0.2.0)(postcss@8.5.26)(preact-render-to-string@6.7.0(preact@10.29.8))(search-insights@2.17.3)(terser@5.51.0)(typescript@6.0.3))
+      '@swifty.js/docs': 0.0.15(vitepress@1.6.4(@algolia/client-search@5.57.0)(@types/node@24.13.3)(lightningcss@1.33.0)(nprogress@0.2.0)(postcss@8.5.26)(preact-render-to-string@6.7.0(preact@10.29.8))(search-insights@2.17.3)(terser@5.51.0)(typescript@6.0.3))
       vitepress: 1.6.4(@algolia/client-search@5.57.0)(@types/node@24.13.3)(lightningcss@1.33.0)(nprogress@0.2.0)(postcss@8.5.26)(preact-render-to-string@6.7.0(preact@10.29.8))(search-insights@2.17.3)(terser@5.51.0)(typescript@6.0.3)
       vue: 3.5.41(typescript@6.0.3)
 
-  '@swifty.js/docs@0.0.14(vitepress@1.6.4(@algolia/client-search@5.57.0)(@types/node@24.13.3)(lightningcss@1.33.0)(nprogress@0.2.0)(postcss@8.5.26)(preact-render-to-string@6.7.0(preact@10.29.8))(search-insights@2.17.3)(terser@5.51.0)(typescript@6.0.3))':
+  '@swifty.js/docs@0.0.15(vitepress@1.6.4(@algolia/client-search@5.57.0)(@types/node@24.13.3)(lightningcss@1.33.0)(nprogress@0.2.0)(postcss@8.5.26)(preact-render-to-string@6.7.0(preact@10.29.8))(search-insights@2.17.3)(terser@5.51.0)(typescript@6.0.3))':
     dependencies:
       js-yaml: 4.3.1
       lit: 3.3.3
@@ -7876,7 +7877,7 @@ snapshots:
   vite@8.2.2(@types/node@24.13.3)(esbuild@0.27.7)(jiti@2.7.0)(terser@5.51.0)(yaml@2.9.0):
     dependencies:
       lightningcss: 1.33.0
-      picomatch: 4.0.5
+      picomatch: 4.0.7
       postcss: 8.5.26
       rolldown: 1.2.5
       tinyglobby: 0.2.17

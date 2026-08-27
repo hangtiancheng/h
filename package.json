@@ -27,7 +27,7 @@
     "@eslint/js": "^10.0.1",
     "@lark.js/docs": "^0.0.26",
     "@swifty.js/anti-copy": "latest",
-    "@swifty.js/docs": "^0.0.14",
+    "@swifty.js/docs": "^0.0.15",
     "@types/node": "^24.13.3",
     "eslint": "^10.9.0",
     "globals": "^17.11.0",
