@@ -13,9 +13,14 @@ export default defineConfig({
   lang: "zh-CN",
   title: "Swifty Homepage",
   description: "Swifty Homepage",
+  cleanUrls: true,
+  lastUpdated: true,
+  ignoreDeadLinks: false,
   base: "/h/",
   vite: {
     plugins: [
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-expect-error
       VitePWA({
         registerType: "autoUpdate",
         injectRegister: "script",
@@ -99,8 +104,6 @@ export default defineConfig({
       noExternal: ["@swifty.js/anti-copy", "@lark.js/docs"],
     },
   },
-  cleanUrls: true,
-  ignoreDeadLinks: false,
   head: [
     // Auto generated
     // <meta charset="UTF-8" />
@@ -148,7 +151,7 @@ export default defineConfig({
     nav: buildNav("docs"),
     sidebar: buildSidebar("docs"),
     logo: "/favicon.svg",
-    outline: [2, 3],
+    outline: { level: [2, 3] },
     socialLinks: [{ icon: "github", link: "https://github.com/hangtiancheng" }],
     search: {
       provider: "local",
@@ -165,5 +168,4 @@ export default defineConfig({
   sitemap: {
     hostname: "https://hangtiancheng.github.io/h",
   },
-  lastUpdated: true,
 });
