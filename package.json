@@ -27,7 +27,7 @@
     "@eslint/js": "^10.0.1",
     "@lark.js/docs": "^0.0.26",
     "@swifty.js/anti-copy": "latest",
-    "@swifty.js/docs": "^0.0.13",
+    "@swifty.js/docs": "^0.0.14",
     "@swifty.js/sentry": "latest",
     "@tailwindcss/typography": "^0.5.20",
     "@tailwindcss/vite": "^4.3.3",
