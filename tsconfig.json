@@ -3,7 +3,6 @@
     "target": "ESNext",
     "module": "ESNext",
     "moduleResolution": "bundler",
-    "jsx": "react-jsx",
     "strict": true,
     "noEmit": true,
     "skipLibCheck": true,
@@ -11,10 +10,6 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "verbatimModuleSyntax": true,
-    "noUncheckedIndexedAccess": false,
-    "paths": {
-      "@swifty-docs/generated": ["./.swifty-docs/generated"]
-    }
-  },
-  "include": ["swifty", "wanproxy.js", "docs.config.ts", "vite.config.ts"]
+    "noUncheckedIndexedAccess": false
+  }
 }

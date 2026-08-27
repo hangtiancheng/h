@@ -1,17 +1,10 @@
-@import "tailwindcss";
-
-@source "../../node_modules/@lark.js/docs/dist";
-
-@theme {
+:root {
   --font-sans:
     "Iosevka", "Maple Mono", Menlo, "Cascadia Code", "PingFang SC",
     "Microsoft YaHei" !important;
   --font-mono:
     "Iosevka", "Maple Mono", Menlo, "Cascadia Code", "PingFang SC",
     "Microsoft YaHei" !important;
-}
-
-:root {
   --vp-c-brand-1: #f05138cc;
   --vp-c-brand-2: #f26550cc;
   --vp-c-brand-3: #ee3c20cc;
