@@ -32,5 +32,3 @@ features:
 ---
 
 > Welcome to Swifty Homepage
-
-- [swifty-docs](https://hangtiancheng.github.io/h/swifty-docs)
