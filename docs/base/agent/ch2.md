@@ -1,5 +1,5 @@
 ---
-protected: true
+private: true
 ---
 
 # LLM API、对话管理

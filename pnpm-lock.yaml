@@ -12,14 +12,14 @@ importers:
         specifier: ^10.0.1
         version: 10.0.1(eslint@10.9.0(jiti@2.7.0))
       '@lark.js/docs':
-        specifier: file:../lark.js/packages/lark-docs
-        version: file:../lark.js/packages/lark-docs(tailwindcss@4.3.3)(vitepress@1.6.4(@algolia/client-search@5.57.0)(@types/node@25.9.5)(@types/react@19.2.18)(lightningcss@1.33.0)(nprogress@0.2.0)(postcss@8.5.26)(preact-render-to-string@6.7.0(preact@10.29.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(search-insights@2.17.3)(terser@5.50.0)(typescript@6.0.3))
+        specifier: ^0.0.26
+        version: 0.0.26(tailwindcss@4.3.3)(vitepress@1.6.4(@algolia/client-search@5.57.0)(@types/node@25.9.5)(@types/react@19.2.18)(lightningcss@1.33.0)(nprogress@0.2.0)(postcss@8.5.26)(preact-render-to-string@6.7.0(preact@10.29.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(search-insights@2.17.3)(terser@5.50.0)(typescript@6.0.3))
       '@swifty.js/anti-copy':
         specifier: latest
-        version: 0.0.6(@swifty.js/docs@file:../swifty.js/packages/swifty-docs(vitepress@1.6.4(@algolia/client-search@5.57.0)(@types/node@25.9.5)(@types/react@19.2.18)(lightningcss@1.33.0)(nprogress@0.2.0)(postcss@8.5.26)(preact-render-to-string@6.7.0(preact@10.29.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(search-insights@2.17.3)(terser@5.50.0)(typescript@6.0.3)))(react@19.2.8)(vitepress@1.6.4(@algolia/client-search@5.57.0)(@types/node@25.9.5)(@types/react@19.2.18)(lightningcss@1.33.0)(nprogress@0.2.0)(postcss@8.5.26)(preact-render-to-string@6.7.0(preact@10.29.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(search-insights@2.17.3)(terser@5.50.0)(typescript@6.0.3))(vue@3.5.41(typescript@6.0.3))
+        version: 0.0.6(@swifty.js/docs@0.0.13(vitepress@1.6.4(@algolia/client-search@5.57.0)(@types/node@25.9.5)(@types/react@19.2.18)(lightningcss@1.33.0)(nprogress@0.2.0)(postcss@8.5.26)(preact-render-to-string@6.7.0(preact@10.29.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(search-insights@2.17.3)(terser@5.50.0)(typescript@6.0.3)))(react@19.2.8)(vitepress@1.6.4(@algolia/client-search@5.57.0)(@types/node@25.9.5)(@types/react@19.2.18)(lightningcss@1.33.0)(nprogress@0.2.0)(postcss@8.5.26)(preact-render-to-string@6.7.0(preact@10.29.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(search-insights@2.17.3)(terser@5.50.0)(typescript@6.0.3))(vue@3.5.41(typescript@6.0.3))
       '@swifty.js/docs':
-        specifier: file:../swifty.js/packages/swifty-docs
-        version: file:../swifty.js/packages/swifty-docs(vitepress@1.6.4(@algolia/client-search@5.57.0)(@types/node@25.9.5)(@types/react@19.2.18)(lightningcss@1.33.0)(nprogress@0.2.0)(postcss@8.5.26)(preact-render-to-string@6.7.0(preact@10.29.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(search-insights@2.17.3)(terser@5.50.0)(typescript@6.0.3))
+        specifier: ^0.0.13
+        version: 0.0.13(vitepress@1.6.4(@algolia/client-search@5.57.0)(@types/node@25.9.5)(@types/react@19.2.18)(lightningcss@1.33.0)(nprogress@0.2.0)(postcss@8.5.26)(preact-render-to-string@6.7.0(preact@10.29.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(search-insights@2.17.3)(terser@5.50.0)(typescript@6.0.3))
       '@swifty.js/sentry':
         specifier: latest
         version: 0.0.5(react@19.2.8)(vite@8.2.2(@types/node@25.9.5)(esbuild@0.27.7)(jiti@2.7.0)(terser@5.50.0)(yaml@2.9.0))(vue@3.5.41(typescript@6.0.3))
@@ -1159,8 +1159,8 @@ packages:
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
 
-  '@lark.js/docs@file:../lark.js/packages/lark-docs':
-    resolution: {directory: ../lark.js/packages/lark-docs, type: directory}
+  '@lark.js/docs@0.0.26':
+    resolution: {integrity: sha512-jIHRGXLnWYFscd/OjUfMfwGfWhXVON6yK26c0IIYo15GQSz6/36zN3x1fpkzw1MEvTzwKnxLRSRiHXw59iPlXQ==}
     peerDependencies:
       tailwindcss: ^4.0.0
       vitepress: ^1.0.0 || ^2.0.0-0
@@ -1511,7 +1511,6 @@ packages:
 
   '@swifty.js/anti-copy@0.0.6':
     resolution: {integrity: sha512-fJq8c1bHkvrWSiaOnswvpwZVlXxAKZUoQL7O4KGDEJXxhRE1qFfaSUn88JeWr4AmhkulnWMW82agzMmH8JW4mA==}
-    version: 0.0.6
     peerDependencies:
       '@swifty.js/docs': '>=0.0.12'
       react: ^18.0.0 || ^19.0.0
@@ -1527,8 +1526,8 @@ packages:
       vue:
         optional: true
 
-  '@swifty.js/docs@file:../swifty.js/packages/swifty-docs':
-    resolution: {directory: ../swifty.js/packages/swifty-docs, type: directory}
+  '@swifty.js/docs@0.0.13':
+    resolution: {integrity: sha512-ofrdr/5roZfVvrAydYNuuSlhgdOQJeMrP1sdLAsT6ak3gXWBj2Q8PDRRKvTLmRDm8BCqCjiVF1aQqYG+BCkGtQ==}
     engines: {node: '>=20'}
     peerDependencies:
       vitepress: '>=1.0.0'
@@ -5421,7 +5420,7 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
 
-  '@lark.js/docs@file:../lark.js/packages/lark-docs(tailwindcss@4.3.3)(vitepress@1.6.4(@algolia/client-search@5.57.0)(@types/node@25.9.5)(@types/react@19.2.18)(lightningcss@1.33.0)(nprogress@0.2.0)(postcss@8.5.26)(preact-render-to-string@6.7.0(preact@10.29.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(search-insights@2.17.3)(terser@5.50.0)(typescript@6.0.3))':
+  '@lark.js/docs@0.0.26(tailwindcss@4.3.3)(vitepress@1.6.4(@algolia/client-search@5.57.0)(@types/node@25.9.5)(@types/react@19.2.18)(lightningcss@1.33.0)(nprogress@0.2.0)(postcss@8.5.26)(preact-render-to-string@6.7.0(preact@10.29.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(search-insights@2.17.3)(terser@5.50.0)(typescript@6.0.3))':
     dependencies:
       lit: 3.3.3
       mermaid: 11.17.2
@@ -5662,14 +5661,14 @@ snapshots:
 
   '@standard-schema/spec@1.1.0': {}
 
-  '@swifty.js/anti-copy@0.0.6(@swifty.js/docs@file:../swifty.js/packages/swifty-docs(vitepress@1.6.4(@algolia/client-search@5.57.0)(@types/node@25.9.5)(@types/react@19.2.18)(lightningcss@1.33.0)(nprogress@0.2.0)(postcss@8.5.26)(preact-render-to-string@6.7.0(preact@10.29.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(search-insights@2.17.3)(terser@5.50.0)(typescript@6.0.3)))(react@19.2.8)(vitepress@1.6.4(@algolia/client-search@5.57.0)(@types/node@25.9.5)(@types/react@19.2.18)(lightningcss@1.33.0)(nprogress@0.2.0)(postcss@8.5.26)(preact-render-to-string@6.7.0(preact@10.29.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(search-insights@2.17.3)(terser@5.50.0)(typescript@6.0.3))(vue@3.5.41(typescript@6.0.3))':
+  '@swifty.js/anti-copy@0.0.6(@swifty.js/docs@0.0.13(vitepress@1.6.4(@algolia/client-search@5.57.0)(@types/node@25.9.5)(@types/react@19.2.18)(lightningcss@1.33.0)(nprogress@0.2.0)(postcss@8.5.26)(preact-render-to-string@6.7.0(preact@10.29.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(search-insights@2.17.3)(terser@5.50.0)(typescript@6.0.3)))(react@19.2.8)(vitepress@1.6.4(@algolia/client-search@5.57.0)(@types/node@25.9.5)(@types/react@19.2.18)(lightningcss@1.33.0)(nprogress@0.2.0)(postcss@8.5.26)(preact-render-to-string@6.7.0(preact@10.29.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(search-insights@2.17.3)(terser@5.50.0)(typescript@6.0.3))(vue@3.5.41(typescript@6.0.3))':
     optionalDependencies:
-      '@swifty.js/docs': file:../swifty.js/packages/swifty-docs(vitepress@1.6.4(@algolia/client-search@5.57.0)(@types/node@25.9.5)(@types/react@19.2.18)(lightningcss@1.33.0)(nprogress@0.2.0)(postcss@8.5.26)(preact-render-to-string@6.7.0(preact@10.29.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(search-insights@2.17.3)(terser@5.50.0)(typescript@6.0.3))
+      '@swifty.js/docs': 0.0.13(vitepress@1.6.4(@algolia/client-search@5.57.0)(@types/node@25.9.5)(@types/react@19.2.18)(lightningcss@1.33.0)(nprogress@0.2.0)(postcss@8.5.26)(preact-render-to-string@6.7.0(preact@10.29.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(search-insights@2.17.3)(terser@5.50.0)(typescript@6.0.3))
       react: 19.2.8
       vitepress: 1.6.4(@algolia/client-search@5.57.0)(@types/node@25.9.5)(@types/react@19.2.18)(lightningcss@1.33.0)(nprogress@0.2.0)(postcss@8.5.26)(preact-render-to-string@6.7.0(preact@10.29.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(search-insights@2.17.3)(terser@5.50.0)(typescript@6.0.3)
       vue: 3.5.41(typescript@6.0.3)
 
-  '@swifty.js/docs@file:../swifty.js/packages/swifty-docs(vitepress@1.6.4(@algolia/client-search@5.57.0)(@types/node@25.9.5)(@types/react@19.2.18)(lightningcss@1.33.0)(nprogress@0.2.0)(postcss@8.5.26)(preact-render-to-string@6.7.0(preact@10.29.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(search-insights@2.17.3)(terser@5.50.0)(typescript@6.0.3))':
+  '@swifty.js/docs@0.0.13(vitepress@1.6.4(@algolia/client-search@5.57.0)(@types/node@25.9.5)(@types/react@19.2.18)(lightningcss@1.33.0)(nprogress@0.2.0)(postcss@8.5.26)(preact-render-to-string@6.7.0(preact@10.29.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(search-insights@2.17.3)(terser@5.50.0)(typescript@6.0.3))':
     dependencies:
       js-yaml: 4.3.1
       lit: 3.3.3

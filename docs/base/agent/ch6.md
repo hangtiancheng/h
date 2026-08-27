@@ -1,5 +1,5 @@
 ---
-protected: true
+private: true
 ---
 
 # 权限

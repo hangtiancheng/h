@@ -1,7 +1,14 @@
-import { defineDocsConfig } from "@lark.js/docs";
+import {
+  buildNav,
+  buildSidebar,
+  installMermaidFence,
+  MERMAID_TAG,
+} from "@lark.js/docs";
 import tailwindcss from "@tailwindcss/vite";
 import { VitePWA } from "vite-plugin-pwa";
 import type { PluginOption } from "vite";
+import { defineConfig } from "vitepress";
+import { excludePrivatePages, privateDocsPlugin } from "@swifty.js/docs";
 
 const plugins: PluginOption[] = [
   tailwindcss(),
@@ -77,9 +84,10 @@ const plugins: PluginOption[] = [
       ],
     },
   }),
+  privateDocsPlugin(),
 ];
 
-export default defineDocsConfig({
+export default defineConfig({
   srcDir: "docs",
   lang: "zh-CN",
   title: "Swifty Homepage",
@@ -90,10 +98,12 @@ export default defineDocsConfig({
     // @ts-ignore
     plugins,
     optimizeDeps: {
-      exclude: ["@swifty.js/anti-copy"],
+      exclude: ["@swifty.js/anti-copy", "@lark.js/docs"],
+      // Prebundle the excluded package's nested dep so its CJS deps (dayjs) get ESM interop in dev.
+      include: ["@lark.js/docs > mermaid"],
     },
     ssr: {
-      noExternal: ["@swifty.js/anti-copy"],
+      noExternal: ["@swifty.js/anti-copy", "@lark.js/docs"],
     },
   },
   cleanUrls: true,
@@ -132,13 +142,27 @@ export default defineDocsConfig({
   ],
   markdown: {
     lineNumbers: true,
+    config: installMermaidFence,
+  },
+  vue: {
+    template: {
+      compilerOptions: {
+        isCustomElement: (tag) => tag === MERMAID_TAG,
+      },
+    },
   },
   themeConfig: {
+    nav: buildNav("docs"),
+    sidebar: buildSidebar("docs"),
     logo: "/favicon.svg",
     outline: [2, 3],
     socialLinks: [{ icon: "github", link: "https://github.com/hangtiancheng" }],
     search: {
       provider: "local",
+      // Local search reads markdown straight from disk, so private pages
+      // must be excluded explicitly. Mirrors the default renderer and
+      // keeps `search: false` support.
+      options: { _render: excludePrivatePages },
     },
     editLink: {
       pattern: "https://github.com/hangtiancheng/h/edit/main/docs/:path",

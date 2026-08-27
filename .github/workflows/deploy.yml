@@ -39,8 +39,8 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Build with vitepress
         run: pnpm build
-        env:
-          DOCS_PASSWORD: ${{ secrets.DOCS_PASSWORD }}
+        # env:
+        #   DOCS_PASSWORD: ${{ secrets.DOCS_PASSWORD }}
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:

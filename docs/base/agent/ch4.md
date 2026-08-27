@@ -1,5 +1,5 @@
 ---
-protected: true
+private: true
 ---
 
 # ReAct 和 Agent Loop

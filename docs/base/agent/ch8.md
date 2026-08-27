@@ -1,5 +1,5 @@
 ---
-protected: true
+private: true
 ---
 
 # 上下文压缩

@@ -1,5 +1,5 @@
 ---
-protected: true
+private: true
 ---
 
 # 指令文件、会话持久化、跨会话记忆

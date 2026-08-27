@@ -1,5 +1,5 @@
 ---
-protected: true
+private: true
 ---
 
 # 工具调用

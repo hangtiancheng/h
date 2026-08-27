@@ -1,5 +1,5 @@
 ---
-protected: true
+private: true
 ---
 
 # 什么是 Agent
