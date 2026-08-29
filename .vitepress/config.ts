@@ -5,7 +5,7 @@ import {
   MERMAID_TAG,
 } from "@lark.js/docs";
 import { VitePWA } from "vite-plugin-pwa";
-import { defineConfig } from "vitepress";
+import { defineConfig, type Plugin } from "vitepress";
 import { privateDocsPlugin } from "@swifty.js/docs";
 
 export default defineConfig({
@@ -93,7 +93,7 @@ export default defineConfig({
           ],
         },
       }),
-      privateDocsPlugin(),
+      privateDocsPlugin() as Plugin,
     ],
     optimizeDeps: {
       exclude: ["@swifty.js/anti-copy", "@lark.js/docs"],
