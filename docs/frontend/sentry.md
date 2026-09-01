@@ -190,7 +190,7 @@ DataReporter 的数据上报管道分为 send (入队) 和 flush (发送) 两个
      - flush 发送时发现离线
      - 发送失败时
 
-- 创建 DataReporter 实例时, 安装 online/offline 监听器 `window.addEventListener("online", onOnline)`, `window.addEventListener("offline", onOffline)`; 网络状态初始化为 `navigator.onLine`
+- 创建 DataReporter 实例时, 安装 online/offline 监听器 `window.addEventListener("online", onOnline)`, `window.addEventListener("offline", onOffline)`; 网络状态初始化为 `navigator.onLine`, 从 localStorage 中加载上一个会话未上报的数据
 
 ## 数据传输层的双通道策略
 
@@ -198,3 +198,10 @@ DataReporter 的数据上报管道分为 send (入队) 和 flush (发送) 两个
 | ---------------------- | -------------- | --------------------------------------------------- | ------------------------------------------------------- | -------------------------- |
 | `navigator.sendBeacon` | <64KB 在途预算 | 页面卸载时可靠上报、不阻塞页面渲染                  | 只能使用 POST 方法、不能自定义 header、无法获取响应状态 | 普通批量上报               |
 | `fetch POST`           | 没有硬限制     | 可以自定义 header、可以获取响应状态、支持 keepalive | 页面卸载时可能中断、载荷体积过大时关闭 keepalive        | 大数据量上报、需要确认送达 |
+
+`fetch` 通道的特殊处理
+
+- 条件性的 `keepalive`: 载荷 <=60KB 时设置 `keepalive: true`, 开启 keepalive 页面卸载时仍然尝试完成请求; 超过 60KB 则关闭 keepalive: chromium 对 `keepalive: true` 的 fetch 有大约 64KB 的在途预算, 大数据量上报 (例如屏幕录制) 时如果开启 keepalive 会被浏览器拒绝, 导致数据上报失败并阻塞上报队列头部
+- 数据上报失败时 (被服务器拒绝或 res.ok === false) 时, 启动定时 HEAD 探测服务器, 服务器健康时恢复数据上报
+
+## 白屏检测算法
