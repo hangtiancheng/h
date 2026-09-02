@@ -224,10 +224,38 @@ DataReporter 的数据上报管道分为 send (入队) 和 flush (发送) 两个
 
 ## 首屏渲染事时间 (FSP)
 
-FSP (First Screen Paint) 是一个自定义指标
+FSP (First Screen Paint) 是一个自定义指标: LCP 关注单个最大内容元素, 对于 SPA 首屏 (多个组件) 的场景不准确; FSP 监听视口中所有 DOM 的变化, 取最后一个可视元素完成渲染的时间, 真实反映用户感知的页面完成
 
 FSP 对比 LCP
 
-|      | FSP                                 | LCP                              |
-| ---- | ----------------------------------- | -------------------------------- |
-| 定义 | 首屏所有可视 DOM 元素完成渲染的时间 | 视口中最大内容元素完成渲染的时间 |
+|          | FSP                                        | LCP                                               |
+| -------- | ------------------------------------------ | ------------------------------------------------- |
+| 定义     | 首屏所有可视 DOM 元素完成渲染的时间        | 视口中最大内容元素完成渲染的时间                  |
+| 关注点   | 首屏整体完成度                             | 单个最大内容元素                                  |
+| 实现     | MutationObserver 监听视口中所有 DOM 的变化 | PerformanceObserver 监听 largest-contentful-paint |
+| 排除元素 | link/style/script                          | 浏览器自动判定                                    |
+| 终止条件 | `document.readyState === "complete"`       | 页面完全加载或者有用户交互                        |
+| 适用场景 | SPA 首屏、SSR 页面                         | 通用页面                                          |
+
+## 性能监控插件采集的指标
+
+1. Web Vitals
+
+| 指标 | 含义             | 采集方式   |
+| ---- | ---------------- | ---------- |
+| LCP  | 最大内容绘制     | `onLCP()`  |
+| FCP  | 首次内容绘制     | `onFCP()`  |
+| CLS  | 累积布局偏移     | `onCLS()`  |
+| INP  | 交互到下一次绘制 | `onINP()`  |
+| TTFB | 首字节时间       | `onTTFB()` |
+
+2. Navigation Timing (Performance API)
+
+从 `performance.getEntriesByType("navigation")` 提取
+
+- DNS 查询耗时 (domainLookupEnd - domainLookupStart)
+- TCP 连接耗时 (connectEnd - connectStart)
+- TLS 握手耗时
+- 首字节时间 (responseStart - requestStart)
+- 内容传输耗时 (responseEnd - responseStart)
+- DOM 解析耗时
