@@ -296,14 +296,14 @@ FSP 对比 LCP
 
 ### 跨源隔离开启方法
 
-服务器必须在响应头中返回
+服务器必须在响应头中返回:
 
 ```
 Cross-Origin-Opener-Policy: same-origin
-Cross-Origin-Embedder-Policy: require-corp
+Cross-Origin-Embedder-Policy: require-corp | credentialless
 ```
 
-- COOP: same-origin 从本页面打开的第三方窗口, 或者打开本页面的第三方窗口, 如果非同源, 则会被隔离为独立的浏览上下文
+- COOP: same-origin 从本页面打开的第三方窗口, 或者打开本页面的第三方窗口, 如果非同源, 则会被隔离为独立的浏览上下文 (Browsing Context Group, BCG), 无法通过 `window.opener` 引用对方, 也无法与对方共享进程
 - COEP: require-corp 本页面加载的所有跨源资源 (img/script/iframe 等) 和同源 iframe, 都必须显式声明 `Cross-Origin-Resource-Policy` CORP 头, 即强制所有嵌入内容 "声明同意嵌入", 或者使用 CORS 加载
 
 1. COOP: why? 其他第三方窗口可能和本页面共享浏览上下文 (Browsing Context Group, BCG), 即使用 `window.open` 打开某页面, 并且通过 `window.opener` 引用该页面
