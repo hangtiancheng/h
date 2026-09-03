@@ -133,7 +133,7 @@ response 的 body 只能被消费一次, sentry SDK 包装了 fetch, 并且将�
 | 类型               | 来源                                                      | 实现方式                                                    |
 | ------------------ | --------------------------------------------------------- | ----------------------------------------------------------- |
 | 运行时 JS 错误     | `window.addEventListener("error", listener, true)`        | capture 阶段监听 `error` 事件                               |
-| 资源加载错误       | 同上监听 error 事件, img/link/script 加载失败             | capture 阶段判断 `target.src/target.href`                   |
+| 资源加载错误       | 同上监听 error 事件, img/font/link/script/video 加载失败  | capture 阶段判断 `target.src/target.href`                   |
 | Promise 未捕获异常 | `window.addEventListener("unhandledrejection", listener)` | 全局事件监听, 解析 `reason` 再分类                          |
 | console.error      | 开发者主动打印                                            | 装饰 `console.error` 提取 Error 对象                        |
 | React 组件错误     | ErrorBoundary                                             | `componentDidCatch` 生命周期                                |
@@ -271,8 +271,8 @@ FSP 对比 LCP
 4. Resource Element Fallback (MutationObserver)
 
 - 针对不支持 PerformanceObserver 监听 `resource` 类型的浏览器
-- 通过 MutationObserver 监听新增的 img/link/script 元素
-- 在 img/link/script 元素 load/error 事件回调中上报, 每个 URL 只上报一次
+- 通过 MutationObserver 监听新增的 img/font/link/script/video 元素
+- 在 img/font/link/script/video 元素 load/error 事件回调中上报, 每个 URL 只上报一次
 
 5. Long Tasks:
 
@@ -296,25 +296,27 @@ FSP 对比 LCP
 
 ### 跨源隔离开启方法
 
-服务器必须在响应头中返回:
+服务器必须在响应头中设置
 
-```
+```bash
+# COOP: same-origin
 Cross-Origin-Opener-Policy: same-origin
+# COEP: require-corp | credentials
 Cross-Origin-Embedder-Policy: require-corp | credentialless
 ```
 
-- COOP: same-origin 从本页面打开的第三方窗口, 或者打开本页面的第三方窗口, 如果非同源, 则会被隔离为独立的浏览上下文 (Browsing Context Group, BCG), 无法通过 `window.opener` 引用对方, 也无法与对方共享进程
-- COEP: require-corp 本页面加载的所有跨源资源 (img/script/iframe 等) 和同源 iframe, 都必须显式声明 `Cross-Origin-Resource-Policy` CORP 头, 即强制所有嵌入内容 "声明同意嵌入", 或者使用 CORS 加载
+- `COOP: same-origin` 从本页面打开的第三方窗口, 或者打开本页面的第三方窗口, 如果非同源, 则会被隔离为独立的浏览上下文 (Browsing Context Group, BCG), 无法通过 `window.opener` 引用对方, 也无法与对方共享进程
+- `COEP: require-corp` 本页面加载的跨源 no-cors 子资源 (img/font/link/script/video 等), 第三方服务器必须显式携带 `Cross-Origin-Resource-Policy` 响应头, 或者使用 CORS 加载, 即强制嵌入资源 "声明同意嵌入"; 同源 iframe 无需 CORP
 
 1. COOP: why? 其他第三方窗口可能和本页面共享浏览上下文 (Browsing Context Group, BCG), 即使用 `window.open` 打开某页面, 并且通过 `window.opener` 引用该页面
-2. COEP: 本页面嵌入第三方资源, img/script/iframe 等资源只要有 URL 就能被嵌入, 提供被嵌入的资源的第三方服务器未同意; 服务器在响应头中设置 Cross-Origin-Embedder-Policy: require-corp 后, 跨源资源和同源 iframe 只有 2 种方式可以被加载
-   - COEP: require-corp 要求本页面加载的所有跨源资源 (img/script/iframe 等) 和同源 iframe, 第三方服务器都必须在响应头中设置 `Cross-Origin-Resource-Policy: cross-origin` 或 `Cross-Origin-Resource-Policy: same-site`; 表示第三方服务器显式声明同意嵌入
-   - 跨源资源也可以使用 CORS 加载 (crossorigin 属性、fetch 的 CORS 模式), 第三方服务器必须在响应头中设置 `Access-Control-Allow-Origin`
+2. COEP: 本页面嵌入第三方资源, img/font/link/script/video 等资源只要有 URL 就能被嵌入, 提供被嵌入的资源的第三方服务器未同意; 服务器携带 `COEP: require-corp` 响应头后, 第三方资源加载规则:
+   - no-cors 子资源 (img/font/link/script/video 等): 第三方服务器的响应必须携带 `CORP: cross-origin` (跨站) 或 `CORP: same-site` (同站跨源) 响应头, 表示显式声明同意嵌入; 也可以使用 CORS 加载 (crossorigin 属性、fetch 的 CORS 模式), 第三方服务器的响应必须携带 `Access-Control-Allow-Origin` 响应头
+   - 跨源 iframe: 服务器的响应「必须」携带 COEP (`require-corp` / `credentialless`) 响应头; 第三方服务器的响应必须携带 `CORP: cross-origin` 响应头; 服务器携带 `COEP: none` 响应头时, 即使第三方服务器的响应携带 CORP 也会被拦截
 
-案例 --- 服务器在响应头中设置 Cross-Origin-Embedder-Policy: require-corp 后, 第三方资源加载失败: 提供第三方资源的服务器未在响应头中设置 `Cross-Origin-Resource-Policy`
+案例 --- 服务器携带 `COEP: require-corp` 响应头后, 第三方资源加载失败: 提供第三方资源的服务器未携带 `CORP` 响应头
 
-> 如果是 `Cross-Origin-Embedder-Policy: credentialless`, 嵌入第三方资源时, 第三方服务器不需要加 CORP 响应头, 缺陷是请求第三方资源时不会携带 cookie
-> 如果希望请求第三方资源时携带 cookie, 则需要升级到 `Cross-Origin-Embedder-Policy: require-corp`, 并且要求第三方服务器在响应头中设置 `Cross-Origin-Resource-Policy: cross-origin`
+> 如果服务器携带的是 `COEP: credentialless` 响应头, 嵌入跨源 no-cors 子资源 (img/font/link/script/video 等) 时, 第三方服务器不需要携带 CORP 响应头, 缺陷是请求跨源 no-cors 子资源时不会携带 cookie
+> 请求跨源 no-cors 子资源需要携带 cookie 时, 服务器必须携带 `COEP: require-corp` 响应头, 并且要求第三方服务器的响应携带 `CORP: cross-origin`
 
 ### 开启跨源隔离后解锁的能力
 
