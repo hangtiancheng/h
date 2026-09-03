@@ -193,6 +193,7 @@ rules.ninja
 *.swo
 
 **/.vitepress/cache/
+**/.vitepress/.temp/
 
 tsconfig.tsbuildinfo
 **/tsconfig.tsbuildinfo

@@ -7,14 +7,6 @@ import {
 import { VitePWA } from "vite-plugin-pwa";
 import { defineConfig, type Plugin } from "vitepress";
 import { privateDocsPlugin } from "@swifty.js/docs";
-import { join } from "node:path";
-import { fileURLToPath, resolve } from "node:url";
-
-const publicDir = join(fileURLToPath(new URL("../public", import.meta.url)));
-// console.log(publicDir, import.meta.url);
-
-// const publicDir2 = resolve(import.meta.dirname, "../public");
-// console.log(publicDir2, import.meta.dirname, import.meta.filename);
 
 export default defineConfig({
   srcDir: "docs",
@@ -26,7 +18,6 @@ export default defineConfig({
   ignoreDeadLinks: false,
   base: "/h/",
   vite: {
-    publicDir,
     plugins: [
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-expect-error
