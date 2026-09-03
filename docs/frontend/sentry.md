@@ -258,4 +258,65 @@ FSP 对比 LCP
 - TLS 握手耗时
 - 首字节时间 (responseStart - requestStart)
 - 内容传输耗时 (responseEnd - responseStart)
-- DOM 解析耗时
+- DOM 解析耗时 (domInteractive - responseEnd)
+- 资源加载耗时 (loadEventStart - domContentLoadedEventEnd)
+- 重定向耗时、unload 耗时、paintTime (最后一条 paint entry 相对 fetchStart)
+
+3. Resource Timing (PerformanceObserver)
+
+- PerformanceObserver 监听 `resource` 类型的 PerformanceEntry
+- 排除 fetch/xmlhttprequest/beacon 类型 (这些由 HTTP 监控覆盖) 和包含 DSN 的 URL
+- 记录每个静态资源的大小、加载耗时、initiatorType (触发请求该静态资源的来源类型); `fromCache` 由 `transferSize === 0 || encodedBodySize === 0` 推导
+
+4. Resource Element Fallback (MutationObserver)
+
+- 针对不支持 PerformanceObserver 监听 `resource` 类型的浏览器
+- 通过 MutationObserver 监听新增的 img/link/script 元素
+- 在 img/link/script 元素 load/error 事件回调中上报, 每个 URL 只上报一次
+
+5. Long Tasks:
+
+- PerformanceObserver 监听 `longtask` 类型
+- 记录超过 50ms 的长任务, 用于定位主线程阻塞
+
+6. Memory:
+
+- PerformancePlugin 插件初始化时, 调用一次 `performance.measureUserAgentSpecificMemory()` (Chrome-only, 页面需要 window.crossOriginIsolated === true)
+- 测量页面的 JS 堆内存使用情况
+
+7. FSP、HTTP 性能
+
+> window.crossOriginIsolated: 当前页面是否为跨源隔离 (Cross-Origin Isolation) 状态, 如果 window.crossOriginIsolated === true, 则表示浏览器判断该页面安全, 允许使用受限制的、强大的 Web API, 例如: SharedArrayBuffer、performance.measureUserAgentSpecificMemory() 等
+
+### 为什么需要跨源隔离
+
+- 同源策略: 如果两个 URL 的协议, 主机名 (或 IP) 和端口都相同, 则两个 URL 同源
+
+某些强大的 Web API (特别是 SharedArrayBuffer) 存在「侧信道攻击」风险 (侧信道攻击: 通过精确测量时间/内存窃取其他源的数据); 浏览器默认禁用这些强大的 API; 只有当网页明确声明「跨源隔离」的安全环境时，浏览器才会重新开启这些强大的 API
+
+### 跨源隔离开启方法
+
+服务器必须在响应头中返回
+
+```
+Cross-Origin-Opener-Policy: same-origin
+Cross-Origin-Embedder-Policy: require-corp
+```
+
+- COOP: 从该页面打开的窗口, 或者打开该页面的窗口, 如果非同源, 则会被隔离为独立的浏览上下文, 保证顶层的文档「干净」
+- COEP: 页面加载的所有跨源资源 (img/script/iframe 等) 和同源 iframe, 都必须显式声明 `Cross-Origin-Resource-Policy` CORP 头, 或者使用 CORS 加载, 即强制所有嵌入内容 "承诺可信任"
+
+1. COOP: 其他窗口和本页面共享浏览上下文 (Browsing Context Group, BCG), 使用 `window.open` 打开某页面, 并且通过 `window.opener` 引用该页面
+2. COEP: 本页面嵌入资源: img/script/iframe 等资源只要有 URL 就能被嵌入, 提供被嵌入的资源的服务器未同意; Cross-Origin-Embedder-Policy: require-corp 开启后, 跨源资源和同源 iframe 只有 2 种方式可以被加载
+   - COEP 要求本页面加载的所有跨源资源 (img/script/iframe 等) 和同源 iframe, 都必须在响应头中设置 `Cross-Origin-Resource-Policy: cross-origin` 或 `Cross-Origin-Resource-Policy: same-site`; 表示资源提供者显式声明同意嵌入
+   - 跨源资源也可以使用 CORS 加载 (crossorigin 属性、fetch 的 CORS 模式), 服务器必须在响应头中设置 `Access-Control-Allow-Origin`
+
+案例 --- 开启 Cross-Origin-Embedder-Policy: require-corp 后, 第三方资源加载失败: 提供第三方资源的服务器未在响应头中设置 `Cross-Origin-Resource-Policy`
+
+### 开启跨源隔离后解锁的能力
+
+- SharedArrayBuffer: 多线程共享内存
+- performance.measureUserAgentSpecificMemory(): 测量页面的 JS 堆内存使用情况
+- 高精度时间戳: performance.now() 的时钟精度不会被降级
+
+## 屏幕录制插件的滑动窗口机制
