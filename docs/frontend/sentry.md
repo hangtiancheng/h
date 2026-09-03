@@ -303,15 +303,18 @@ Cross-Origin-Opener-Policy: same-origin
 Cross-Origin-Embedder-Policy: require-corp
 ```
 
-- COOP: 从该页面打开的窗口, 或者打开该页面的窗口, 如果非同源, 则会被隔离为独立的浏览上下文, 保证顶层的文档「干净」
-- COEP: 页面加载的所有跨源资源 (img/script/iframe 等) 和同源 iframe, 都必须显式声明 `Cross-Origin-Resource-Policy` CORP 头, 或者使用 CORS 加载, 即强制所有嵌入内容 "承诺可信任"
+- COOP: same-origin 从本页面打开的第三方窗口, 或者打开本页面的第三方窗口, 如果非同源, 则会被隔离为独立的浏览上下文
+- COEP: require-corp 本页面加载的所有跨源资源 (img/script/iframe 等) 和同源 iframe, 都必须显式声明 `Cross-Origin-Resource-Policy` CORP 头, 即强制所有嵌入内容 "声明同意嵌入", 或者使用 CORS 加载
 
-1. COOP: 其他窗口和本页面共享浏览上下文 (Browsing Context Group, BCG), 使用 `window.open` 打开某页面, 并且通过 `window.opener` 引用该页面
-2. COEP: 本页面嵌入资源: img/script/iframe 等资源只要有 URL 就能被嵌入, 提供被嵌入的资源的服务器未同意; Cross-Origin-Embedder-Policy: require-corp 开启后, 跨源资源和同源 iframe 只有 2 种方式可以被加载
-   - COEP 要求本页面加载的所有跨源资源 (img/script/iframe 等) 和同源 iframe, 都必须在响应头中设置 `Cross-Origin-Resource-Policy: cross-origin` 或 `Cross-Origin-Resource-Policy: same-site`; 表示资源提供者显式声明同意嵌入
-   - 跨源资源也可以使用 CORS 加载 (crossorigin 属性、fetch 的 CORS 模式), 服务器必须在响应头中设置 `Access-Control-Allow-Origin`
+1. COOP: why? 其他第三方窗口可能和本页面共享浏览上下文 (Browsing Context Group, BCG), 即使用 `window.open` 打开某页面, 并且通过 `window.opener` 引用该页面
+2. COEP: 本页面嵌入第三方资源, img/script/iframe 等资源只要有 URL 就能被嵌入, 提供被嵌入的资源的第三方服务器未同意; 服务器在响应头中设置 Cross-Origin-Embedder-Policy: require-corp 后, 跨源资源和同源 iframe 只有 2 种方式可以被加载
+   - COEP: require-corp 要求本页面加载的所有跨源资源 (img/script/iframe 等) 和同源 iframe, 第三方服务器都必须在响应头中设置 `Cross-Origin-Resource-Policy: cross-origin` 或 `Cross-Origin-Resource-Policy: same-site`; 表示第三方服务器显式声明同意嵌入
+   - 跨源资源也可以使用 CORS 加载 (crossorigin 属性、fetch 的 CORS 模式), 第三方服务器必须在响应头中设置 `Access-Control-Allow-Origin`
 
-案例 --- 开启 Cross-Origin-Embedder-Policy: require-corp 后, 第三方资源加载失败: 提供第三方资源的服务器未在响应头中设置 `Cross-Origin-Resource-Policy`
+案例 --- 服务器在响应头中设置 Cross-Origin-Embedder-Policy: require-corp 后, 第三方资源加载失败: 提供第三方资源的服务器未在响应头中设置 `Cross-Origin-Resource-Policy`
+
+> 如果是 `Cross-Origin-Embedder-Policy: credentialless`, 嵌入第三方资源时, 第三方服务器不需要加 CORP 响应头, 缺陷是请求第三方资源时不会携带 cookie
+> 如果希望请求第三方资源时携带 cookie, 则需要升级到 `Cross-Origin-Embedder-Policy: require-corp`, 并且要求第三方服务器在响应头中设置 `Cross-Origin-Resource-Policy: cross-origin`
 
 ### 开启跨源隔离后解锁的能力
 
@@ -320,3 +323,8 @@ Cross-Origin-Embedder-Policy: require-corp
 - 高精度时间戳: performance.now() 的时钟精度不会被降级
 
 ## 屏幕录制插件的滑动窗口机制
+
+- ScreenRecordPlugin 屏幕录制插件, 插件中 dynamic import: `import ("@rrweb/record")` 和 `import("pako")`, 避免屏幕录制插件阻塞主 JS bundle
+- SDK 上报的事件类型匹配: Error / XHR / Fetch / Resource / UnhandledRejection 时, 才触发屏幕录制的滑动窗口的上报: 将滑动窗口中的 rrweb 事件作为 ScreenRecord 事件上报: rrweb events (JSON) -> pako.gzip() -> Uint8Array -> base64 编码 -> string
+- 屏幕录制中包含用户隐私时:
+  - rrweb 会将 type="password" 的输入框值替换为 *
