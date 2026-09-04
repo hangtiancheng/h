@@ -572,7 +572,7 @@ hash 模式
 
 ### 可靠性优化
 
-- Service Worker 离线队列: localStorage 有 5MB 大小限制并且同步阻塞, Service Worker + Cache API 可以获得更大的离线队列
+- Service Worker 离线队列: localStorage 有 5MB 大小限制并且同步阻塞, Service Worker + IndexedDB (Dexie.js) 可以获得更大的离线队列
 - 指数退避重试: sentry recovery 使用指数退避重试: 1s -> 2s -> 4s -> ... 60s
 - 数据完整性校验: 写入离线缓存时添加 checksum, 防止离线缓存的数据损坏
 
