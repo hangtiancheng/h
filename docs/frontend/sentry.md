@@ -324,7 +324,15 @@ Cross-Origin-Embedder-Policy: require-corp | credentialless
 - performance.measureUserAgentSpecificMemory(): 测量页面的 JS 堆内存使用情况
 - 高精度时间戳: performance.now() 的时钟精度不会被降级
 
-## 屏幕录制插件的滑动窗口机制
+## ScreenRecordPlugin 屏幕录制插件
+
+- rrweb 记录的是结构化的 DOM 增量事件, 不是视频, 开销小,「全程录制」是可行的
+- rrweb 的 `record()` 启动后, 每产生一个 rrweb 事件 (DOM 增量、点击、滚动), 都会通过 emit 回调 push 到滑动窗口;
+- 只保留最近 3s: 每次 emit 时丢弃最早的 rrweb 事件
+
+rrweb 的 checkoutEveryNms 按窗口长度 3s 定期生成新的全量 DOM 快照, 回放必须从一个全量 DOM 快照开始重建 DOM
+
+### 屏幕录制插件的滑动窗口机制
 
 - ScreenRecordPlugin 屏幕录制插件, 插件中 dynamic import: `import ("@rrweb/record")` 和 `import("pako")`, 避免屏幕录制插件阻塞主 JS bundle
 - SDK 上报的事件类型匹配: Error / XHR / Fetch / Resource / UnhandledRejection 时, 才触发屏幕录制上报: 将滑动窗口中的 rrweb 事件作为 ScreenRecord 事件上报: rrweb events (JSON) -> pako.gzip() -> Uint8Array -> base64 编码 -> string
@@ -577,6 +585,9 @@ hash 模式
 - 数据完整性校验: 写入离线缓存时添加 checksum, 防止离线缓存的数据损坏
 
 ## source-map 堆栈反解
+
+- 代码错误 window.addEventListener("event", fn): 浏览器派发 ErrorEvent, ErrorEvent 对象携带 filename/lineno/colno
+- 运行时抛出的 Error 对象 (try-catch 捕获, Promise 拒绝的 reason 等) ECMAScript 规范只有 name 和 message, 没有 lineno/colno; 但是 stack 调用栈包含调用帧信息 两种都要覆盖
 
 ```ts
 // Chrome 桢格式
