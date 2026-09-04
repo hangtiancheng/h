@@ -327,6 +327,255 @@ Cross-Origin-Embedder-Policy: require-corp | credentialless
 ## 屏幕录制插件的滑动窗口机制
 
 - ScreenRecordPlugin 屏幕录制插件, 插件中 dynamic import: `import ("@rrweb/record")` 和 `import("pako")`, 避免屏幕录制插件阻塞主 JS bundle
-- SDK 上报的事件类型匹配: Error / XHR / Fetch / Resource / UnhandledRejection 时, 才触发屏幕录制的滑动窗口的上报: 将滑动窗口中的 rrweb 事件作为 ScreenRecord 事件上报: rrweb events (JSON) -> pako.gzip() -> Uint8Array -> base64 编码 -> string
-- 屏幕录制中包含用户隐私时:
-  - rrweb 会将 type="password" 的输入框值替换为 *
+- SDK 上报的事件类型匹配: Error / XHR / Fetch / Resource / UnhandledRejection 时, 才触发屏幕录制上报: 将滑动窗口中的 rrweb 事件作为 ScreenRecord 事件上报: rrweb events (JSON) -> pako.gzip() -> Uint8Array -> base64 编码 -> string
+
+### 屏幕录制的设计
+
+- 隐私: rrweb 默认将 type="password" 的输入框值替换为 *, 也支持隐私配置: 例如 `recordCanvas" true` 记录 canvas 内容; 同时屏幕录制插件的滑动窗口只保留最近 3s, 不会记录用户的完整操作历史
+- 体积: 使用 gzip 压缩后的体积, 只有原 rrweb events JSON 体积的 10%-20%
+- 性能: rrweb 基于 MutationObserver, MutationObserver 是微任务, 监听整个 DOM 树的改变, 开销可控
+- 按需触发: 特定的事件类型才会触发屏幕录制上报, 降低网络带宽
+
+## 框架集成
+
+::: code-group
+
+```ts [react 集成]
+export class ReactErrorBoundary extends Component<Props, State> {
+  static displayName = "ReactErrorBoundary"; // 保证 react16 组件栈可读
+
+  // render 阶段将 error 写入 state, 使得 fallback 立即可见
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+
+  override componentDidCatch(error: Error, errorInfo: React.ErrorInfo): void {
+    this.setState({ error, errorInfo });
+    reportFrameworkError({
+      type: EventType.React,
+      error,
+      context: errorInfo, // ErrorInfo, 包含 componentStack 组件栈
+    });
+  }
+
+  override render() {
+    const { error, errorInfo } = this.state;
+    if (error) {
+      const { fallback } = this.props;
+      if (typeof fallback === "function") return fallback(error, errorInfo);
+      return fallback ?? null;
+    }
+    return this.props.children ?? null;
+  }
+}
+```
+
+```ts [vue 集成]
+export const vuePlugin: Plugin = (app, options: InitOptions) => {
+  const handler = app.config.errorHandler; // 原 errorHandler
+  app.config.errorHandler = (err, vueInstance, info) => {
+    reportFrameworkError({
+      type: EventType.Vue,
+      error: err,
+      context: { vueInstance, info },
+    });
+    handler?.call(null, err, vueInstance, info); // 链式调用原 errorHandler
+  };
+  init(options); // 插件安装时初始化 SDK
+};
+
+app.use(vuePlugin, { dsn: "/sentry" });
+```
+
+:::
+
+## 数据采样和数据过滤
+
+```
+JSError 事件 -> excludeAPIs / ignoreErrors (采集层过滤)
+             -> LRU 去重 (去重层过滤)
+             -> tracesSampleRate (采样层过滤) 随机采样: tracesSampleRate=0.5, 50% 的事件被随机丢弃
+             -> beforeSend (前置钩子, 可以过滤)
+             -> beforeSendBatch (前置钩子, 可以批量过滤)
+             -> 上报
+```
+
+## Reporter 单例、基于 Proxy 的懒加载
+
+```ts
+let instance: DataReporter | null = null;
+
+export function resetReporter() {
+  instance?.dispose(); // 清理定时器、清理 online/offline 监听、清空队列 (localStorage 缓存不会受到影响)
+  instance = null;
+}
+
+export default new Proxy({} as DataReporter, {
+  get(_target, prop) {
+    instance = instance ?? new DataReporter(); // 首次访问属性时, 才实例化
+    const value = Reflect.get(instance, prop, instance);
+    return typeof value === "function" ? value.bind(instance) : value;
+  },
+});
+```
+
+### 为什么需要懒加载?
+
+1. 避免模块加载时的副作用: DataReporter 的构造函数会注册 online/offline 监听, 并且从 localStorage 中恢复上个会话的离线缓存; 如果直接 `export default new DataReporter();`, import 该模块时会导致副作用, 并且早于 `init()` SDK 初始化
+2. 解决 this 绑定问题, 消费方可以安全解构 `const { send } = reporter`
+
+## 声明式点击埋点
+
+> See "$HOME/github/swifty-sentry/sentry"
+
+属性约定
+
+| 属性                 | 含义       | 示例                                 |
+| -------------------- | ---------- | ------------------------------------ |
+| `swifty-sentry-ev`   | 事件 ID    | `swifty-sentry-ev="toggle-language"` |
+| `swifty-sentry-msg`  | 事件描述   | `swifty-sentry-msg="切换语言"`       |
+| `swifty-sentry-view` | 元素标记   | `swifty-sentry-view="toggle-button"` |
+| `swifty-sentry-*`    | 自定义参数 | `swifty-sentry-lang="en"`            |
+
+```ts
+function getComposedElementPath(event: MouseEvent): HTMLElement[] {
+  return event
+    .composedPath()
+    .filter((node): node is HTMLElement => node instanceof HTMLElement);
+}
+
+function getElementPath(target: EventTarget | null): HTMLElement[] {
+  if (!(target instanceof HTMLElement)) {
+    return [];
+  }
+  const path: HTMLElement[] = [];
+  let current: HTMLElement | null = target;
+  while (current) {
+    path.push(current);
+    current = current.parentElement;
+  }
+  return path;
+}
+
+export function getDeclarativeClickData(
+  event: MouseEvent,
+): DeclarativeClickData | null {
+  // event.composedPath() 可以穿透 shadow DOM, 过滤得到 HTMLElement 的路径
+  const path = getComposedElementPath(event);
+  const fallbackPath = path.length > 0 ? path : getElementPath(event.target);
+  // 找到路径中, 第一个携带 swifty-sentry-ev/msg/view 属性的元素
+  const trackingTarget = fallbackPath.find(hasTrackingAttribute);
+  if (!trackingTarget) {
+    return null;
+  }
+  // 点击元素优先使用 event.target (如果 event.target 是 HTMLElement), 否则 fallback 到埋点元素
+  const clickedElement =
+    event.target instanceof HTMLElement ? event.target : trackingTarget;
+  const { top, left } = clickedElement.getBoundingClientRect();
+  const { scrollTop, scrollLeft } = document.documentElement;
+  return {
+    ev: getEventId(fallbackPath), // 优先级: swifty-sentry-ev > title > swifty-sentry-view > 标签名
+    msg: getMessage(trackingTarget), // 优先级: swifty-sentry-msg > title > textContent > aria-label > 标签名
+    triggerPageUrl: location.href,
+    x: left + scrollLeft,
+    y: top + scrollTop,
+    params: getParams(fallbackPath), // 收集 swifty-sentry-* 自定义参数 (ev/msg/view 除外)
+    elementPath: dom2str(trackingTarget), // 埋点元素的 CSS 选择器路径
+    triggerTime: Date.now(),
+  };
+}
+```
+
+### dom2str
+
+思路对齐 `@sentry/react` 的 htmlTreeAsString, 从被点击元素向上 (最多 5 层), 每层生成 `tag#id.class` 形式的选择器字符串并使用 > 连接, 例如 `body > div#app > button.btn.primary` 累积长度到达 128 字符后, 丢弃整层选择器字符串
+
+## 设备指纹和用户身份
+
+| 标识          | 来源                    | 缓存         | 用途           |
+| ------------- | ----------------------- | ------------ | -------------- |
+| `anonymousId` | fingerprintjs visitorId | localStorage | 设备级匿名指纹 |
+| `visitorId`   | setVisitorId() 手动设置 | 内存         | 未登录访客 ID  |
+| `userId`      | setUserId() 手动设置    | 内存         | 已登录用户 ID  |
+
+1. 隐私: fingerprintjs 默认禁用
+2. deviceInfo 设备信息惰性解析: 第一次数据上报时, 才使用 UAParser 解析设备信息
+
+## scheduleFlush
+
+```ts
+interface UnrefTimer {
+  unref: () => void;
+}
+
+function hasUnref(timer: unknown): timer is UnrefTimer {
+  return (
+    typeof timer === "object" &&
+    timer !== null &&
+    "unref" in timer &&
+    typeof timer.unref === "function"
+  );
+}
+
+export function unrefTimer(timer: ReturnType<typeof setTimeout>): void {
+  if (hasUnref(timer)) {
+    // Node.js setTimeout 返回的定时器是对象, 有 unref() 方法
+    // 浏览器 setTimeout 返回的定时器是 number
+
+    // Node.js 侧 timer.unref() 的作用
+    // Node.js 会保持 event loop 直到最后一个受引用的定时器到期
+    // 调用 unref() 使得定时器不受引用
+    timer.unref();
+  }
+}
+
+export function scheduleFlush(
+  previousTimer: ReturnType<typeof setTimeout> | undefined,
+  delay: number,
+  flush: () => Promise<void>,
+): ReturnType<typeof setTimeout> {
+  if (previousTimer) clearTimeout(previousTimer);
+  const nextTimer = setTimeout(() => void flush(), delay);
+  unrefTimer(nextTimer);
+  return nextTimer;
+}
+```
+
+## 路由监听
+
+history 模式
+
+- 监听 popstate 事件
+- Monkey patch `history.pushState()` 和 `history.replaceState()`
+
+hash 模式
+
+- 监听 hashchange 事件
+
+## PV 和页面停留时间 (PageDwell)
+
+- PV (Page View) 测量: SDK 初始化时, 立刻发送首次 PV
+- 路由变化时
+  - 如果目的路由与源路由相同, 则不上报
+  - 如果目的路由与源路由不同, 则先发送旧页面停留时间 (过滤 <=100ms 的页面停留时间), 再发送新页面 PV
+
+## 优化
+
+### 性能优化
+
+- Web Worker 上报: 使用 worker 线程执行 JSON 序列化、gzip 压缩, 避免阻塞主线程
+- 批量 DOM 查询: 白屏检测每轮有 18 次 `document.elementFromPoint()` 采样, 该 Web API 依赖布局结果; 布局是批量更新的, 如果有脏布局 (pending layout), 则会强制同步回流 (forced reflow)
+  - 使用 `requestIdleCallback()` 调度到主线程空闲时采样 [DONE]
+  - 采样到首个为空或注册的根元素 (html, body, #app, #root...) 时即可短路本轮白屏检测
+- FSP 测量: 每次 DOM 变化都会检查 `isInViewport` (调用 `element.getBoundingClientRect()`) , 可以改为使用 IntersectionObserver
+- rrweb 加载时机: SDK 使用 dynamic import 异步加载 rrweb, 但是 ScreenRecordPlugin 的 init 方法会立刻触发 rrweb 的异步加载; 可以推迟到首次有录屏标记时 (`sentry.shouldScreenRecord === true`) 触发 rrweb 的异步加载
+
+### 可靠性优化
+
+- Service Worker 离线队列: localStorage 有 5MB 大小限制并且同步阻塞, Service Worker + Cache API 可以获得更大的离线队列
+- 指数退避重试: sentry recovery 使用指数退避重试: 1s -> 2s -> 4s -> ... 60s
+- 数据完整性校验: 写入离线缓存时添加 checksum, 防止离线缓存的数据损坏
+
+## source-map 堆栈反解
+
+##
