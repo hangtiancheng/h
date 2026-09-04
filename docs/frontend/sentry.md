@@ -578,4 +578,70 @@ hash 模式
 
 ## source-map 堆栈反解
 
-##
+```ts
+// Chrome 桢格式
+const CHROME_FRAME = /^\s*at (?:(.+?)\s+)?\(?(\S+?):(\d+):(\d+)\)?\s*$/;
+// Firefox 桢格式
+const FIREFOX_FRAME = /^\s*(?:(.*?)@)?(\S+?):(\d+):(\d+)\s*$/;
+export function parseStack(stack: string): RawFrame[]; // 最多 30 帧
+
+// 单桢反解: 加载 source map 文件, 使用 SourceMapConsumer 查询原文件位置
+export async function resolveFrame(loadMap: MapLoader, frame: RawFrame) {
+  const map = await loadMap(frame.url);
+  return SourceMapConsumer.with(
+    JSON.stringify(map),
+    null /** sourceMapUrl */,
+    (consumer) => {
+      // 浏览器的行列号是 1-based, source-map 的列号是 0-based
+      const pos = consumer.originalPositionFor({
+        line: frame.line,
+        column: Math.max(0, frame.column - 1),
+      });
+      // 附加的源码片段: 错误行的上下各 3 行
+      const content = consumer.sourceContentFor(pos.source, true);
+      const resolvedFrame: ResolvedFrame = {
+        ...frame,
+        resolved: true,
+        source: pos.source,
+        originalLine: pos.line,
+        ...(pos.name !== null ? { name: pos.name } : {}),
+        ...(pos.column !== null ? { originalColumn: pos.column } : {}),
+        ...(content ? { snippet: buildSnippet(content, pos.line) } : {}),
+      };
+      return resolvedFrame;
+    },
+  );
+}
+```
+
+### 生产环境为什么使用 `sourcemap: "hidden"` + 移动 .map 文件
+
+1. `sourcemap: "hidden"`: 仍然输出 sourcemap, 但产物 JS bundle 不会追加 sourceMappingURL 注释
+2. 移动 .map 文件: Vite closeBundle 时将所有 .map 文件移动到 dist/.sourcemaps, .map 文件单独上传到对象存储
+
+## ExposurePlugin 曝光插件的实现
+
+ExposurePlugin 曝光插件基于 IntersectionObserver 统计元素曝光时间
+
+曝光时间计算
+
+```ts
+new IntersectionObserver(
+  (entries) => {
+    entries.forEach((entry) => {
+      const targetObj = this.targetMap.get(entry.target);
+      if (entry.isIntersecting) {
+        targetObj.showTime = Date.now(); // 进入视口: 打点
+      } else {
+        if (!targetObj.showTime) return;
+        const showEndTime = Date.now(); // 离开视口: 结算
+        this.sendEvent(targetObj, showEndTime); // duration = showEndTime - showTime
+        delete targetObj.showTime;
+      }
+    });
+  },
+  { threshold },
+);
+```
+
+## JS Error 的服务端去重
