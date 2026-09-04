@@ -128,7 +128,7 @@ response 的 body 只能被消费一次, sentry SDK 包装了 fetch, 并且将�
 4. 只在错误的 HTTP 状态码时 (>= 400 或 ==0) 克隆 body, body 字符串截断到 8KB, 单个 HTTP 错误不会撑爆数据上报载荷
 5. 可逆装饰: `decorateProp` 返回 cleanup 函数, destroy 时还原原始 xhr/fetch
 
-### 错误捕获包袱哪些错误类型? 如何去重和批量聚合?
+### 错误捕获包括哪些错误类型? 如何去重和批量统计?
 
 | 类型               | 来源                                                      | 实现方式                                                    |
 | ------------------ | --------------------------------------------------------- | ----------------------------------------------------------- |
@@ -152,11 +152,11 @@ response 的 body 只能被消费一次, sentry SDK 包装了 fetch, 并且将�
 - `window.addEventListener("error", listener, true)`: 错误键为 `${ErrorType.Error}-${message}-${filename}-${line}-$`
 - Error 实例、unknown 未知错误: 错误键为 `${ErrorType.Error}-${payload.name}-${payload.message}`
 - 资源加载错误: 错误键为 `${ErrorType.Resource}-${localName}-${src || href}`
-- 没有 filename, 或者 unknown 未知错误, 视为来源不明, 跳过错误去重, 直接进入批量聚合
+- 没有 filename, 或者 unknown 未知错误, 视为来源不明, 跳过错误去重, 直接进入批量统计
 - `BoundedSet` 容量上限 1000, 溢出时淘汰最早插入的条目
 - breadcrumb 记录发生在错误去重前, 被去重 (未被上报) 的错误仍然会被记录 breadcrumb, 提供给后续的错误上下文还原
 
-错误聚合: 按 `{$err.type || filename}-${err.name}-${err.message}` 聚合
+错误统计: 按 `{$err.type || filename}-${err.name}-${err.message}` 统计
 
 - 防止循环错误 (例如 setInterval 中抛出错误) 导致上报风暴
 - 2s 时间窗口 + >= 5 次阈值, 既保证单个错误及时上报, 又避免高频重复错误打满网络带宽
@@ -239,7 +239,7 @@ FSP 对比 LCP
 
 ## 性能监控插件采集的指标
 
-1. Web Vitals
+### Web Vitals
 
 | 指标 | 含义             | 采集方式   |
 | ---- | ---------------- | ---------- |
@@ -249,7 +249,7 @@ FSP 对比 LCP
 | INP  | 交互到下一次绘制 | `onINP()`  |
 | TTFB | 首字节时间       | `onTTFB()` |
 
-2. Navigation Timing (Performance API)
+### Navigation Timing (Performance API)
 
 从 `performance.getEntriesByType("navigation")` 提取
 
@@ -262,19 +262,33 @@ FSP 对比 LCP
 - 资源加载耗时 (loadEventStart - domContentLoadedEventEnd)
 - 重定向耗时、unload 耗时、paintTime (最后一条 paint entry 相对 fetchStart)
 
-3. Resource Timing (PerformanceObserver)
+### Resource Timing (PerformanceObserver)
 
 - PerformanceObserver 监听 `resource` 类型的 PerformanceEntry
 - 排除 fetch/xmlhttprequest/beacon 类型 (这些由 HTTP 监控覆盖) 和包含 DSN 的 URL
 - 记录每个静态资源的大小、加载耗时、initiatorType (触发请求该静态资源的来源类型); `fromCache` 由 `transferSize === 0 || encodedBodySize === 0` 推导
 
-4. Resource Element Fallback (MutationObserver)
+```js
+// pageLoad 前
+performance.getEntriesByType("resource");
+
+// pageLoad 后
+const observer = new PerformanceObserver((list) => {
+  list.getEntries().forEach((entry) => {
+    // entry 包含 DNS、TCP、TLS、TTFB、资源加载等阶段的精确耗时
+    onReport(createResourceTimingData(entry));
+  });
+});
+observer.observe({ entryTypes: ["resource"], buffered: false });
+```
+
+### Resource Element Fallback (MutationObserver)
 
 - 针对不支持 PerformanceObserver 监听 `resource` 类型的浏览器
 - 通过 MutationObserver 监听新增的 img/font/link/script/video 元素
 - 在 img/font/link/script/video 元素 load/error 事件回调中上报, 每个 URL 只上报一次
 
-5. Long Tasks:
+### Long Tasks:
 
 - PerformanceObserver 监听 `longtask` 类型
 - 记录超过 50ms 的长任务, 用于定位主线程阻塞
@@ -400,12 +414,12 @@ app.use(vuePlugin, { dsn: "/sentry" });
 ## 数据采样和数据过滤
 
 ```
-JSError 事件 -> excludeAPIs / ignoreErrors (采集层过滤)
-             -> LRU 去重 (去重层过滤)
-             -> tracesSampleRate (采样层过滤) 随机采样: tracesSampleRate=0.5, 50% 的事件被随机丢弃
-             -> beforeSend (前置钩子, 可以过滤)
-             -> beforeSendBatch (前置钩子, 可以批量过滤)
-             -> 上报
+Error 事件 -> excludeAPIs / ignoreErrors (采集层过滤)
+           -> LRU 去重 (去重层过滤)
+           -> tracesSampleRate (采样层过滤) 随机采样:tracesSampleRate=0.5, 50% 的事件被随机丢弃
+           -> beforeSend (前置钩子, 可以过滤)
+           -> beforeSendBatch (前置钩子, 可以批量过滤)
+           -> 上报
 ```
 
 ## Reporter 单例、基于 Proxy 的懒加载
@@ -586,8 +600,9 @@ hash 模式
 
 ## source-map 堆栈反解
 
-- 代码错误 window.addEventListener("event", fn): 浏览器派发 ErrorEvent, ErrorEvent 对象携带 filename/lineno/colno
-- 运行时抛出的 Error 对象 (try-catch 捕获, Promise 拒绝的 reason 等) ECMAScript 规范只有 name 和 message, 没有 lineno/colno; 但是 stack 调用栈包含调用帧信息 两种都要覆盖
+- source-map 堆栈反解: VLQ (Variable-Length Quantity) 编码
+- 代码错误 `window.addEventListener("event", fn)`: 浏览器派发 ErrorEvent, ErrorEvent 对象携带 filename/lineno/colno
+- 运行时抛出的 Error 对象 (try-catch 捕获, Promise 拒绝的 reason 等) ECMAScript 标准只有 name 和 message, 没有 lineno/colno; 但是 stack 调用栈包含调用帧信息 两种都要覆盖
 
 ```ts
 // Chrome 桢格式
@@ -627,7 +642,7 @@ export async function resolveFrame(loadMap: MapLoader, frame: RawFrame) {
 
 ### 生产环境为什么使用 `sourcemap: "hidden"` + 移动 .map 文件
 
-1. `sourcemap: "hidden"`: 仍然输出 sourcemap, 但产物 JS bundle 不会追加 sourceMappingURL 注释
+1. `sourcemap: "hidden"`: 仍然输出 sourcemap, 但产物 JS bundle 不会追加 sourceMappingURL 注释 (如果追加 sourceMappingURL, 则浏览器会自动关联, 例如 pnpm dev)
 2. 移动 .map 文件: Vite closeBundle 时将所有 .map 文件移动到 dist/.sourcemaps, .map 文件单独上传到对象存储
 
 ## ExposurePlugin 曝光插件的实现
@@ -655,4 +670,39 @@ new IntersectionObserver(
 );
 ```
 
-## JS Error 的服务端去重
+## @sentry/react
+
+### 堆栈聚合 (fingerprint)
+
+一个 Error 通常携带
+
+- name: 错误类型, 例如 TypeError, SyntaxError, DOMError
+- message: 错误描述, 例如 "Cannot read properties of undefined (reading 'b')"
+- stack: 堆栈字符串, 不是 ECMAScript 标准
+
+错误聚合: 最朴素的错误聚合方式是 name + message, 但是两个不同文件、不同代码片段抛出的 TypeError 可能有相同的 message, 不能被聚合
+
+应该使用 stack 堆栈字符串实现精确的聚合
+
+- stack 堆栈字符串反解后得到多个 Frame 栈帧
+- 每个 Frame 栈帧提取 3 个关键信息: 调用函数名 (function)、文件名 (filename) 和当前执行行 (context_line)
+- 每个提取部分称为一个 GroupingComponent, 生成 GroupingComponent 树
+- 顶层调用 GroupingComponent.getHash() 得到 hash 值, 作为 Error 的 fingerprint
+
+相同 fingerprint 的 Error 聚合为一类错误, 对比 name + messsage, 使用 stack 堆栈字符串可以区分不同文件、不同代码片段抛出相同的 message 的情况, 聚合精度提高
+
+```yaml
+# @sentry/react 的 Frame 栈帧
+filename: "src/App.tsx"
+lineno: 12
+colno: 34
+function: "handleClick"
+context_line: "  throw new Error('boom');" # 当前执行行
+pre_context: ["  // click handler", ""] # 前几行
+post_context: ["  console.log('after click')", ""] # 后几行
+```
+
+总结
+
+- 客户端错误去重: 错误键, 防止循环错误导致上报风暴
+- 服务端堆栈聚合: 通过堆栈反解得到错误 fingerprint
