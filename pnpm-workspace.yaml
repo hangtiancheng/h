@@ -2,5 +2,3 @@ packages:
   - packages/*
 allowBuilds:
   esbuild: true
-patchedDependencies:
-  rspress-plugin-mermaid@1.0.1: patches/rspress-plugin-mermaid@1.0.1.patch

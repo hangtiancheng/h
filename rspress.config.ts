@@ -1,7 +1,7 @@
 import path from "node:path";
 import { defineConfig } from "@rspress/core";
 import { pluginSitemap } from "@rspress/plugin-sitemap";
-import pluginMermaid from "rspress-plugin-mermaid";
+import pluginMermaid from "@swifty.js/docs";
 import { pluginPWA } from "rsbuild-plugin-pwa";
 
 export default defineConfig({

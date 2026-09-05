@@ -2,7 +2,12 @@ import React, { useEffect, useId, useRef, useState } from "react";
 
 import mermaid, { type MermaidConfig } from "mermaid";
 
-import type { MermaidRendererProps } from "../src/types";
+// This file is published as raw source and compiled inside the consumer's
+// Rspress build, so it must not import from unpublished paths.
+export interface MermaidRendererProps {
+  code: string;
+  config?: MermaidConfig;
+}
 
 // mermaid v10 render() is not reentrant: concurrent renders share temporary
 // DOM elements keyed by the render id and corrupt each other's output.

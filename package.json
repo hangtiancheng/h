@@ -34,7 +34,7 @@
     "lint-staged": "^17.4.1",
     "prettier": "^3.9.6",
     "rsbuild-plugin-pwa": "^2.10.0",
-    "rspress-plugin-mermaid": "^1.0.1",
+    "@swifty.js/docs": "workspace:*",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.69.0",
     "vitest": "^4.1.11"

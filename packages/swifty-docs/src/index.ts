@@ -2,7 +2,7 @@ import path from "node:path";
 
 import type { RspressPlugin } from "@rspress/core";
 import type { MermaidConfig } from "mermaid";
-import type { MermaidRendererProps } from "./types";
+import type { MermaidRendererProps } from "../components/MermaidRender";
 
 import { RemarkCodeBlockToGlobalComponentPluginFactory } from "rspress-plugin-devkit";
 
@@ -22,7 +22,7 @@ export default function rspressPluginMermaid(
         componentPath: path.join(
           import.meta.dirname,
           "../components",
-          "mermaid-render.tsx",
+          "MermaidRender.tsx",
         ),
         childrenProvider() {
           return [];
