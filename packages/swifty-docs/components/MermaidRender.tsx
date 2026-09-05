@@ -62,7 +62,7 @@ const MermaidRenderer: React.FC<MermaidRendererProps> = (props) => {
           const { svg } = await mermaid.render(id, code);
           setSvg(svg);
           setRenderError(false);
-        } catch (error) {
+        } catch {
           lastTheme.current = null;
           lastCode.current = null;
           setRenderError(true);
