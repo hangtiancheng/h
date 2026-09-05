@@ -21,7 +21,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "git:commit": "git add -A && git commit -m \"feat: Introduce new features\"",
     "git:push": "pnpm git:commit && git push origin main",
-    "pwa": "pnpm dlx @vite-pwa/assets-generator --preset minimal public/favicon.svg"
+    "pwa": "pnpm dlx @vite-pwa/assets-generator --preset minimal docs/public/favicon.svg"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -34,6 +34,7 @@
     "lint-staged": "^17.4.1",
     "prettier": "^3.9.6",
     "rsbuild-plugin-pwa": "^2.10.0",
+    "rspress-plugin-mermaid": "^1.0.1",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.69.0",
     "vitest": "^4.1.11"

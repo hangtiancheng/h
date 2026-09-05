@@ -1,0 +1,53 @@
+{
+  "name": "@swifty.js/rspress-mermaid",
+  "version": "0.0.1",
+  "description": "Rspress plugin to render mermaid",
+  "type": "module",
+  "files": [
+    "dist",
+    "components"
+  ],
+  "keywords": [
+    "rspress",
+    "plugin",
+    "mermaid"
+  ],
+  "homepage": "https://github.com/hangtiancheng/h/tree/main/packages/swifty-docs#readme",
+  "bugs": {
+    "url": "https://github.com/hangtiancheng/h/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hangtiancheng/h.git",
+    "directory": "packages/swifty-docs"
+  },
+  "license": "MIT",
+  "author": "hangtiancheng <yukino161043261@gmail.com> (https://github.com/hangtiancheng)",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsup"
+  },
+  "dependencies": {
+    "mermaid": "^10.9.0",
+    "react": "latest"
+  },
+  "devDependencies": {
+    "@rspress/core": "latest",
+    "@types/node": "^24.13.3",
+    "@types/react": "latest",
+    "rspress-plugin-devkit": "^1.0.0"
+  },
+  "peerDependencies": {
+    "@rspress/core": "^2.0.0-rc.4 || ^2.0.0"
+  }
+}

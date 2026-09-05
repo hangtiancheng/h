@@ -1,6 +1,7 @@
 import path from "node:path";
 import { defineConfig } from "@rspress/core";
 import { pluginSitemap } from "@rspress/plugin-sitemap";
+import pluginMermaid from "rspress-plugin-mermaid";
 import { pluginPWA } from "rsbuild-plugin-pwa";
 
 export default defineConfig({
@@ -29,7 +30,10 @@ export default defineConfig({
       docRepoBaseUrl: "https://github.com/hangtiancheng/h/edit/main/docs",
     },
   },
-  plugins: [pluginSitemap({ siteUrl: "https://hangtiancheng.github.io/h" })],
+  plugins: [
+    pluginSitemap({ siteUrl: "https://hangtiancheng.github.io/h" }),
+    pluginMermaid(),
+  ],
   builderConfig: {
     plugins: [
       pluginPWA({
