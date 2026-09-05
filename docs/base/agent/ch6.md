@@ -1,7 +1,3 @@
----
-private: true
----
-
 # 权限
 
 ## 三种攻击
@@ -63,7 +59,7 @@ const DANGEROUS_PATTERNS = [
 
 ## 第 2 层: 路径沙箱
 
-{/* 源码: src/permissions/checker.ts */}
+  <!-- 源码: src/permissions/checker.ts -->
 
 - 计算绝对路径 (通过 path.resolve)
 - 解析符号链接
@@ -98,7 +94,7 @@ const DANGEROUS_PATTERNS = [
 }
 ```
 
-{/* 源码: src/permissions/checker.ts */}
+<!-- 源码: src/permissions/checker.ts -->
 
 - 本地规则 .swifty/permissions.local.yaml (优先级最高)
 - 项目规则 .swifty/permissions.yaml
@@ -146,7 +142,7 @@ function evaluate(toolName, content) {
 - acceptEdits: 读写放行, shell 命令确认
 - bypassPermissions: 绕过权限, 读/写/ shell 命令全部放行, 但仍然拒绝 rm -rf / 等危险命令
 
-{/* 源码: src/permissions/checker.ts, modeDecide 函数 */}
+<!-- 源码: src/permissions/checker.ts, modeDecide 函数 -->
 
 | 模式              | 只读工具 (read) | 写工具 (write) | 命令工具 (command) |
 | ----------------- | --------------- | -------------- | ------------------ |
@@ -155,7 +151,7 @@ function evaluate(toolName, content) {
 | plan              | Allow           | Ask            | Ask                |
 | bypassPermissions | Allow           | Allow          | Allow              |
 
-{/* 源码: src/permissions/checker.ts, acceptEdits 模式 category 为 command 时返回 ask */}
+<!-- 源码: src/permissions/checker.ts, acceptEdits 模式 category 为 command 时返回 ask -->
 
 ## 第 5 层: HITL 人在回路
 

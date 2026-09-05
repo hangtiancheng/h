@@ -1,7 +1,3 @@
----
-private: true
----
-
 # MCP
 
 ## 背景
@@ -35,7 +31,7 @@ type MCPTransport =
   | SSEClientTransport;
 ```
 
-{/* 源码: src/mcp/client.ts */}
+<!-- 源码: src/mcp/client.ts -->
 
 - tools: 一个 MCP Server 可以暴露一组工具, 每个工具有 name, description, input_schema, required
 - resources: 可读的数据源, 例如数据库 MCP Server 可以暴露表结构最为 resources
@@ -244,7 +240,7 @@ MCP Server
 
 - MCP Client 发送 `tools/list` 请求, 获取 MCP Server 提供的所有工具定义
 - MCP Server 响应自己提供的所有工具定义
-- MCP Client 将 MCP Server 响应的工具定义包装为 Swifty 内部的 Tool 接口 (MCPToolWrapper, 适配器模式), 注册到 ToolRegistry; 下一轮对话, LLM 在工具列表中就能看到这些工具, 决定是否调用 {/* 源码: src/mcp/tool-wrapper.ts */}
+- MCP Client 将 MCP Server 响应的工具定义包装为 Swifty 内部的 Tool 接口 (MCPToolWrapper, 适配器模式), 注册到 ToolRegistry; 下一轮对话, LLM 在工具列表中就能看到这些工具, 决定是否调用 <!-- 源码: src/mcp/tool-wrapper.ts -->
 
 ```json
 {
@@ -345,7 +341,7 @@ mcp_servers:
 - MCP Client 发送 `notifications/initialized` 通知
 
 5. 工具发现: MCP Client 发送 `tools/list` 请求, MCP Server 响应, 获取工具定义
-6. 工具注册: MCP Client 将 MCP Server 响应的工具定义包装为 CLI 内部的 Tool 接口: MCPToolWrapper (适配器模式), 注册到 ToolRegistry; 工具 name 使用 `mcp__serverName__toolName` 格式, 默认 `deferred = true`, `category = "command"` {/* 源码: src/mcp/tool-wrapper.ts */}
+6. 工具注册: MCP Client 将 MCP Server 响应的工具定义包装为 CLI 内部的 Tool 接口: MCPToolWrapper (适配器模式), 注册到 ToolRegistry; 工具 name 使用 `mcp__serverName__toolName` 格式, 默认 `deferred = true`, `category = "command"` <!-- 源码: src/mcp/tool-wrapper.ts -->
 7. LLM 调用: 下一轮对话, LLM 在工具列表中看到这些工具, 决定是否调用
 8. 工具调用: LLM 调用工具, MCP Client 发送 `tools/call` 请求
 9. 返回工具调用结果: MCP Server 返回工具调用结果
@@ -415,7 +411,7 @@ function toolSearchExecute(query, registry, maxResults = 5) {
 ### 延迟加载策略
 
 - 6 个内置工具: `deferred: false`
-- MCP Server 提供的工具: `deferred: true`, 延迟加载; MCPToolWrapper 默认 `category = "command"`, `deferred = true` {/* 源码: src/mcp/tool-wrapper.ts */}
+- MCP Server 提供的工具: `deferred: true`, 延迟加载; MCPToolWrapper 默认 `category = "command"`, `deferred = true` <!-- 源码: src/mcp/tool-wrapper.ts -->
 
 ## 工具权限
 
@@ -423,7 +419,7 @@ function toolSearchExecute(query, registry, maxResults = 5) {
 
 MCP 工具命名规范: `mcp__serverName__toolName`
 
-{/* 源码: src/mcp/tool-wrapper.ts */}
+<!-- 源码: src/mcp/tool-wrapper.ts -->
 
 sanitizeName 函数将 serverName 和 toolName 中的非字母数字字符替换为下划线, 并使用 `mcp__` 前缀和双下划线连接
 
@@ -434,7 +430,7 @@ function sanitizeName(serverName: string, toolName: string): string {
 }
 ```
 
-{/* 源码: src/mcp/tool-wrapper.ts */}
+<!-- 源码: src/mcp/tool-wrapper.ts -->
 
 MCPToolWrapper 默认配置:
 

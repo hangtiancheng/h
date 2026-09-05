@@ -1,7 +1,3 @@
----
-private: true
----
-
 # ReAct 和 Agent Loop
 
 ReAct (Reasoning + Acting)
@@ -19,7 +15,7 @@ ReAct (Reasoning + Acting)
 
 ## Agent Loop
 
-{/* 源码: src/agent/agent.ts */}
+<!-- 源码: src/agent/agent.ts -->
 
 ```js
 function agentLoop(userMessage) {
@@ -43,7 +39,7 @@ function agentLoop(userMessage) {
 
 ## 退出 Agent Loop
 
-{/* 源码: src/agent/agent.ts */}
+<!-- 源码: src/agent/agent.ts -->
 
 Swifty 需要 5 种 agent loop 退出条件
 

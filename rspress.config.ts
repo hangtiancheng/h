@@ -16,56 +16,6 @@ export default defineConfig({
     showLineNumbers: true,
   },
   themeConfig: {
-    nav: [
-      { text: "homepage", link: "/" },
-      {
-        text: "base",
-        link: "/base/css",
-        activeMatch: "^/base/",
-        items: [
-          { text: "css", link: "/base/css" },
-          { text: "git", link: "/base/git" },
-          { text: "go", link: "/base/go" },
-          { text: "js", link: "/base/js" },
-          { text: "linux", link: "/base/linux" },
-          { text: "network", link: "/base/network" },
-        ],
-      },
-      {
-        text: "backend",
-        link: "/backend/mysql",
-        activeMatch: "^/backend/",
-        items: [
-          { text: "mysql", link: "/backend/mysql" },
-          { text: "redis", link: "/backend/redis" },
-        ],
-      },
-      {
-        text: "frontend",
-        link: "/frontend/lit",
-        activeMatch: "^/frontend/",
-        items: [
-          { text: "lit", link: "/frontend/lit" },
-          { text: "next", link: "/frontend/next" },
-          { text: "pinia", link: "/frontend/pinia" },
-          { text: "react", link: "/frontend/react" },
-          { text: "react-router", link: "/frontend/react-router" },
-          { text: "rsc", link: "/frontend/rsc" },
-          { text: "sentry", link: "/frontend/sentry" },
-          { text: "vite", link: "/frontend/vite" },
-          { text: "vitest", link: "/frontend/vitest" },
-          { text: "vue-router", link: "/frontend/vue-router" },
-          { text: "vue3", link: "/frontend/vue3" },
-          { text: "zustand", link: "/frontend/zustand" },
-        ],
-      },
-      {
-        text: "qa",
-        link: "/qa/2607",
-        activeMatch: "^/qa/",
-        items: [{ text: "2607", link: "/qa/2607" }],
-      },
-    ],
     lastUpdated: true,
     search: true,
     socialLinks: [

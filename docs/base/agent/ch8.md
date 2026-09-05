@@ -1,7 +1,3 @@
----
-private: true
----
-
 # 上下文压缩
 
 > 开启新对话, 调用 LLM API 压缩上下文
@@ -18,7 +14,7 @@ LLM API 是无状态的, 每个 LLM API 请求, 都需要发送完整的对话�
 
 ### 单个工具调用结果的阈值
 
-{/* 源码: src/tool-result/budget.ts SINGLE_RESULT_LIMIT = 50000 */}
+<!-- 源码: src/tool-result/budget.ts SINGLE_RESULT_LIMIT = 50000 -->
 
 单个工具调用结果超过 50k 字符时 (约 12.5k tokens), CLI 不会将大结果 push 到对话历史, 而是将大结果写入磁盘文件, 向对话历史中 push 一个预览, 使用 `<persisted-output />` 标签包裹, 包含文件大小、文件路径和前 2k 字符
 
@@ -36,9 +32,9 @@ Preview (first 2KB):
 
 ### 单条消息中多个工具调用结果的聚合限制
 
-{/* 源码: src/tool-result/budget.ts MESSAGE_AGGREGATE_LIMIT = 200000 */}
+<!-- 源码: src/tool-result/budget.ts MESSAGE_AGGREGATE_LIMIT = 200000 -->
 
-一轮对话中, 并发调用 10 个工具, 每个工具调用结果是 40k 字符, 单个工具调用结果都 \< 50k 字符, 但是聚合总量是 400k
+一轮对话中, 并发调用 10 个工具, 每个工具调用结果是 40k 字符, 单个工具调用结果都 < 50k 字符, 但是聚合总量是 400k
 
 所以有单条消息中多个工具调用结果的聚合限制 200k, 超过 200k 字符时, 按工具调用结果的大小降序排序, 将最大的工具调用结果溢出到磁盘, 直到聚合大小降低到 200k 以内
 
@@ -71,13 +67,13 @@ Preview (first 2KB):
 
 #### 为什么预留 20k 给对话摘要
 
-{/* 源码: src/compact/compact.ts SUMMARY_OUTPUT_RESERVE = 20000 */}
+<!-- 源码: src/compact/compact.ts SUMMARY_OUTPUT_RESERVE = 20000 -->
 
 预留给对话摘要 20k tokens: 对话摘要有 9 个结构化部分 (见下文: 摘要 prompt 的设计) 和 `<analysis />` 草稿块, 一个复杂会话的摘要输出大约 15k 到 18k 的 tokens, 设置为 15k 有被截断的风险
 
 ## 摘要 prompt 的设计
 
-{/* 源码: src/compact/compact.ts */}
+<!-- 源码: src/compact/compact.ts -->
 
 prompt 开头和结尾, 重复禁止 LLM 生成摘要时调用任何工具, 仅输出纯文本: Swifty 请求 LLM API 生成摘要时, 也会携带 tools 参数, 目的是命中 prompt cache (prompt cache 按前缀匹配, 顺序是 tools -> system -> messages)
 
@@ -168,13 +164,13 @@ Everything above the divider is reconstructed context. For exact code, error str
 (以下是保留的近期消息原文)
 ```
 
-{/* 源码: src/compact/compact.ts, src/compact/recovery.ts */}
+<!-- 源码: src/compact/compact.ts, src/compact/recovery.ts -->
 
 摘要内容、会话记录日志路径、恢复的关键上下文 (最近访问的文件、最近加载的 skills、可用工具列表) 拼接在一条 user 消息中, 使用 --- 分隔, 后面是保留的近期消息原文; 两条连续的 user 消息会被自动合并为一条
 
 ## 熔断机制
 
-{/* 源码: src/compact/compact.ts MAX_CONSECUTIVE_FAILURES = 3 */}
+<!-- 源码: src/compact/compact.ts MAX_CONSECUTIVE_FAILURES = 3 -->
 
 - 如果摘要请求因为网络错误、LLM API 错误等连续失败 3 次, 则熔断器触发, 停止重试
 - token 用量继续涨到强制压缩阈值时, 即使熔断器已触发, 仍会强制压缩上下文
@@ -201,7 +197,7 @@ Everything above the divider is reconstructed context. For exact code, error str
 
 ## @/tool-result/budget.ts 的 `applyBudget`
 
-{/* 源码: src/tool-result/budget.ts */}
+<!-- 源码: src/tool-result/budget.ts -->
 
 ```txt
 为什么统计实际 agent loop turn 数需要统计 role 是 assistant 并且没有 tool_use 的消息数量?

@@ -1,7 +1,3 @@
----
-private: true
----
-
 # System Prompt
 
 ## System Prompt
