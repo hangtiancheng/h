@@ -2,21 +2,10 @@ import React, { useEffect, useId, useRef, useState } from "react";
 
 import mermaid, { type MermaidConfig } from "mermaid";
 
-// This file is published as raw source and compiled inside the consumer's
-// Rspress build, so it must not import from unpublished paths.
 export interface MermaidRendererProps {
   code: string;
   config?: MermaidConfig;
 }
-
-// mermaid v10 render() is not reentrant: concurrent renders share temporary
-// DOM elements keyed by the render id and corrupt each other's output.
-// Serialize all renders through a module-level queue.
-let renderQueue: Promise<void> = Promise.resolve();
-
-const enqueueRender = (task: () => Promise<void>) => {
-  renderQueue = renderQueue.then(task, task);
-};
 
 const MermaidRenderer: React.FC<MermaidRendererProps> = (props) => {
   const { code, config = {} } = props;
@@ -37,37 +26,37 @@ const MermaidRenderer: React.FC<MermaidRendererProps> = (props) => {
   const lastCode = useRef<string | null>(null);
 
   useEffect(() => {
-    const render = () => {
-      enqueueRender(async () => {
-        const theme = document.documentElement.classList.contains("dark")
-          ? "dark"
-          : "default";
+    // Concurrent calls are safe: mermaid queues render() calls internally
+    // and runs them serially.
+    const render = async () => {
+      const theme = document.documentElement.classList.contains("dark")
+        ? "dark"
+        : "default";
 
-        if (lastTheme.current === theme && lastCode.current === code) {
-          return;
-        }
+      if (lastTheme.current === theme && lastCode.current === code) {
+        return;
+      }
 
-        lastTheme.current = theme;
-        lastCode.current = code;
+      lastTheme.current = theme;
+      lastCode.current = code;
 
-        const mermaidConfig: MermaidConfig = {
-          securityLevel: "loose",
-          startOnLoad: false,
-          theme,
-          ...config,
-        };
+      const mermaidConfig: MermaidConfig = {
+        securityLevel: "loose",
+        startOnLoad: false,
+        theme,
+        ...config,
+      };
 
-        try {
-          mermaid.initialize(mermaidConfig);
-          const { svg } = await mermaid.render(id, code);
-          setSvg(svg);
-          setRenderError(false);
-        } catch {
-          lastTheme.current = null;
-          lastCode.current = null;
-          setRenderError(true);
-        }
-      });
+      try {
+        mermaid.initialize(mermaidConfig);
+        const { svg } = await mermaid.render(id, code);
+        setSvg(svg);
+        setRenderError(false);
+      } catch (error) {
+        lastTheme.current = null;
+        lastCode.current = null;
+        setRenderError(true);
+      }
     };
 
     render();
