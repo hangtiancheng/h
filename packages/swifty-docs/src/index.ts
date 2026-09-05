@@ -20,7 +20,7 @@ export default function rspressPluginMermaid(
       {
         lang: "mermaid",
         componentPath: path.join(
-          __dirname,
+          import.meta.dirname,
           "../components",
           "mermaid-render.tsx",
         ),
