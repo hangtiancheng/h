@@ -1,0 +1,14 @@
+:root {
+  --rp-font-family-base:
+    "Iosevka", "Maple Mono", Menlo, "Cascadia Code", "PingFang SC",
+    "Microsoft YaHei";
+  --rp-font-family-mono:
+    "Iosevka", "Maple Mono", Menlo, "Cascadia Code", "PingFang SC",
+    "Microsoft YaHei";
+  --rp-c-brand: #9caf88cc;
+  --rp-c-brand-light: #a8bc96cc;
+  --rp-c-brand-lighter: #a8bc96cc;
+  --rp-c-brand-dark: #849a72cc;
+  --rp-c-brand-darker: #849a72cc;
+  --rp-c-brand-tint: #9caf8829;
+}

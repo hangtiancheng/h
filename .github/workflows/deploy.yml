@@ -5,6 +5,10 @@ on:
     branches: [main]
     paths:
       - "docs/**"
+      - "theme/**"
+      - "rspress.config.ts"
+      - "package.json"
+      - "pnpm-lock.yaml"
   workflow_dispatch:
 
 permissions:
@@ -37,14 +41,12 @@ jobs:
         uses: actions/configure-pages@v4
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-      - name: Build with vitepress
+      - name: Build with rspress
         run: pnpm build
-        # env:
-        #   DOCS_PASSWORD: ${{ secrets.DOCS_PASSWORD }}
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./.vitepress/dist
+          path: ./doc_build
   deploy:
     environment:
       name: github-pages

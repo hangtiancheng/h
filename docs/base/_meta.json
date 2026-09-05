@@ -1,0 +1,9 @@
+[
+  { "type": "dir", "name": "agent", "label": "agent", "collapsed": true },
+  "css",
+  "git",
+  "go",
+  "js",
+  "linux",
+  "network"
+]

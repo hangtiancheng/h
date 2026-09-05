@@ -1,6 +1,4 @@
 ---
-# https://vitepress.dev/reference/default-theme-home-page
-layout: home
 pageType: home
 copyable: true
 
@@ -9,7 +7,7 @@ hero:
   text: Homepage
   tagline: Swifty Homepage
   image:
-    src: /favicon.svg
+    src: /h/favicon.svg
     alt: Swifty
   actions:
     - theme: brand

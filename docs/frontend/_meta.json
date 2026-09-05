@@ -1,0 +1,14 @@
+[
+  "lit",
+  "next",
+  "pinia",
+  "react",
+  "react-router",
+  "rsc",
+  "sentry",
+  "vite",
+  "vitest",
+  "vue-router",
+  "vue3",
+  "zustand"
+]
