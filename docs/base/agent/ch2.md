@@ -30,7 +30,7 @@ curl https://api.deepseek.com/anthropic/v1/messages \
 
 响应 Demo
 
-<!-- 源码: src/llm/anthropic.ts (usage 字段) -->
+{/* 源码: src/llm/anthropic.ts (usage 字段) */}
 
 ```json
 {
@@ -81,7 +81,7 @@ message_delta 消息增量 (output_tokens 输出 token 数, stop_reason 停止�
 message_stop 整个响应结束
 ```
 
-<!-- 源码: src/llm/events.ts (StreamEvent) -->
+{/* 源码: src/llm/events.ts (StreamEvent) */}
 
 封装层将 LLM API 的 SSE 事件映射到 CLI 的 StreamEvent:
 
@@ -126,14 +126,14 @@ Claude 支持 Extended Thinking, 让 LLM 回复前先进行内部推理, 开启�
 
 包含工具调用的一轮对话, 对话历史中的 thinking 内容块必须携带, 和后面的 tool_result 一起发送给 LLM API, 否则会报错; 对于纯聊天、没有工具调用的场景, 则对话历史中的 thinking 内容块可以不携带, LLM API 会自动忽略
 
-<!-- 源码: src/conversation/conversation.ts (ThinkingBlock 接口: thinking + signature) -->
-<!-- 源码: src/llm/anthropic.ts (assistant 消息 thinking block 的 API 转换) -->
+{/* 源码: src/conversation/conversation.ts (ThinkingBlock 接口: thinking + signature) _/}
+{/_ 源码: src/llm/anthropic.ts (assistant 消息 thinking block 的 API 转换) */}
 
 ## 如何封装
 
 ProviderConfig 有 8 个字段, 覆盖主流厂商: Anthropic、OpenAI、OpenAI 兼容层
 
-<!-- 源码: src/config/config.ts (ProviderConfigSchema) -->
+{/* 源码: src/config/config.ts (ProviderConfigSchema) */}
 
 - name: provider 名称
 - protocol: LLM API 协议, 枚举值 "anthropic" | "openai" | "openai-compat"
@@ -144,8 +144,8 @@ ProviderConfig 有 8 个字段, 覆盖主流厂商: Anthropic、OpenAI、OpenAI 
 - context_window: 上下文窗口大小 (可选, 默认 200_000)
 - max_output_tokens: 最大输出 token 数 (可选, thinking 开启时默认 200_000, 关闭时默认 128_000)
 
-<!-- 源码: src/config/config.ts (getMaxOutputTokens 默认值逻辑) -->
-<!-- 源码: src/config/config.ts (DEFAULT_CONTEXT_WINDOW = 200_000) -->
+{/* 源码: src/config/config.ts (getMaxOutputTokens 默认值逻辑) _/}
+{/_ 源码: src/config/config.ts (DEFAULT_CONTEXT_WINDOW = 200_000) */}
 
 封装层负责翻译
 
@@ -155,7 +155,7 @@ ProviderConfig 有 8 个字段, 覆盖主流厂商: Anthropic、OpenAI、OpenAI 
 
 ### 消息模型
 
-<!-- 源码: src/conversation/conversation.ts (Message 接口) -->
+{/* 源码: src/conversation/conversation.ts (Message 接口) */}
 
 内部 Message 接口:
 
@@ -184,7 +184,7 @@ interface Message {
 - role: user, assistant, system, tool (Only for OpenAI)
 - content: 消息内容 (thinking 推理、text 文本、tool_use 工具调用或其他...)
 
-<!-- 源码: src/llm/openai.ts (buildChatCompletionMessages) -->
+{/* 源码: src/llm/openai.ts (buildChatCompletionMessages) */}
 
 ### 对话管理器
 
@@ -200,7 +200,7 @@ interface Message {
 - Anthropic: `src/llm/anthropic.ts`
 - OpenAI: `src/llm/openai.ts`
 
-<!-- 源码: src/llm/anthropic.ts (buildAnthropicMessages) -->
+{/* 源码: src/llm/anthropic.ts (buildAnthropicMessages) */}
 
 1. 转换: 内部 Message 的 thinkingBlocks、content、toolUses 转换为 LLM API 的 content block; toolResults 转换为 LLM API 的 tool_result block
 2. 合并: 虽然 Claude API 可以自动合并相邻的相同 role 的消息, 但是在客户端合并是更好的做法, 消息结构更清晰, 减少 token 消耗
@@ -208,7 +208,7 @@ interface Message {
 
 ### 流式接收机制
 
-<!-- 源码: src/llm/anthropic.ts (AnthropicClient.stream, AsyncGenerator) -->
-<!-- 源码: src/llm/events.ts (StreamEvent 联合类型) -->
+{/* 源码: src/llm/anthropic.ts (AnthropicClient.stream, AsyncGenerator) _/}
+{/_ 源码: src/llm/events.ts (StreamEvent 联合类型) */}
 
 用户发送请求后, ConversationManager 的 stream 方法返回 `AsyncGenerator<StreamEvent>`, 每收到一个 SSE chunk, yield 对应的 StreamEvent; CLI 循环消费 AsyncGenerator, 如果是文本增量, 则提交给 UI 渲染, 如果收集到完整的工具调用 json 参数, 则调用工具; 流式接收完成后, agent 循环调用 ConversationManager 的 appendMessages 方法将消息写入对话历史

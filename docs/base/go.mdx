@@ -2,8 +2,6 @@ import { Tabs, Tab } from "@rspress/core/theme";
 
 # Go
 
-{/* cSpell: words notesleep notewakeup _Gwaiting _Grunnable */}
-
 | 术语             | 适用场景                                                         |
 | ---------------- | ---------------------------------------------------------------- |
 | 睡眠 (sleep)     | Machine OS 线程调用 `notesleep` 进入睡眠, 等待 `notewakeup` 唤醒 |
@@ -290,7 +288,7 @@ go build -gcflags '-m -m -l' ./src/main.go
 
 ### slice 扩容
 
-- 如果旧切片容量 oldCap < 256 时, 新切片容量 newCap 扩容 2x
+- 如果旧切片容量 oldCap \< 256 时, 新切片容量 newCap 扩容 2x
 - 如果旧切片容量 oldCap >= 256 时, 随切片容量增大, 新切片容量 newCap 从扩容 2x 平滑过渡到扩容 1.25x
 
 ```go
@@ -423,7 +421,7 @@ func main() {
 
 - 负载因子超过阈值 6.5 (kv 键值对数 > 6.5 \* 桶数): 触发 2x 双倍扩容, B += 1
 - 溢出的桶数量过多: 触发等量扩容, 将稀疏的 kv 键值对排列紧凑
-  - B < 15, 桶数 2^B < 2 ^ 15, 溢出的桶数量 >= 2^B 时, 触发等量扩容
+  - B \< 15, 桶数 2^B \< 2 ^ 15, 溢出的桶数量 >= 2^B 时, 触发等量扩容
   - B >= 15, 即桶数 2^B >= 2 ^ 15, 溢出的桶数量 >= 2^15 时, 触发等量扩容
 
 ### map 底层实现
@@ -495,7 +493,7 @@ type table struct {
 }
 ```
 
-- map 改为 directory 目录 + 多个 swiss table 的结构, 每个 swiss table 最多 1024 个 kv 键值对 (128 groups \* 8 slots): swiss table 是 <=128 个 groups 的集合, group 是 8 个 slots 的集合
+- map 改为 directory 目录 + 多个 swiss table 的结构, 每个 swiss table 最多 1024 个 kv 键值对 (128 groups \* 8 slots): swiss table 是 \<=128 个 groups 的集合, group 是 8 个 slots 的集合
 - 某个 swiss table 长度超过 7/8 时, 该 swiss table 单独扩容/分裂
 - swiss table 满 1024 后分裂为 2 个 swiss table
 - 单个 swiss table 的搬迁一次性完成, 不再需要渐进式搬迁
@@ -555,8 +553,8 @@ type hchan struct {
 
 1. 先检查是否有等待中的接收者: 如果 recvq 接收者队列不为空, 则有 goroutine 等待接收数据, 直接发送数据给等待中的接收者, 同时唤醒该 goroutine 继续执行
 2. 如果没有等待中的接收者, 则尝试向缓冲区中写入
-   - 检查缓冲区是否有剩余空间: qcount < dataqsiz
-   - 如果 qcount < dataqsiz, 则缓冲区中有剩余空间, 写入数据到 `buf[sendx]`, 更新 sendx 索引和 qcount 计数
+   - 检查缓冲区是否有剩余空间: qcount \< dataqsiz
+   - 如果 qcount \< dataqsiz, 则缓冲区中有剩余空间, 写入数据到 `buf[sendx]`, 更新 sendx 索引和 qcount 计数
 3. 如果缓冲区满, 没有剩余空间, 则创建一个 sudog 结构体实例, 包装当前 goroutine 和数据, 加入 sendq 发送者队列, 调用 gopark 阻塞当前生产者 goroutine
 4. 向「已关闭」的 channel 中发送数据会 panic
 
@@ -934,7 +932,7 @@ func main() {
 
 ### sync.Map 底层原理
 
-#### Go <=1.23: read/dirty 读写分离
+#### Go \<=1.23: read/dirty 读写分离
 
 空间换时间: 使用两个 map (只读的 read.m 和可读写的 dirty) 实现读写分离, read 可以无锁的并发读取
 
@@ -989,7 +987,7 @@ type entry struct {
 | 读       | read 命中无锁, 未命中如果 read.amended == true 则需要加互斥锁 | 无锁                   |
 | 写       | 写写互斥                                                      | 不同 key 可以并发写    |
 
-#### Go <=1.23: read 和 dirty 的关系
+#### Go \<=1.23: read 和 dirty 的关系
 
 1. misses 的值 >= dirty 长度时, dirty 提升为 read
 2. dirty != nil 时, read 是 dirty 的一个可能过期的只读快照, dirty 包含全部最新数据, read 中少了上次提升后新增的 key, 多了 expunged 已被删除的 kv
@@ -1824,7 +1822,7 @@ Go 通过「混合写屏障」和「弱三色不变性」解决并发标记清�
    - 超过两分钟没有 GC 时, 强制触发 GC
    - 每次内存分配时, 检查当前堆内存大小是否超过阈值, 阈值 = 上次 GC 结束后的堆内存大小 \* (1 + GOGC/100), 默认 GOGC = 100, 即默认当前堆内存大小 >= 上次 GC 结束后的堆内存的 2 倍时, 触发 GC
    - 可以通过 `debug.SetGCPercent(300)`, 当前堆内存大小 >= 上次 GC 结束后的堆内存的 (1 + 300/100) = 4 倍时, 才触发 GC
-   - 首次 GC 触发, 堆内存大小的下限是 4MB, 堆内存大小 < 4MB 不会触发 GC
+   - 首次 GC 触发, 堆内存大小的下限是 4MB, 堆内存大小 \< 4MB 不会触发 GC
 
 ### GC 指标
 

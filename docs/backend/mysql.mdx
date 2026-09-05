@@ -488,7 +488,7 @@ if (trx_id < min_trx_id) {
 }
 ```
 
-- 如果记录的 trx_id < read view 中的 min_trx_id, 说明这个版本的记录是在创建 read view 前已提交的事务创建/更新的, 所以该版本的记录对当前事务可见
+- 如果记录的 trx_id \< read view 中的 min_trx_id, 说明这个版本的记录是在创建 read view 前已提交的事务创建/更新的, 所以该版本的记录对当前事务可见
 - 如果记录的 trx_id >= read view 中的 max_trx_id, 说明这个版本的记录是在创建 read view 后才启动的事务创建/更新的, 所以该版本的记录对当前事务不可见
 - 如果记录的 trx_id [min_trx_id, max_trx_id)
   - 如果该记录的 trx_id 在 m_ids 列表中, 说明创建/更新该版本的记录的事务是活跃事务 (已启动、未提交), 所以该版本的记录对当前事务不可见
