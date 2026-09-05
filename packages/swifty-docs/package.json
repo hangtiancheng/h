@@ -1,5 +1,5 @@
 {
-  "name": "@swifty.js/rspress-mermaid",
+  "name": "@swifty.js/docs",
   "version": "0.0.1",
   "description": "Rspress plugin to render mermaid",
   "type": "module",

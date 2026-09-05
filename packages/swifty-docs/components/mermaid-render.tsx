@@ -2,7 +2,7 @@ import React, { useEffect, useId, useRef, useState } from "react";
 
 import mermaid, { type MermaidConfig } from "mermaid";
 
-import type { MermaidRendererProps } from "../src/typings";
+import type { MermaidRendererProps } from "../src/types";
 
 // mermaid v10 render() is not reentrant: concurrent renders share temporary
 // DOM elements keyed by the render id and corrupt each other's output.

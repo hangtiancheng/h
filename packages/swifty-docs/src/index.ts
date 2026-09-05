@@ -2,7 +2,7 @@ import path from "node:path";
 
 import type { RspressPlugin } from "@rspress/core";
 import type { MermaidConfig } from "mermaid";
-import type { MermaidRendererProps } from "./typings";
+import type { MermaidRendererProps } from "./types";
 
 import { RemarkCodeBlockToGlobalComponentPluginFactory } from "rspress-plugin-devkit";
 
@@ -22,7 +22,7 @@ export default function rspressPluginMermaid(
         componentPath: path.join(
           __dirname,
           "../components",
-          "MermaidRender.tsx",
+          "mermaid-render.tsx",
         ),
         childrenProvider() {
           return [];
@@ -38,7 +38,7 @@ export default function rspressPluginMermaid(
   });
 
   return {
-    name: "rspress-plugin-mermaid",
+    name: "@swifty.js/docs",
     // config not needed for Rspress V2
     markdown: {
       remarkPlugins: [remarkMermaid.remarkPlugin],
