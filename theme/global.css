@@ -5,10 +5,51 @@
   --rp-font-family-mono:
     "Geist Mono", "Maple Mono", Menlo, "Cascadia Code", "Sarasa Gothic SC",
     "PingFang SC", "Microsoft YaHei";
+
+  /* Sage green palette, taken from docs/public/favicon.svg */
   --rp-c-brand: #9caf88cc;
   --rp-c-brand-light: #a8bc96cc;
   --rp-c-brand-lighter: #a8bc96cc;
   --rp-c-brand-dark: #849a72cc;
   --rp-c-brand-darker: #849a72cc;
   --rp-c-brand-tint: #9caf8829;
+
+  /* Core ships a gradient banner; keep it flat even if a banner is enabled */
+  --rp-banner-background: #849a72;
+
+  /* Home background follows the theme token, so it stays flat in both modes */
+  --rp-home-background-bg: var(--rp-c-bg);
+}
+
+/* Flat home page: replace every gradient with solid sage tones */
+html:not(.rp-dark) {
+  --rp-home-hero-title-bg: #849a72;
+  --rp-home-feature-bg: #f4f7f0;
+}
+
+/* Dark mode keeps the deep sage for the hero: the brand button paints white
+   text on this color, and the lighter #a8bc96 fails contrast against it. */
+html.rp-dark {
+  --rp-home-hero-title-bg: #849a72;
+  --rp-home-feature-bg: transparent;
+}
+
+/* Card hover shine is an inline gradient injected by JS, so !important is required */
+html .rp-home-feature__item__shine {
+  background: none !important;
+}
+
+/* Prompt glow layer */
+html .rp-prompt__backdrop {
+  background: none;
+}
+
+/* Code block fold fade-out */
+html .rp-codeblock__content--fold::after {
+  background: none;
+}
+
+/* Outline scroll mask */
+html .rp-outline__toc {
+  mask-image: none;
 }
