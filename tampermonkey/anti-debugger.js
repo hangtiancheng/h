@@ -4,7 +4,6 @@
 // @version      0.0.1
 // @description  Anti debugger
 // @author       Swifty
-// @match        https://www.mianshiya.com/*
 // @grant        none
 // @run-at       document-start
 // @icon         https://raw.githubusercontent.com/hangtiancheng/h/main/public/favicon.ico

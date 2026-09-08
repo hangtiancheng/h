@@ -20,7 +20,9 @@
     "format": "prettier -w ./ --experimental-cli",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "git:commit": "git add -A && git commit -m \"feat: Introduce new features\"",
+    "git:commit:skip": "git add -A && git commit -m \"feat: Introduce new features [skip ci]\"",
     "git:push": "pnpm git:commit && git push origin main",
+    "git:push:skip": "pnpm git:commit:skip && git push origin main",
     "pwa": "pnpm dlx @vite-pwa/assets-generator --preset minimal docs/public/favicon.svg"
   },
   "devDependencies": {

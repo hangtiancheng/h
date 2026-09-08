@@ -5,8 +5,6 @@
 // @author       Swifty
 // @description  Anti copy
 // @match        https://xiaolincoding.com/*
-// @match        https://mianshiya.com/*
-// @match        https://*.mianshiya.com/*
 // @grant        none
 // @icon         https://raw.githubusercontent.com/hangtiancheng/h/main/public/favicon.ico
 // @run-at       document-start
