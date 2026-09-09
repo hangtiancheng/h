@@ -50,3 +50,59 @@ var lexGreaterPermutation = function (s, target) {
 
   return ans;
 };
+
+/**
+ *
+ * @param {unknown} a
+ * @returns {string | NaN}
+ */
+const maybeNumber = (a) => {
+  if (typeof a === "number") {
+    return !Number.isNaN(a) ? String(a) : NaN;
+  }
+  if (typeof a === "bigint") {
+    return String(a);
+  }
+  if (typeof a === "string") {
+    for (let i = 0; i < a.length; i++) {
+      if (a.charCodeAt(i) < "0" || a.charCodeAt(i) > "9") {
+        return NaN;
+      }
+    }
+    return a.replace(/^0+/, "") || "0";
+  }
+  return NaN;
+};
+
+/**
+ *
+ * @param {string} a
+ * @param {string} b
+ * @returns {string}
+ */
+function multiple(a, b) {
+  a = a.replace(/^0+/, "") || "0";
+  b = b.replace(/^0+/, "") || "0";
+  if (a === "0" || b === "0") {
+    return "0";
+  }
+
+  const charCode0 = "0".charCodeAt(0);
+  const ansArr = Array.from({ length: a.length + b.length }, () => 0);
+  for (let i = a.length - 1; i >= 0; i--) {
+    for (let j = b.length - 1; j >= 0; j--) {
+      const aItem = a.charCodeAt(i) - charCode0;
+      const bItem = b.charCodeAt(j) - charCode0;
+
+      const mul = aItem * bItem + ansArr[i + j + 1];
+      ansArr[i + j + 1] = mul % 10;
+      ansArr[i + j] += Math.floor(mul / 10);
+    }
+  }
+  const ans = ansArr.join("").replace(/^0+/, "");
+  return ans;
+}
+
+const a = multiple("12", "34");
+const b = 12 * 34;
+console.log(a, b);

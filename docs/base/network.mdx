@@ -556,12 +556,12 @@ HTTP 是无状态协议, cookie 以键值对的形式存储状态, 每次向同�
 - path: 指定哪些 URL 路径可以携带该 cookie 发送回服务器, 设置 path 属性 `document.cookie = "key=value;path=/"`, 表示所有路径都可以携带该 cookie 发送回服务器; 设置 path 属性 `document.cookie = "key=value;path=/ys"`, 表示只有 /ys 路径和子路径可以携带该 cookie 发送回服务器
 - domain 域名, `https://ys.mihoyo.com/` 和 `https://sr.mihoyo.com/` 是同一个域名下的不同子域名, 默认一个主机不允许访问另一个主机派发的 cookie, 可以设置 domain 属性 `document.cookie = "key=value;domain=.mihoyo.com"`, 允许 \*.mihoyo.com 域名下的所有主机访问派发的 cookie
 - secure: `secure=true` 时
-  - 只有在 HTTPS 请求时, 浏览器才会携带 cookie 并发送到服务器
-  - 在 HTTP 请求时, 浏览器不会携带 cookie 并发送到服务器
+  - 只有 HTTPS 请求时, 浏览器才会携带 cookie 并发送到服务器
+  - HTTP 请求时, 浏览器不会携带 cookie 并发送到服务器
 - httponly: `httponly=true` 时, 服务器可以通过 Set-Cookie 响应头字段设置 cookie, 但客户端 JS 不能读写 cookie; 以防止 XSS 攻击截获 cookie
 - SameSite 属性
-  - SameSite=Lax 不允许跨站 POST 请求或 xhr/fetch 时携带 Cookie
-  - SameSite=Strict 严格模式, 不允许任何跨站请求携带 Cookie
+  - `SameSite=Lax` 不允许跨站 POST 请求或 xhr/fetch 时携带 Cookie
+  - `SameSite=Strict` 严格模式, 不允许任何跨站请求携带 Cookie
 
 ## localStorage, sessionStorage
 
@@ -1395,3 +1395,17 @@ Host: https://www.youtube.com # 域名
 ### TDK
 
 TDK: Title, Description, Keywords 搜索引擎优化的元数据
+
+### 身份认证方法
+
+- access token 放内存, refresh token 放 httponly cookie
+- access token 短期, 每次请求携带
+- refresh token 长期, token 续期时使用, 可以服务端吊销; access token 过期时, 使用 refresh token 刷新 access token; 优点是即使 access token 泄漏, 攻击窗口也很短; refresh token 可以通过重放检测发现
+
+| 身份认证方法                                          | 优点                                                         | 缺点                   |
+| ----------------------------------------------------- | ------------------------------------------------------------ | ---------------------- |
+| 内存变量                                              | 最安全, 页面刷新即丢失                                       | 页面刷新后需要重新获取 |
+| secure=true; httponly=true; SameSite=Strict 的 cookie | https、同源请求才携带 cookie, JS 不能读写 cookie; 可以防 XSS | 需要配合 CSRF          |
+
+- HMAC: 会话签名
+- PKCE: OAuth 授权码防截获
