@@ -12,7 +12,5 @@ swifty&larkyIntent:
   run: "npx @tanstack/intent@latest load @swifty.js/anti-copy#swifty-anti-copy"
 - id: "@swifty.js/cache#swifty-cache"
   run: "npx @tanstack/intent@latest load @swifty.js/cache#swifty-cache"
-- id: "@lark.js/mvc#lark-mvc"
-  run: "npx @tanstack/intent@latest load @lark.js/mvc#lark-mvc"
 
 <!-- intent-skills:end -->
