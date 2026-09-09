@@ -38,7 +38,7 @@ export default function rspressPluginMermaid(
   });
 
   return {
-    name: "@swifty.js/docs",
+    name: "@swifty.js/rspress-plugin-mermaid",
     // config not needed for Rspress V2
     markdown: {
       remarkPlugins: [remarkMermaid.remarkPlugin],

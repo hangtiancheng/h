@@ -41,8 +41,8 @@ jobs:
         uses: actions/configure-pages@v4
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-      - name: Build @swifty.js/docs
-        run: pnpm --filter @swifty.js/docs build
+      - name: Build @swifty.js/rspress-plugin-mermaid
+        run: pnpm --filter @swifty.js/rspress-plugin-mermaid build
       - name: Build with rspress
         run: pnpm build
       - name: Upload artifact
