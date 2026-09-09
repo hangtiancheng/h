@@ -11,6 +11,16 @@ import { Tabs, Tab } from "@rspress/core/theme";
 - 总阻塞时间 TBT, Total Blocking Time: 从首次内容绘制 (FCP) 到首次可交互 (TTI) 期间, 主线程超过 50ms 的阻塞时间总和
 - 累积布局偏移 CLS, Cumulative Layout Shift: 页面生命周期内所有可见布局偏移分数的累积值, 数值越小越好
 - 交互到下一次绘制 INP, Interaction to Next Paint: 页面对用户交互的响应速度
+- TTFB 首字节时间
+
+排查
+
+- Chrome DevTools Network: TTFB、瀑布图、请求时序、请求优先级、资源体积
+- Chrome DevTools Performance: longtask、火焰图、主线程阻塞、JS 执行耗时
+- LightHouse, PageSpeed Insights, WebPageTest
+- bundle 分析: webpack-bundle-analyzer / rollup-plugin-visualizer
+- web-vitals 指标
+- coverage
 
 ## 输入 URL 回车到页面加载完成, 发生了什么
 
