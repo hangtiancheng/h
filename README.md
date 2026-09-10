@@ -1,85 +1,69 @@
-# homepage
+<div align="center">
 
-## ACM 模式
+<img src="docs/public/favicon.svg" alt="Swifty Homepage" width="96" />
 
-JS/TS
+# Homepage
 
-```ts
-import { createInterface } from "readline";
+**A personal technical knowledge base covering base engineering topics, frontend,
+and backend — plus an algorithm notebook and first-party Rspress plugins.**
 
-const rl = createInterface({
-  input: process.stdin,
-  output: process.stdout,
-});
+Built with [Rspress](https://rspress.dev/), deployed to GitHub Pages at
+<https://hangtiancheng.github.io/h/>.
 
-let lineno = 0;
+![Rspress](https://img.shields.io/badge/Rspress-2.x-0ea5e9?logo=rspress&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)
+![Go](https://img.shields.io/badge/Go-1.26-00ADD8?logo=go&logoColor=white)
+![PWA](https://img.shields.io/badge/PWA-enabled-5A0FC8?logo=pwa&logoColor=white)
+![License: MIT](https://img.shields.io/badge/License-MIT-f5a623.svg)
 
-rl.on("line", (line: string) => {
-  console.log(line);
-  lineno++;
+</div>
 
-  if (lineno === 3) {
-    rl.close();
-  }
-});
+---
+
+## What's inside
+
+| Area         | Topics                                                                                          |
+| ------------ | ----------------------------------------------------------------------------------------------- |
+| **Base**     | CSS, Git, JavaScript/TypeScript, Go, Linux, Networking, and a 15-chapter agent primer           |
+| **Frontend** | React, Next.js, React Router, RSC, Vite, Vitest, Vue 3, Vue Router, Pinia, Zustand, Lit, Sentry |
+| **Backend**  | MySQL, Redis                                                                                    |
+| **QA**       | Interview-style question banks                                                                  |
+
+The `src/` directory additionally holds an **algorithm notebook** — curated
+solutions in Go, JavaScript, and TypeScript for dynamic programming, graphs,
+heaps, and other classic problem families — with an ACM-style stdin/stdout
+harness.
+
+## Getting started
+
+Prerequisites: **Node.js 20+** and **pnpm**.
+
+```sh
+pnpm install
+pnpm dev       # start the dev server with HMR
 ```
 
-```ts
-import { createInterface } from "node:readline";
-const rl = createInterface({
-  input: process.stdin,
-});
+| Command          | Description                             |
+| ---------------- | --------------------------------------- |
+| `pnpm dev`       | Start the local dev server              |
+| `pnpm build`     | Build the static site into `doc_build/` |
+| `pnpm preview`   | Preview the production build            |
+| `pnpm typecheck` | Type-check the repo                     |
+| `pnpm lint`      | Lint and auto-fix with ESLint           |
+| `pnpm format`    | Format the repo with Prettier           |
 
-const iter = rl[Symbol.asyncIterator]();
-const input = async () => String((await iter.next()).value);
+## Repository layout
 
-(async function () {
-  const line = await input();
-  console.log(line);
-})();
+```
+h/
+├── docs/                        # Rspress content root
+├── src/                         # algorithm notebook (Go / JS / TS)
+├── packages/
+│   └── rspress-plugin-mermaid/  # Mermaid diagram plugin (published)
+├── theme/                       # global styles
+└── rspress.config.ts            # Rspress + sitemap + mermaid + PWA config
 ```
 
-### Go
-
-```go
-package main
-
-import (
-	"bufio"
-	"fmt"
-	"os"
-)
-
-func main() {
-	in := bufio.NewScanner(os.Stdin)
-	in.Split(bufio.ScanWords)
-
-	for in.Scan() {
-		fmt.Println(in.Text())
-	}
-}
-```
-
-```go
-package main
-
-import (
-	"bufio"
-	"os"
-	"strconv"
-)
-
-var in = bufio.NewScanner(os.Stdin)
-
-func nextInt() int {
-	in.Scan()
-	n, _ := strconv.Atoi(in.Text())
-	return n
-}
-
-func main() {
-	in.Split(bufio.ScanWords)
-	n := nextInt()
-	_ = n
-}
-```
+The site ships as an installable **PWA** (offline caching via Workbox) and renders
+**Mermaid** diagrams through the first-party
+[`@swifty.js/rspress-plugin-mermaid`](./packages/rspress-plugin-mermaid) plugin.
