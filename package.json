@@ -19,6 +19,7 @@
     "lint": "eslint --fix ./",
     "format": "prettier -w ./ --experimental-cli",
     "typecheck": "tsc -p tsconfig.json --noEmit",
+    "build:src": "tsc -p tsconfig.build.json",
     "git:commit": "git add -A && git commit -m \"feat: Introduce new features\"",
     "git:commit:skip": "git add -A && git commit -m \"feat: Introduce new features [skip ci]\"",
     "git:push": "pnpm git:commit && git push origin main",

@@ -1,45 +1,55 @@
 {
+  "version": "0.2.0",
   "configurations": [
     {
-      "name": "Go",
+      "name": "JS: Debug Current File",
+      "type": "node",
+      "request": "launch",
+      "program": "${file}",
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "skipFiles": ["<node_internals>/**"]
+    },
+    {
+      "name": "TS: Debug Current File",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/dist/${relativeFileDirname}/${fileBasenameNoExtension}.js",
+      "cwd": "${workspaceFolder}",
+      "preLaunchTask": "build:src",
+      "sourceMaps": true,
+      "outFiles": ["${workspaceFolder}/dist/**/*.js"],
+      "console": "integratedTerminal",
+      "skipFiles": ["<node_internals>/**"]
+    },
+    {
+      "name": "Go: Debug Current File",
       "type": "go",
       "request": "launch",
       "mode": "debug",
       "program": "${file}"
     },
     {
-      "command": "pnpm main:js",
-      "name": "pnpm main:js",
+      "name": "Go: Debug src (scheduler)",
+      "type": "go",
       "request": "launch",
-      "type": "node-terminal"
+      "mode": "debug",
+      "program": "${workspaceFolder}/src"
     },
     {
-      "command": "pnpm main:ts",
-      "name": "pnpm main:ts",
+      "name": "Go: Debug golang (semaphore tag)",
+      "type": "go",
       "request": "launch",
-      "type": "node-terminal"
+      "mode": "debug",
+      "program": "${workspaceFolder}/src/golang",
+      "buildFlags": "-tags=semaphore"
     },
     {
-      "console": "integratedTerminal",
-      "name": "python",
+      "name": "Python: Debug Current File",
+      "type": "debugpy",
+      "request": "launch",
       "program": "${file}",
-      "request": "launch",
-      "type": "debugpy"
-    },
-    {
-      "name": "JS",
-      "program": "${file}",
-      "request": "launch",
-      "skipFiles": ["<node_internals>/**"],
-      "type": "node"
-    },
-    {
-      "name": "TS",
-      "program": "${workspaceFolder}/dist/${relativeFileDirname}/${fileBasenameNoExtension}.js",
-      "request": "launch",
-      "skipFiles": ["<node_internals>/**"],
-      "type": "node"
+      "console": "integratedTerminal"
     }
-  ],
-  "version": "0.2.0"
+  ]
 }

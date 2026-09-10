@@ -13,5 +13,6 @@
     "noUncheckedIndexedAccess": false,
     "rootDir": "./",
     "types": ["node"]
-  }
+  },
+  "exclude": ["node_modules", "dist", "doc_build", "packages"]
 }

@@ -1,76 +1,59 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"sync"
+	"time"
+)
 
-func maxSubarrayLength(nums []int, k int) int {
-	l, r := 0, 0
-	n := len(nums)
-	ans := 0
-	cnt := map[int]int{}
+// runScheduler demonstrates the pipeline: the time wheel fires user scheduled
+// tasks, each task publishes a message to the queue, and consumers execute them.
+func runScheduler() {
+	const topic = "user-tasks"
 
-	for ; l <= r && r < n; r++ {
-		num := nums[r]
+	mq := NewSimpleMQ()
+	mq.CreateTopic(topic, 2)
 
-		if cnt[num] == k {
-			ans = max(ans, r-l)
-		}
+	done := make(chan struct{})
+	var wg sync.WaitGroup
 
-		cnt[num]++
-		for ; l <= r && cnt[num] > k; l++ {
-			num2 := nums[l]
-			cnt[num2]--
-		}
+	// one consumer per partition
+	for idx := range 2 {
+		wg.Add(1)
+		go func(idx int) {
+			defer wg.Done()
+			var offset int64
+			for {
+				msg, next, ok := mq.Consume(topic, idx, offset, done)
+				if !ok {
+					return
+				}
+				offset = next
+				fmt.Printf("[consumer-%d] execute task key=%s value=%s\n", idx, msg.Key, msg.Value)
+			}
+		}(idx)
 	}
 
-	ans = max(ans, r-l)
-	return ans
+	tw := NewTimeWheel(100*time.Millisecond, 16)
+	tw.Start()
+
+	// three user scheduled tasks: one-shot and periodic
+	tw.Schedule(200*time.Millisecond, 0, func() {
+		_ = mq.Produce(topic, Message{Key: "backup", Value: "daily backup"})
+	})
+	tw.Schedule(300*time.Millisecond, 500*time.Millisecond, func() {
+		_ = mq.Produce(topic, Message{Key: "heartbeat", Value: "heartbeat report"})
+	})
+	tw.Schedule(400*time.Millisecond, 0, func() {
+		_ = mq.Produce(topic, Message{Key: "report", Value: "generate daily report"})
+	})
+
+	time.Sleep(1600 * time.Millisecond)
+	tw.Stop()
+	close(done)
+	wg.Wait()
 }
 
-func validSequence(word1 string, word2 string) []int {
-	m := len(word1)
-
-	n := len(word2)
-
-	suf := make([]int, m+1)
-	j := n - 1
-	for i := m - 1; i >= 0; i-- {
-		if j >= 0 && word1[i] == word2[j] {
-			j--
-			suf[i] = suf[i+1] + 1
-		} else {
-			suf[i] = suf[i+1]
-		}
-	}
-
-	fmt.Println(suf)
-
-	changed := false
-	ans := []int{}
-	k := 0
-
-	for i := range m {
-		if k == n {
-			break
-		}
-
-		if word1[i] == word2[k] {
-			ans = append(ans, i)
-			k++
-			continue
-		}
-
-		// word1[i] != word2[k]
-		if !changed {
-			if k+1+suf[i+1] >= n {
-				changed = true
-				ans = append(ans, i)
-				k++
-			}
-		}
-	}
-
-	if k == n {
-		return ans
-	}
-	return []int{}
+func main() {
+	runScheduler()
 }
