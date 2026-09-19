@@ -2,9 +2,9 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "build:src",
+      "label": "build:chucks",
       "type": "shell",
-      "command": "pnpm build:src",
+      "command": "pnpm build:chunk",
       "problemMatcher": ["$tsc"],
       "group": {
         "kind": "build",

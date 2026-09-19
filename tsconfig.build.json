@@ -9,13 +9,7 @@
     "rootDir": "./",
     "sourceMap": true
   },
-  "exclude": [
-    "node_modules",
-    "dist",
-    "doc_build",
-    "packages",
-    "src/**/*.test.ts"
-  ],
+  "exclude": ["node_modules", "dist", "chucks/**/*.test.ts"],
   "extends": "./tsconfig.json",
-  "include": ["src/**/*.ts", "src/**/*.js"]
+  "include": ["chucks/**/*.ts", "chucks/**/*.js"]
 }

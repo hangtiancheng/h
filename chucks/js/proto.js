@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-empty-function, @typescript-eslint/no-extraneous-class, @typescript-eslint/class-literal-property-style, no-prototype-builtins -- the snippets deliberately exercise these patterns */
 /**
  * Prototype chain tricks.
  *

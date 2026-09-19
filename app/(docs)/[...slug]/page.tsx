@@ -10,7 +10,7 @@ import {
 } from "@fumadocs/base-ui/layouts/docs/page";
 import { createRelativeLink } from "@fumadocs/base-ui/mdx";
 import { getMDXComponents } from "@/components/mdx";
-import { getPageImageUrl, getPageMarkdownUrl, gitConfig } from "@/lib/shared";
+import { getPageMarkdownUrl, gitConfig } from "@/lib/shared";
 import { source } from "@/lib/source";
 
 export default async function Page(props: PageProps<"/[...slug]">) {
@@ -60,8 +60,5 @@ export async function generateMetadata(
   return {
     title: page.data.title,
     description: page.data.description,
-    openGraph: {
-      images: getPageImageUrl(page).url,
-    },
   };
 }

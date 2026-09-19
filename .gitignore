@@ -192,8 +192,9 @@ rules.ninja
 *.swp
 *.swo
 
-tsconfig.tsbuildinfo
-**/tsconfig.tsbuildinfo
+# TypeScript incremental build info (`tsc -p <config>` writes <config>.tsbuildinfo)
+*.tsbuildinfo
+**/*.tsbuildinfo
 
 target
 **/target
@@ -212,10 +213,3 @@ dist-rollup/
 
 dist-tsup/
 **/dist-tsup/
-
-# Next.js (website/)
-website/.next/
-website/out/
-website/.source/
-website/next-env.d.ts
-website/*.tsbuildinfo

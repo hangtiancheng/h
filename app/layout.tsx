@@ -3,15 +3,13 @@ import { Provider } from "@/components/provider";
 import "./global.css";
 
 export const metadata: Metadata = {
-  // resolves relative og:image URLs under the /h basePath
-  metadataBase: new URL("https://hangtiancheng.github.io/h"),
   title: {
     default: "Swifty Homepage",
     template: "%s | Swifty Homepage",
   },
   description: "Swifty Homepage",
   icons: {
-    // icon URLs bypass metadataBase resolution, prefix /h manually
+    // favicon URLs are not resolved against basePath, so carry /h manually
     icon: "/h/favicon.svg",
   },
 };
