@@ -4,10 +4,19 @@ on:
   push:
     branches: [main]
     paths:
-      - "website/**"
+      - "app/**"
+      - "components/**"
+      - "content/**"
+      - "lib/**"
+      - "public/**"
+      - "next.config.mjs"
+      - "source.config.ts"
+      - "postcss.config.mjs"
+      - "tsconfig.json"
       - "package.json"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
+      - ".github/workflows/deploy.yml"
   workflow_dispatch:
 
 permissions:
@@ -39,11 +48,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
       - name: Build with Next.js
-        run: pnpm --filter website build
+        run: pnpm build
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./website/out
+          path: ./out
   deploy:
     environment:
       name: github-pages
