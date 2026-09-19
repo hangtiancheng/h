@@ -1,0 +1,51 @@
+{
+  "name": "homepage",
+  "version": "0.0.0",
+  "private": true,
+  "description": "homepage",
+  "keywords": [
+    "@swifty.js",
+    "hangtiancheng",
+    "homepage"
+  ],
+  "license": "MIT",
+  "author": "https://github.com/hangtiancheng",
+  "type": "module",
+  "scripts": {
+    "dev": "rspress dev",
+    "build": "rspress build",
+    "preview": "rspress preview",
+    "prepare": "husky",
+    "lint": "eslint --fix ./",
+    "format": "prettier -w ./ --experimental-cli",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "build@": "tsc -p tsconfig.build.json",
+    "git:commit": "git add -A && git commit -m \"feat: Introduce new features\"",
+    "git:commit:skip": "git add -A && git commit -m \"feat: Introduce new features [skip ci]\"",
+    "git:push": "pnpm git:commit && git push origin main",
+    "git:push:skip": "pnpm git:commit:skip && git push origin main",
+    "pwa": "pnpm dlx @vite-pwa/assets-generator --preset minimal docs/public/favicon.svg"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@rspress/core": "^2.0.21",
+    "@rspress/plugin-sitemap": "^2.0.21",
+    "@types/node": "^24.13.3",
+    "eslint": "^10.9.1",
+    "globals": "^17.12.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.4.1",
+    "prettier": "^3.9.6",
+    "rsbuild-plugin-pwa": "^2.10.0",
+    "@swifty.js/rspress-plugin-mermaid": "workspace:*",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.69.0",
+    "vitest": "^4.1.11"
+  },
+  "lint-staged": {
+    "*.{json,jsonc,js,cjs,mjs,jsx,ts,cts,mts,tsx,html,vue,css,scss,md,mdx}": [
+      "pnpm format"
+    ]
+  },
+  "packageManager": "pnpm@10.33.0"
+}
