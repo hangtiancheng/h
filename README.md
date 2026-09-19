@@ -1,19 +1,19 @@
 <div align="center">
 
-<img src="docs/public/favicon.svg" alt="Swifty Homepage" width="96" />
+<img src="website/public/favicon.svg" alt="Swifty Homepage" width="96" />
 
 # Homepage
 
 **A personal technical knowledge base covering base engineering topics, frontend,
-and backend — plus an algorithm notebook and first-party Rspress plugins.**
+and backend — plus an algorithm notebook.**
 
-Built with [Rspress](https://rspress.dev/), deployed to GitHub Pages at
-<https://hangtiancheng.github.io/h/>.
+Built with [Next.js](https://nextjs.org/) and [Fumadocs](https://fumadocs.dev/),
+deployed to GitHub Pages at <https://hangtiancheng.github.io/h/>.
 
-![Rspress](https://img.shields.io/badge/Rspress-2.x-0ea5e9?logo=rspress&logoColor=white)
+![Next.js](https://img.shields.io/badge/Next.js-16-000000?logo=next.js&logoColor=white)
+![Fumadocs](https://img.shields.io/badge/Fumadocs-16-171717)
 ![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)
 ![Go](https://img.shields.io/badge/Go-1.26-00ADD8?logo=go&logoColor=white)
-![PWA](https://img.shields.io/badge/PWA-enabled-5A0FC8?logo=pwa&logoColor=white)
 ![License: MIT](https://img.shields.io/badge/License-MIT-f5a623.svg)
 
 </div>
@@ -40,30 +40,27 @@ Prerequisites: **Node.js 20+** and **pnpm**.
 
 ```sh
 pnpm install
-pnpm dev       # start the dev server with HMR
+pnpm dev       # start the dev server with HMR (http://localhost:3000/h)
 ```
 
-| Command          | Description                             |
-| ---------------- | --------------------------------------- |
-| `pnpm dev`       | Start the local dev server              |
-| `pnpm build`     | Build the static site into `doc_build/` |
-| `pnpm preview`   | Preview the production build            |
-| `pnpm typecheck` | Type-check the repo                     |
-| `pnpm lint`      | Lint and auto-fix with ESLint           |
-| `pnpm format`    | Format the repo with Prettier           |
+| Command          | Description                                    |
+| ---------------- | ---------------------------------------------- |
+| `pnpm dev`       | Start the local dev server                     |
+| `pnpm build`     | Statically export the site into `website/out/` |
+| `pnpm typecheck` | Type-check the repo                            |
+| `pnpm lint`      | Lint and auto-fix with ESLint                  |
+| `pnpm format`    | Format the repo with Prettier                  |
 
 ## Repository layout
 
 ```
 h/
-├── docs/                        # Rspress content root
-├── src/                         # algorithm notebook (Go / JS / TS)
-├── packages/
-│   └── rspress-plugin-mermaid/  # Mermaid diagram plugin (published)
-├── theme/                       # global styles
-└── rspress.config.ts            # Rspress + sitemap + mermaid + PWA config
+├── website/                     # Next.js + Fumadocs site
+│   ├── app/                     # routes: home, docs catch-all, search API,
+│   │                            #         llms.txt / llms.mdx, OG images
+│   ├── components/              # provider, search dialog, MDX components
+│   ├── content/docs/            # MDX/MD content (base / backend / frontend)
+│   ├── lib/                     # source, shared config & layout options
+│   └── public/                  # static assets
+└── src/                         # algorithm notebook (Go / JS / TS)
 ```
-
-The site ships as an installable **PWA** (offline caching via Workbox) and renders
-**Mermaid** diagrams through the first-party
-[`@swifty.js/rspress-plugin-mermaid`](./packages/rspress-plugin-mermaid) plugin.

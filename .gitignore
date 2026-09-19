@@ -213,4 +213,9 @@ dist-rollup/
 dist-tsup/
 **/dist-tsup/
 
-doc_build/
+# Next.js (website/)
+website/.next/
+website/out/
+website/.source/
+website/next-env.d.ts
+website/*.tsbuildinfo

@@ -14,5 +14,5 @@
     "rootDir": "./",
     "types": ["node"]
   },
-  "exclude": ["node_modules", "dist", "doc_build", "packages"]
+  "exclude": ["node_modules", "dist", "website"]
 }
