@@ -12,34 +12,46 @@
   "author": "https://github.com/hangtiancheng",
   "type": "module",
   "scripts": {
-    "dev": "pnpm --filter website dev",
-    "build": "pnpm --filter website build",
-    "prepare": "husky",
-    "lint": "eslint --fix ./",
+    "dev": "next dev",
+    "build": "next build",
+    "typecheck:chunk": "tsc -p tsconfig.build.json --noEmit",
     "format": "prettier -w ./ --experimental-cli",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
-    "build@": "tsc -p tsconfig.build.json",
+    "lint": "eslint --fix --cache --quiet .",
+    "build:chunk": "tsc -p tsconfig.build.json",
+    "typecheck": "next typegen && tsc --noEmit",
     "git:commit": "git add -A && git commit -m \"feat: Introduce new features\"",
     "git:commit:skip": "git add -A && git commit -m \"feat: Introduce new features [skip ci]\"",
     "git:push": "pnpm git:commit && git push origin main",
     "git:push:skip": "pnpm git:commit:skip && git push origin main"
-  },
-  "devDependencies": {
-    "@eslint/js": "^10.0.1",
-    "@types/node": "^24.13.3",
-    "eslint": "^10.9.1",
-    "globals": "^17.12.0",
-    "husky": "^9.1.7",
-    "lint-staged": "^17.4.1",
-    "prettier": "^3.9.6",
-    "typescript": "^6.0.3",
-    "typescript-eslint": "^8.69.0",
-    "vitest": "^4.1.11"
   },
   "lint-staged": {
     "*.{json,jsonc,js,cjs,mjs,jsx,ts,cts,mts,tsx,html,vue,css,scss,md,mdx}": [
       "pnpm format"
     ]
   },
-  "packageManager": "pnpm@10.33.0"
+  "dependencies": {
+    "@fumadocs/base-ui": "^16.15.11",
+    "fumadocs-core": "^16.15.11",
+    "fumadocs-mdx": "^15.4.1",
+    "next": "^16.3.5",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/mdx": "^2.0.14",
+    "@types/node": "^24.13.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "eslint": "^10.10.0",
+    "globals": "^17.12.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.5.1",
+    "postcss": "^8.5.28",
+    "prettier": "^3.9.8",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^7.0.2",
+    "typescript-eslint": "^8.70.0"
+  }
 }

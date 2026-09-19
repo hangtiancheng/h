@@ -10,7 +10,7 @@ import {
   SearchDialogList,
   SearchDialogOverlay,
   type SharedProps,
-} from "fumadocs-ui/components/dialog/search";
+} from "@fumadocs/base-ui/components/dialog/search";
 import { useDocsSearch } from "fumadocs-core/search/client";
 import { staticClient } from "fumadocs-core/search/client/orama-static";
 
