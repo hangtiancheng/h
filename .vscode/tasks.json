@@ -1,0 +1,15 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "build:chucks",
+      "type": "shell",
+      "command": "pnpm build:chunk",
+      "problemMatcher": ["$tsc"],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
+    }
+  ]
+}

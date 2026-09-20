@@ -1,0 +1,80 @@
+{
+  "$schema": "./resume.schema.json",
+  "headers": {
+    "edu": "Education",
+    "skills": "Technical Skills",
+    "works": "Work Experience",
+    "projects": "Projects",
+    "research": "Research Experience"
+  },
+  "labels": {
+    "tel": "Phone",
+    "email": "Email",
+    "github": "GitHub",
+    "switch": "中文"
+  },
+  "name": "Tiancheng Hang",
+  "tel": "15395377789",
+  "email": "161043261@qq.com",
+  "github": "hangtiancheng",
+  "about": "Male, 24, Master's degree, Frontend/Full-stack Engineer",
+  "edu": [
+    [
+      "High School: 2016-2019",
+      "Nanling High School, Anhui Province",
+      "Science Track"
+    ],
+    [
+      "Bachelor's: 2019-2023",
+      "Xidian University",
+      "Microelectronic Science and Engineering"
+    ],
+    [
+      "Master's: 2024-2027",
+      "Nanjing University of Posts and Telecommunications",
+      "Computer Technology"
+    ]
+  ],
+  "skills": [
+    "Familiar with Agent development: SSE streaming output, tool calling, ReAct and Agent Loop, System Prompt, permissions, MCP, context compression, instruction files, session persistence, cross-session memory, Slash Commands, Skills, Hooks, Subagents, Worktrees, Agent Teams",
+    "Proficient in CSS, CSS preprocessors, modularization, atomic CSS, PostCSS, CSS-in-JS",
+    "Proficient in JS/TS, zod, monorepo",
+    "Proficient in Node.js, Express/Koa; experienced in BFF layer and Node/Go backend development",
+    "Proficient in JSX/TSX, React, Zustand, react-router; familiar with React Fiber architecture; proficient in React performance optimization hooks, virtual scrolling, SWR",
+    "Proficient in data structures and computer networks; familiar with design patterns",
+    "Proficient in Vite; familiar with Webpack",
+    "Proficient in Go, MySQL, Redis; familiar with ClickHouse",
+    "Familiar with web performance optimization, frontend monitoring and event tracking",
+    "Familiar with SSR, Next.js",
+    "Proficient in Vue3, Pinia, vue-router; familiar with Vue3 reactivity principles"
+  ],
+  "works": [
+    {
+      "title": "ByteDance",
+      "content": "Jun 2025 ~ Sep 2025, Product R&D and Engineering Architecture, TikTok Performance team; performance data collected by Perfetto is forwarded via Kafka to Hive, ClickHouse, MySQL, Redis; backend built with Golang and Kitex, BFF layer cleans the data, frontend renders the visualization; BFF layer built with Nest.js, calling backend RPC methods and exposing HTTP APIs to the frontend; used performance optimization hooks and built virtual scrolling lists; fixed open-source coze-dev/coze-js: TypeError caused by missing User-Agent in Android environments (pull/257)"
+    },
+    {
+      "title": "Tencent",
+      "content": "Oct 2025 ~ Feb 2026, IEG Interactive Entertainment Group, Infrastructure Technology Product Department; responsible for the Tencent TcaplusDB NoSQL database management console; on the frontend, migrated React class components to function components, used performance optimization hooks to avoid duplicate requests, optimized rendering performance, and diagnosed data races caused by unstable API response times; on the backend, used a general-purpose pool to pool multiple scenarios simultaneously: TCP connection pool for NoSQL database connections; ffi-napi calls C++ .so dynamic libraries for encryption/decryption, and a process pool for parsing table files; used valgrind to diagnose memory leaks when ffi-napi calls .so dynamic libraries, leveraged V8 hidden classes and maintained object pools to reduce GC pressure on the Node side"
+    },
+    {
+      "title": "ByteDance",
+      "content": "Feb 2026 ~ May 2026, Data Architecture Department; development of the search & recommendation algorithm platform and the Douyin Debug platform; for the search & recommendation algorithm platform: the frontend Slardar monitoring SDK reports JSErrors with error details; used rrweb to record page interactions before errors to reconstruct the fault scene; built the project's harness engineering, feeding error information to an LLM for automated fixes, MR submission, and e2e testing; integrated SWR for frontend performance optimization"
+    },
+    {
+      "title": "Alibaba",
+      "content": "May 2026 ~ Present, Alimama Advertising Technology Department; responsible for developing the Alimama Merchant Agent, owning the conditional task and scheduled task modules; Webpack/Vite Module Federation integration; built A2UI capabilities for the Merchant Agent; fixed open-source module-federation/vite: crash when workspace packages provide both cjs/esm entries via exports (pull/860); fixed open-source rstackjs/rspress-plugins: renderId sanitization and reduced redundant rerenders (pull/36); built an AI chat full-stack website builder platform with backend hot deployment via edge functions"
+    }
+  ],
+  "projects": [
+    {
+      "title": "CLI Coding Agent",
+      "content": "Repository: https://github.com/hangtiancheng/yukino-code; a lightweight CLI Coding Agent; 5-layer architecture supporting multiple LLM providers; AI-friendly toolset; based on the ReAct paradigm, driving the LLM to autonomously complete coding tasks through alternating reasoning and action in an Agent Loop; System Prompt assembly; 5-layer permission system; MCP support; secure, high-quality context compression; instruction files, session persistence, and LLM automatic memory extraction with periodic memory consolidation; support for Slash Commands, Skills, Hooks; implemented worktree file isolation, predefined/fork Subagents, and multi-teammate Agent Teams; added support for image content blocks"
+    },
+    {
+      "title": "Frontend Monitoring & Event Tracking",
+      "content": "Repository: https://github.com/hangtiancheng/yukino-sentry; a framework-agnostic frontend monitoring SDK with publish-subscribe architecture; core module (event bus, lifecycle, data reporting) decoupled from plugin submodules (performance collection, screen recording); supports error capture, blank screen detection, performance metrics collection, and fault scene replay; error capture covers: resource loading errors, JSErrors, uncaught Promise errors, XHR and fetch request errors, with error deduplication and LRU queue support; supports declarative attribute-based click event tracing, hashchange and history navigation listening; blank screen detection via keypoint sampling; performance collection plugin computes metrics such as LCP/FCP/CLS/INP/TTFB, uses MutationObserver + rAF to calculate FSP first-screen render time and detect long tasks; screen recording with rrweb + gzip for fault scene replay; data reporting uses 3-tier fallback: navigator.sendBeacon -> Image beacon (optional) -> fetch keepalive; offline storage via localStorage with automatic queue flush on network recovery; provides React16+/Vue3+ framework integrations"
+    }
+  ],
+  "research": "Research focus: reinforcement learning-assisted computer network congestion control, multi-core parallelized network simulation"
+}

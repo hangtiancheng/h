@@ -1,0 +1,105 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "resume",
+  "description": "resume data schema",
+  "type": "object",
+  "required": [
+    "headers",
+    "labels",
+    "name",
+    "tel",
+    "email",
+    "github",
+    "about",
+    "edu",
+    "skills",
+    "works",
+    "projects",
+    "research"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "headers": {
+      "type": "object",
+      "description": "Section header titles",
+      "required": ["edu", "skills", "works", "projects", "research"],
+      "additionalProperties": false,
+      "properties": {
+        "edu": { "type": "string" },
+        "skills": { "type": "string" },
+        "works": { "type": "string" },
+        "projects": { "type": "string" },
+        "research": { "type": "string" }
+      }
+    },
+    "labels": {
+      "type": "object",
+      "description": "Field labels",
+      "required": ["tel", "email", "github", "switch"],
+      "additionalProperties": false,
+      "properties": {
+        "tel": { "type": "string" },
+        "email": { "type": "string" },
+        "github": { "type": "string" },
+        "switch": { "type": "string" }
+      }
+    },
+    "name": { "type": "string", "description": "Full name" },
+    "tel": { "type": "string", "description": "Phone number" },
+    "email": {
+      "type": "string",
+      "format": "email",
+      "description": "Email address"
+    },
+    "github": { "type": "string", "description": "GitHub username" },
+    "about": { "type": "string", "description": "Brief personal summary" },
+    "edu": {
+      "type": "array",
+      "description": "Education history entries",
+      "items": {
+        "type": "array",
+        "minItems": 3,
+        "maxItems": 3,
+        "items": { "type": "string" },
+        "description": "[period, institution, major]"
+      }
+    },
+    "skills": {
+      "type": "array",
+      "description": "Skill descriptions",
+      "items": { "type": "string" }
+    },
+    "works": {
+      "type": "array",
+      "description": "Work experience entries with bold company name",
+      "items": { "$ref": "#/definitions/titledItem" }
+    },
+    "projects": {
+      "type": "array",
+      "description": "Project experience entries with bold project name",
+      "items": { "$ref": "#/definitions/titledItem" }
+    },
+    "research": {
+      "type": "string",
+      "description": "Research experience"
+    }
+  },
+  "definitions": {
+    "titledItem": {
+      "type": "object",
+      "required": ["title", "content"],
+      "additionalProperties": false,
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "Bold heading, e.g. company or project name"
+        },
+        "content": {
+          "type": "string",
+          "description": "Detail text following the title"
+        }
+      }
+    }
+  }
+}

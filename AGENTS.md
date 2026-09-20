@@ -1,0 +1,1 @@
+Ignore chunks directory

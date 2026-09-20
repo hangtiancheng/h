@@ -1,0 +1,55 @@
+@import "tailwindcss";
+@import "@fumadocs/base-ui/css/neutral.css";
+@import "@fumadocs/base-ui/css/preset.css";
+@plugin "tailwindcss-animate";
+
+@theme {
+  --font-sans:
+    "Geist Mono", "Maple Mono", Menlo, "Cascadia Code", "Sarasa Gothic SC",
+    "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-mono:
+    "Geist Mono", "Maple Mono", Menlo, "Cascadia Code", "Sarasa Gothic SC",
+    "PingFang SC", "Microsoft YaHei", monospace;
+
+  /* sage green brand palette, taken from public/favicon.svg */
+  --color-brand: #849a72;
+  --color-brand-foreground: hsl(0, 0%, 98%);
+  --color-brand-200: #94aa82;
+  --color-landing-foreground: #47543c;
+}
+
+.dark {
+  --color-brand: #a8bc96;
+  --color-brand-foreground: hsl(0, 0%, 9%);
+  --color-brand-200: #bdd0aa;
+  --color-landing-foreground: #d5ddca;
+}
+
+/* sage green primary, unified across all docs sections */
+:root {
+  --color-fd-primary: #849a72;
+  --color-fd-primary-foreground: hsl(0, 0%, 98%);
+  --color-fd-ring: #9caf88;
+}
+
+.dark {
+  --color-fd-primary: #a8bc96;
+  --color-fd-primary-foreground: hsl(0, 0%, 9%);
+  --color-fd-ring: #9caf88;
+}
+
+html {
+  scrollbar-gutter: stable;
+}
+
+/* The resume page prints without the site navigation header */
+@media print {
+  body:has(#resume) #nd-nav {
+    display: none;
+  }
+}
+
+html > body[data-scroll-locked] {
+  margin-right: 0px !important;
+  --removed-body-scroll-bar-size: 0px !important;
+}
