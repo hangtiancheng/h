@@ -137,12 +137,12 @@ app/about
 ├── layout.tsx
 ├── loading.tsx
 ├── page.tsx
-├── larky
+├── yukino2
 │   └── page.tsx
 └── template.tsx
 ```
 
-<Tabs items={['layout.tsx', 'template.tsx', '{yukino,larky}/page.tsx', 'loading.tsx', 'error.tsx']}>
+<Tabs items={['layout.tsx', 'template.tsx', '{yukino,yukino2}/page.tsx', 'loading.tsx', 'error.tsx']}>
 <Tab value="layout.tsx">
 
 ```tsx
@@ -174,7 +174,7 @@ class AboutLayout extends Component<LayoutProps<"/about">, IState> {
         <header>AboutLayout header</header>
         <Suspense fallback={<>loading...</>}>{children}</Suspense>
         <Link href="/about/yukino">/about/yukino</Link>
-        <Link href="/about/larky">/about/larky</Link>
+        <Link href="/about/yukino2">/about/yukino2</Link>
         <footer>AboutLayout footer</footer>
       </>
     );
@@ -217,7 +217,7 @@ export default AboutTemplate;
 ```
 
 </Tab>
-<Tab value="{yukino,larky}/page.tsx">
+<Tab value="{yukino,yukino2}/page.tsx">
 
 ```tsx
 // about/page.tsx
@@ -243,9 +243,9 @@ export default function AboutYukinoPage() {
   return <>About Yukino</>;
 }
 
-// about/larky/page.tsx
-export default function AboutLarkyPage() {
-  return <>About Larky</>;
+// about/yukino2/page.tsx
+export default function AboutYukino2Page() {
+  return <>About Yukino2</>;
 }
 ```
 
@@ -323,8 +323,8 @@ export default function YukinoPage() {
       <button onClick={() => router.back()}>history.back()</button>
       <button onClick={() => router.forward()}>history.forward()</button>
       <button onClick={() => router.refresh()}>refresh /about/yukino</button>
-      <button onClick={() => router.prefetch("/about/larky")}>
-        prefetch /about/larky
+      <button onClick={() => router.prefetch("/about/yukino2")}>
+        prefetch /about/yukino2
       </button>
     </>
   );
@@ -760,10 +760,10 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config: ProxyConfig = {
-  // matclarky: '/home/:path*'
-  // matclarky: ["/home/:path*", "/api/:path*"],
+  // matcher: '/home/:path*'
+  // matcher: ["/home/:path*", "/api/:path*"],
 
-  matclarky: [
+  matcher: [
     "/home/:path*",
     {
       source: "/api/login",
@@ -807,7 +807,7 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config: ProxyConfig = {
-  matclarky: "/api/:path*",
+  matcher: "/api/:path*",
 };
 ```
 
@@ -1499,7 +1499,7 @@ export default function Login() {
 - territory 地区: US, CN, JP, ...
 
 ```shell
-pnpm add negotiator @formatjs/intl-localematclarky
+pnpm add negotiator @formatjs/intl-locale
 pnpm add @types/negotiator -D
 ```
 
@@ -1571,7 +1571,7 @@ export async function getResource(locale: string): Promise<IResource> {
 import { NextRequest, NextResponse, ProxyConfig } from "next/server";
 import { defaultLocale, locales } from "./i18n";
 import Negotiator from "negotiator";
-import { match } from "@formatjs/intl-localematclarky";
+import { match } from "@formatjs/intl-locale";
 
 export async function proxy(req: NextRequest, res: NextResponse) {
   if (req.nextUrl.pathname === "/") {
@@ -1594,7 +1594,7 @@ export async function proxy(req: NextRequest, res: NextResponse) {
 export const config: ProxyConfig = {
   // (?!) 匹配的路径不包含 api, _next/static, _next/image, favicon.ico
   // .* 匹配任意字符 0 次, 1 次或多次
-  matclarky: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
 };
 ```
 
