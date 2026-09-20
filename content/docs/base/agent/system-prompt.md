@@ -9,7 +9,7 @@ system prompt 分为 7 个模块 (section), 按 priority 排序后拼接
 - agent 的角色 (Identity, priority 0)
 - 系统原则 (System, priority 10)
 - 执行任务规范: 例如是否加注释, 是否拆分组件, 是否重构 (Doing Task, priority 20)
-- 动作规范: 例如禁止猜测 API, plan 模式、auto 模式的执行策略 (Executing Actions, priority 30)
+- 行为约束: 例如禁止猜测 API, plan 模式、auto 模式的执行策略 (Executing Actions, priority 30)
 - 工具调用指南: 例如使用 cat 还是 ReadFile, 多个工具调用串行还是并行 (Using Tools, priority 40)
 - 语气风格: 例如不要使用表情符号 (Tone Style, priority 50)
 - 文本输出: 例如 1-2 sentences 的回复 (TextOutput, priority 60)
