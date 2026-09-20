@@ -110,7 +110,7 @@ git rev-list --count ${headCommit}..HEAD
 - 进程崩溃、用户强制退出, 会导致 .yukino/worktree 堆积大量的 worktree 目录
   - workflow 创建的 worktree: `wf-[hash]`, 会被自动清理
   - subagent 创建的 worktree: `agent-[hash]`, 会被自动清理
-  - agent team leader 指定 teammate `isolation: "worktree"`, leader 创建的 worktree: `team-${teamNae}/${teammateName}`, 见 ch15
+  - agent team leader 指定 teammate `isolation: "worktree"`, leader 创建的 worktree: `team-${teamNae}/${teammateName}`, 见 agent-team
   - 用户手动创建的 worktree, 不会被自动清理
 - 如果 worktree 没有未 commit 的修改, 也没有新增的 commit, 则可以自动清理
 - 如果 worktree 已过期、有新增的 commit 并且推送到远端, 则可以自动清理

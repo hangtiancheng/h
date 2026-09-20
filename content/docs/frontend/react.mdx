@@ -266,13 +266,7 @@ msgChan.port2.postMessage("Message from msgChan.port2");
 
 ```tsx
 type ReactNode =
-  | null
-  | undefined
-  | boolean
-  | number
-  | string
-  | ReactElement
-  | ReactNode[];
+  null | undefined | boolean | number | string | ReactElement | ReactNode[];
 
 const Comp: ComponentType<IProps> = (props) => {
   const element: JSX.Element = <>Hello, React!</>;

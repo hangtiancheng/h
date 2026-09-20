@@ -187,7 +187,7 @@ action:
 
 <!-- 源码: src/hooks/hooks.ts executeAction agent 分支 -->
 
-启动 subagent, 见 ch13
+启动 subagent, 见 subagents
 
 ## hook 执行控制
 

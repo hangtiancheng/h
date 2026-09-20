@@ -4,7 +4,7 @@ title: "Skill"
 
 skill 是写给 AI 的 SOP (Standard Operation Procedure)
 
-背景: ch10 的 Slash Command 中, prompt 类型的命令可以将硬编码的代码审查 prompt 发送给 LLM, 不独立、不可更新、不可移植
+背景: slash-commands 中, prompt 类型的命令可以将硬编码的代码审查 prompt 发送给 LLM, 不独立、不可更新、不可移植
 
 1. skill 是独立、可 (热) 更新、可移植
 2. 可以显式指定 skill, 提高 LLM 的准确率

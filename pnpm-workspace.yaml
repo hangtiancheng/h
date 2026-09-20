@@ -1,4 +1,4 @@
 allowBuilds:
   esbuild: true
 minimumReleaseAgeExclude:
-  - '@yukino.js/anti-copy@0.0.1'
+  - "@yukino.js/anti-copy@0.0.1"

@@ -346,7 +346,7 @@ leader 调用 Agent 工具或 SpawnTeammate 工具传递 prompt 给 teammate 后
 - 如果 teammate 使用了 worktree 文件隔离, 则需要合并到主分支
 - 如果 teammate 共享工作目录, 则不需要合并
 
-leader 调用 Bash 工具执行 git 命令, 调用 ReadFile 工具查看冲突文件, 以确定 merge/rebase/cherry-pick 顺序和冲突解决策略 (回顾 ch14: 为什么 Yukino 没有将 merge/rebase/cherry-pick 作为内置工具?)
+leader 调用 Bash 工具执行 git 命令, 调用 ReadFile 工具查看冲突文件, 以确定 merge/rebase/cherry-pick 顺序和冲突解决策略 (回顾 worktree: 为什么 Yukino 没有将 merge/rebase/cherry-pick 作为内置工具?)
 
 leader 不确定冲突解决策略时, 调用 AskUserQuestion 工具弹出对话框让用户确认 (HITL)
 
@@ -373,7 +373,7 @@ leader 每轮 agent loop turn 开始时, , 从邮箱中读邮件, 使用 `<syste
 </system-reminder>
 ```
 
-teammate 空闲后, leader 可以调用 SendMessage 工具向 teammate 发送邮件, 如果发现该 teammate 空闲, 则使用磁盘上的会话日志 (参考 ch9 会话持久化) 重建, 恢复该 teammate 完整上下文继续工作
+teammate 空闲后, leader 可以调用 SendMessage 工具向 teammate 发送邮件, 如果发现该 teammate 空闲, 则使用磁盘上的会话日志 (参考 memory-and-instruction-files 的会话持久化) 重建, 恢复该 teammate 完整上下文继续工作
 
 ```js
 // teammate jane 完成任务后空闲

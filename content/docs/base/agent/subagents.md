@@ -37,8 +37,8 @@ interface Tool {
   "subagent_type": "", // 预定义的 agent 角色, 例如 explore, plan, code-review
   "model": "", // 模型
   "run_in_background": false, // 同步执行/异步执行
-  "isolation": "", // undefined | "worktree", 见 ch14
-  "team_name": "" // 见 ch14
+  "isolation": "", // undefined | "worktree", 见 worktree
+  "team_name": "" // 见 worktree
 }
 ```
 
