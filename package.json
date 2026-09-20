@@ -32,7 +32,7 @@
   "dependencies": {
     "@fumadocs/base-ui": "^16.15.11",
     "@paper-design/shaders-react": "^0.0.81",
-    "@yukino.js/anti-copy": "^0.0.7",
+    "@yukino.js/anti-copy": "latest",
     "class-variance-authority": "^0.7.1",
     "cn": "^0.3.0",
     "fumadocs-core": "^16.15.11",
