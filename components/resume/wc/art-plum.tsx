@@ -1,7 +1,6 @@
-"use client";
+/** @jsxImportSource @yukino.js/lit-jsx */
 
-import { useEffect, useRef } from "react";
-import { useTheme } from "next-themes";
+import { LitElement, customElement } from "@yukino.js/lit-jsx";
 
 /**
  * Generative "plum branch" background, ported from antfu.me's ArtPlum.vue:
@@ -10,6 +9,10 @@ import { useTheme } from "next-themes";
  * look) until every branch dies out or leaves the viewport. A radial CSS
  * mask keeps the center (where the resume text sits) clean and only shows
  * the art toward the screen edges.
+ *
+ * Theme awareness: next-themes toggles the `dark` class on <html> (React
+ * hooks are not available outside React), so a MutationObserver watches the
+ * class attribute and repaints with the matching stroke color.
  */
 
 const R180 = Math.PI;
@@ -139,29 +142,63 @@ function startPlumArt(canvas: HTMLCanvasElement, color: string): () => void {
   };
 }
 
-export function ArtPlum() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const { resolvedTheme } = useTheme();
-  const color = resolvedTheme === "dark" ? DARK_COLOR : LIGHT_COLOR;
+@customElement("art-plum")
+export class ArtPlumElement extends LitElement {
+  private cleanup: (() => void) | null = null;
 
-  // Repaint the branches when the theme (and thus the stroke color) changes.
-  useEffect(() => {
-    const canvas = canvasRef.current;
+  private themeObserver: MutationObserver | null = null;
+
+  protected override createRenderRoot(): HTMLElement {
+    return this;
+  }
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    // next-themes toggles `dark` on <html>; repaint with the matching color.
+    this.themeObserver ??= new MutationObserver(() => this.restart());
+    this.themeObserver.observe(document.documentElement, {
+      attributeFilter: ["class"],
+    });
+  }
+
+  protected override firstUpdated(): void {
+    this.restart();
+  }
+
+  override disconnectedCallback(): void {
+    super.disconnectedCallback();
+    this.themeObserver?.disconnect();
+    this.themeObserver = null;
+    this.cleanup?.();
+    this.cleanup = null;
+  }
+
+  private restart(): void {
+    this.cleanup?.();
+    const canvas = this.querySelector("canvas");
     if (!canvas) return;
+    const dark = document.documentElement.classList.contains("dark");
+    this.cleanup = startPlumArt(canvas, dark ? DARK_COLOR : LIGHT_COLOR);
+  }
 
-    return startPlumArt(canvas, color);
-  }, [color]);
+  protected override render() {
+    return (
+      <div
+        className="pointer-events-none fixed inset-0 print:hidden"
+        // No z-index: as the first positioned sibling in DOM order the
+        // canvas paints above the page background but below the (later,
+        // `relative`) resume content. A negative z-index would slip behind
+        // the opaque page background instead.
+        style={{ maskImage: MASK, WebkitMaskImage: MASK }}
+      >
+        <canvas width={400} height={400} />
+      </div>
+    );
+  }
+}
 
-  return (
-    <div
-      className="pointer-events-none fixed inset-0 print:hidden"
-      // No z-index: as the first positioned sibling in DOM order the
-      // canvas paints above the page background but below the (later,
-      // `relative`) resume content. A negative z-index would slip behind
-      // the opaque page background instead.
-      style={{ maskImage: MASK, WebkitMaskImage: MASK }}
-    >
-      <canvas ref={canvasRef} width={400} height={400} />
-    </div>
-  );
+declare global {
+  interface HTMLElementTagNameMap {
+    "art-plum": ArtPlumElement;
+  }
 }

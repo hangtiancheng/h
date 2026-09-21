@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"slices"
 	"sync"
 	"time"
 )
@@ -137,5 +138,57 @@ tag:
 		}
 	}
 
-  return ans;
+	return ans
+}
+
+func lexicographicallySmallestArray2(nums []int, limit int) []int {
+	n := len(nums)
+
+	pos := make([]int, n)
+	for i := range pos {
+		pos[i] = i
+	}
+
+	// 排序后, nums[pos[i]] 递增
+	slices.SortFunc(pos, func(i, j int) int {
+		return nums[i] - nums[j]
+	})
+
+	ans := make([]int, n)
+	start := 0
+	for i, p := range pos {
+		if i == n-1 || nums[pos[i+1]]-nums[p] > limit {
+			subPos := slices.Clone(pos[start : i+1])
+			slices.Sort(subPos)
+			for j, q := range subPos {
+				ans[q] = nums[pos[start+j]]
+			}
+			start = i + 1
+		}
+	}
+	return ans
+}
+
+
+func minimumDeletions(nums []int) int {
+  if (len(nums) <= 1) {
+    return len(nums);
+  }
+  minIdx, maxIdx := 0, 0
+  for i := range nums {
+    if nums[i] < nums[minIdx] {
+      minIdx = i
+    } else if nums[i] > nums[maxIdx] {
+      maxIdx = i;
+    }
+  }
+  if (minIdx == maxIdx) {
+    return 1;
+  }
+  return min(
+    max(minIdx, maxIdx) +1,
+    max(len(nums) - minIdx, len(nums) - maxIdx),
+    minIdx + len(nums) - maxIdx + 1,
+    maxIdx + len(nums) - minIdx + 1,
+  )
 }

@@ -8,6 +8,7 @@
     "forceConsistentCasingInFileNames": true,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": false,
+    "useDefineForClassFields": false,
     "noEmit": true,
     "esModuleInterop": true,
     "module": "esnext",
