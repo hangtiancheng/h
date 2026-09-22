@@ -1,5 +1,5 @@
 ---
-title: "ReAct 和 Agent Loop"
+title: "ReAct and Agent Loop"
 ---
 
 ReAct (Reasoning + Acting)

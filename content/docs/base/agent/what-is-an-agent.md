@@ -1,5 +1,5 @@
 ---
-title: "什么是 Agent"
+title: "What is an Agent"
 ---
 
 agent 是 LLM 在循环中根据环境反馈自主使用工具的系统

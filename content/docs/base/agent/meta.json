@@ -1,20 +1,20 @@
 {
   "title": "agent",
   "pages": [
-    "what-is-an-agent",
-    "llm-api-and-conversation-management",
-    "tool-calling",
-    "react-and-agent-loop",
-    "system-prompt",
-    "permissions",
-    "mcp",
+    "agent-team",
+    "agents-md-and-memory",
     "context-compaction",
-    "memory-and-instruction-files",
-    "slash-commands",
+    "function-calling",
+    "hook",
+    "llm",
+    "mcp",
+    "permission",
+    "react-and-agent-loop",
     "skills",
-    "hooks",
-    "subagents",
-    "worktree",
-    "agent-team"
+    "slash-command",
+    "subagent",
+    "system-prompt",
+    "what-is-an-agent",
+    "worktree"
   ]
 }
