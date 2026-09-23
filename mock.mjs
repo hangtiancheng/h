@@ -1,25 +1,5 @@
 #!/usr/bin/env node
 // @ts-check
-/**
- * Deterministic ns-3 fixture generator for the TcpSwift comparison bundle.
- *
- * This is a JavaScript (Node.js ESM) port of `docs/mock.py`. Behaviour, output
- * formats and validation rules are kept 1:1 with the Python original:
- *
- * - The same CPython Mersenne Twister (MT19937) stream, seeded through
- *   `init_by_array` with the little-endian uint32 expansion of the seed, so a
- *   given `--seed` reproduces the Python generator's random draws.
- * - The same rounding rules (round-half-even for `round()` and `format()`),
- *   exact `math.fsum`-style summation, and Python's float `repr`/`%.Nf`/`%.Ng`
- *   formatting, so every emitted number is byte-identical.
- * - The same ElementTree XML layout, CSV dialect, JSON layout and atomic
- *   publish/backup semantics.
- *
- * The only unavoidable deviation is in transcendental functions (`log`, `exp`,
- * `sin`, `cos`): V8 and the platform C `libm` differ in the last ulp, so values
- * that flow through them may differ in the final printed digit on rare inputs.
- * Integer arithmetic, the RNG stream, rounding and all formatting are exact.
- */
 
 import { createHash, randomBytes } from "node:crypto";
 import fs from "node:fs";

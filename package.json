@@ -13,7 +13,7 @@
   "type": "module",
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "pnpm typecheck && next build",
     "typecheck:chunk": "tsc -p tsconfig.build.json --noEmit",
     "format": "prettier -w ./ --experimental-cli",
     "lint": "eslint --fix --cache --quiet .",
