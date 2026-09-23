@@ -1,7 +1,14 @@
 "use client";
 
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "resume",
+  description: "hangtiancheng — frontend/full-stack engineer",
+};
+
 import { useEffect } from "react";
-import type { DetailedHTMLProps, HTMLAttributes } from "react";
+import type { DetailedHTMLProps } from "react";
 import { createAntiCopy } from "@yukino.js/anti-copy";
 
 // React 19 renders dashed tags as custom elements (props become properties);
@@ -31,7 +38,7 @@ declare module "react" {
  */
 export function Resume() {
   useEffect(() => {
-    void import("@/components/resume/wc");
+    void import("@/components/wc/resume-view");
 
     // Copy protection is scoped to the resume page; it detaches on unmount
     // so the rest of the site (e.g. MDX copy buttons) stays unaffected.
