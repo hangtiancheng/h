@@ -1,4 +1,12 @@
 {
-  "cSpell.words": ["fumadocs", "HNSW", "llms", "milvus", "orama", "rerank"],
+  "cSpell.words": [
+    "fumadocs",
+    "HNSW",
+    "langchain",
+    "llms",
+    "milvus",
+    "orama",
+    "rerank"
+  ],
   "editor.fontFamily": "Swifty, LXGW WenKai"
 }
