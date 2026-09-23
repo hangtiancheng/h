@@ -4,12 +4,31 @@
     {
       "label": "build:chucks",
       "type": "shell",
-      "command": "pnpm build:chunk",
+      "command": "pnpm exec turbo run build:chunk --ui=stream --log-prefix=none",
       "problemMatcher": ["$tsc"],
       "group": {
         "kind": "build",
         "isDefault": true
       }
+    },
+    {
+      "label": "build:all",
+      "type": "shell",
+      "command": "pnpm exec turbo run build --ui=stream --log-prefix=none",
+      "problemMatcher": [
+        "$tsc",
+        {
+          "owner": "go",
+          "pattern": {
+            "regexp": "^(.+\\.go):(\\d+)(?::(\\d+))?:\\s+(.+)$",
+            "file": 1,
+            "line": 2,
+            "column": 3,
+            "message": 4
+          }
+        }
+      ],
+      "group": "build"
     }
   ]
 }

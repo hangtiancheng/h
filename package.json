@@ -2,6 +2,7 @@
   "name": "homepage",
   "version": "0.0.0",
   "private": true,
+  "packageManager": "pnpm@12.4.2",
   "description": "homepage",
   "keywords": [
     "@yukino.js",
@@ -12,12 +13,14 @@
   "author": "https://github.com/hangtiancheng",
   "type": "module",
   "scripts": {
+    "turbo": "turbo run build",
     "dev": "next dev",
     "build": "pnpm typecheck && next build",
     "typecheck:chunk": "tsc -p tsconfig.build.json --noEmit",
     "format": "prettier -w ./ --experimental-cli",
     "lint": "eslint --fix --cache --quiet .",
     "build:chunk": "tsc -p tsconfig.build.json",
+    "build:go": "go build ./...",
     "typecheck": "next typegen && tsc --noEmit",
     "git:commit": "git add -A && git commit -m \"feat: Introduce new features\"",
     "git:commit:skip": "git add -A && git commit -m \"feat: Introduce new features [skip ci]\"",
@@ -61,6 +64,7 @@
     "prettier": "^3.9.8",
     "tailwindcss": "^4.3.3",
     "tailwindcss-animate": "^1.0.7",
+    "turbo": "^2.11.2",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.70.1"
   }
