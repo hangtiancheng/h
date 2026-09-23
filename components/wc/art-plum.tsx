@@ -2,19 +2,6 @@
 
 import { LitElement, customElement } from "@yukino.js/lit-jsx";
 
-/**
- * Generative "plum branch" background, ported from antfu.me's ArtPlum.vue:
- * branches grow inward from the four screen edges as random fractal strokes
- * (~40fps, half of the pending steps deferred each frame for an organic
- * look) until every branch dies out or leaves the viewport. A radial CSS
- * mask keeps the center (where the resume text sits) clean and only shows
- * the art toward the screen edges.
- *
- * Theme awareness: next-themes toggles the `dark` class on <html> (React
- * hooks are not available outside React), so a MutationObserver watches the
- * class attribute and repaints with the matching stroke color.
- */
-
 const R180 = Math.PI;
 const R90 = Math.PI / 2;
 const R15 = Math.PI / 12;
@@ -23,7 +10,6 @@ const LEN = 6;
 const FRAME_INTERVAL = 1000 / 40;
 const MASK = "radial-gradient(circle, transparent, black)";
 
-/** Sage-green strokes matching the site brand palette. */
 const LIGHT_COLOR = "#849a7225";
 const DARK_COLOR = "#a8bc9625";
 
@@ -105,14 +91,12 @@ function startPlumArt(canvas: HTMLCanvasElement, color: string): () => void {
     steps = [];
     lastTime = performance.now();
 
-    // Every branch died out — freeze the finished painting.
     if (!prevSteps.length) {
       running = false;
       return;
     }
 
     for (const next of prevSteps) {
-      // Keep half of the steps for the next frame — more organic growth.
       if (Math.random() < 0.5) steps.push(next);
       else next();
     }
@@ -154,7 +138,6 @@ export class ArtPlumElement extends LitElement {
 
   override connectedCallback(): void {
     super.connectedCallback();
-    // next-themes toggles `dark` on <html>; repaint with the matching color.
     this.themeObserver ??= new MutationObserver(() => this.restart());
     this.themeObserver.observe(document.documentElement, {
       attributeFilter: ["class"],
@@ -185,10 +168,6 @@ export class ArtPlumElement extends LitElement {
     return (
       <div
         className="pointer-events-none fixed inset-0 print:hidden"
-        // No z-index: as the first positioned sibling in DOM order the
-        // canvas paints above the page background but below the (later,
-        // `relative`) resume content. A negative z-index would slip behind
-        // the opaque page background instead.
         style={{ maskImage: MASK, WebkitMaskImage: MASK }}
       >
         <canvas width={400} height={400} />

@@ -52,8 +52,6 @@ export default function CustomSearchDialog(props: SharedProps) {
   const [tag, setTag] = useState<string | undefined>();
   const { search, setSearch, query } = useDocsSearch({
     client: staticClient({
-      // static export: the search index is a build-time JSON file served
-      // under the GitHub Pages basePath
       from: "/h/api/search",
       tag,
     }),
@@ -75,7 +73,6 @@ export default function CustomSearchDialog(props: SharedProps) {
     for (const item of full.children) onNode(item);
     return map;
   }, [full]);
-  // quick action: jump to a page whose title starts with the query
   const pageTreeAction = useMemo<SearchItemType | undefined>(() => {
     if (search.length === 0) return;
 

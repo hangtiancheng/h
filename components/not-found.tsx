@@ -9,17 +9,12 @@ interface Suggestion {
   url: string;
 }
 
-/**
- * Suggestions for the 404 page. Static-export safe: queries the build-time
- * search index in the browser with the last segment of the current path.
- */
 export function NotFoundSuggestions() {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
 
   useEffect(() => {
     let cancelled = false;
 
-    // strip the basePath, then use the last segment as the query
     const pathname = window.location.pathname.replace(/^\/h/, "");
     const query = pathname.split("/").filter(Boolean).pop() ?? "";
     if (query.length === 0) return;

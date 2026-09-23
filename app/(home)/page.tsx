@@ -65,12 +65,10 @@ export default function HomePage() {
         <Hero />
         <div className="flex flex-col items-center justify-center z-2 px-4 size-full text-center md:p-12">
           <p className="text-xs text-brand font-medium rounded-full p-2 border border-brand/50 w-fit">
-            a personal technical knowledge base.
+            Yukino Homepage
           </p>
           <h1 className="text-4xl my-8 leading-tighter font-medium xl:text-5xl">
-            Notes for <span className="text-brand">engineers</span>,
-            <br />
-            organized by <span className="text-brand">topic</span>.
+            <span className="text-brand">Knowledge base </span>for engineers
           </h1>
           <div className="flex flex-row items-center justify-center gap-4 flex-wrap w-fit">
             <Link
