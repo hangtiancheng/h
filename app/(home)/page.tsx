@@ -55,7 +55,7 @@ const sectionCards = [
   },
 ] as const;
 
-export default function HomePage() {
+export default function Home() {
   const pages = source.getPages();
 
   return (

@@ -7,7 +7,6 @@ export default function Layout({ children }: LayoutProps<"/">) {
     <DocsLayout
       {...baseOptions()}
       tree={source.getPageTree()}
-      // icon items only, text links belong to the home nav
       links={linkItems.filter((item) => item.type === "icon")}
     >
       {children}
