@@ -4,7 +4,7 @@ title: workflow
 
 # Workflow
 
-1. 指代消解 (提示词优化): 她多少钱? -> iPhone17 多少钱?
+1. 指代消解 (query 优化): 她多少钱? -> iPhone17 多少钱?
 2. 意图识别: 用户问的是商品, 还是订单, 还是物流, 还是退换货/退款/售后, 还是投诉, **还是单纯闲聊**
 3. 意图分流
    - 闲聊: 回复固定话术
@@ -91,38 +91,66 @@ flowchart TD
   START([START]) --> resolve_reference["指代消解"]
   resolve_reference --> classify_intent{"意图识别"}
 
-  subgraph react["主力 agent loop (ReAct)"]
+  subgraph react["主力 agent loop"]
     main_agent["主力 agent"]
-    agent_tools["执行工具"]
+    agent_tools["工具调用"]
     main_agent -->|"continue 有 tool_use"| agent_tools
     agent_tools --> main_agent
   end
 
   classify_intent -->|"escalate 投诉"| complaint_reply["安慰 + 创建工单 / 转人工"]
   classify_intent -->|"fallback_script 闲聊"| script_reply["固定话术"]
-  classify_intent -->|"knowledge 知识"| retrieve_knowledge["RAG 相似度 + BM25 检索"]
+  classify_intent -->|"knowledge 知识"| retrieve_knowledge["RAG 相似度搜索 + BM25 关键词检索"]
   classify_intent -->|"refund_flow 退换货"| fetch_order["获取订单"]
   classify_intent -->|"business 订单/物流"| main_agent
 
-  fetch_order --> retrieve_policy["检索售后政策"]
+  fetch_order --> retrieve_policy["查询售后政策"]
   retrieve_policy --> main_agent
 
   retrieve_knowledge --> confidence_check{"置信度判断"}
   confidence_check -->|"strong"| main_agent
-  confidence_check -->|"weak"| fallback_reply["兜底话术 + 记录进数据飞轮"]
+  confidence_check -->|"weak"| fallback_reply["兜底话术 + 记录到数据飞轮"]
 
-  main_agent -->|"stop 无 tool_use / 超最大步数"| log
+  main_agent -->|"stop 没有 tool_use / 超过最大步数"| log
 
   complaint_reply --> log
   script_reply --> log
   fallback_reply --> log
-  log["记录日志 (思维链 / 工具调用 / token)"] --> END([END])
+  log["记录日志 (思维链 / 工具调用 / token 消耗)"] --> END([END])
 ```
+
+## 指代消解 (query 优化)
+
+### 指代消解
+
+她多少钱? -> iPhone17 多少钱
+
+### query 改写、扩写
+
+扩写会导致检索、粗排、精排耗时翻倍, 只在核心业务场景下使用
+
+````md
+query: 我想退货
+
+## 输出要求
+
+严格 3 条, 必须使用以下 JSON 格式返回
+
+```json
+{
+  "query": [
+    "iPhone17 退换货政策",
+    "iPhone17 无理由退换货条件",
+    "iPhone17 退换货时间限制"
+  ]
+}
+```
+````
 
 ## 意图识别
 
-1. 关键词匹配
-2. 训练一个分类器
+1. 关键词匹配: 每个意图对应一个关键词清单
+2. 训练一个 bert 分类器, 缺点是无法结局
 3. LLM Prompt
 
 ### 意图数量很多?
@@ -133,3 +161,7 @@ flowchart TD
 - RAG + 意图识别: RAG 召回最相关的 topK 个候选意图, 提供给模型选择
 
 ## 意图分流
+
+```
+
+```

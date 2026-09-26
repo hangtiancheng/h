@@ -16,7 +16,7 @@ const Dithering = dynamic(
 );
 
 /**
- * Animated hero background: a grainy sage gradient plus a dithered sphere,
+ * Animated hero background: a grainy NVIDIA-green gradient plus a dithered sphere,
  * mirroring the fumadocs.dev landing page.
  */
 export function Hero() {
@@ -42,8 +42,8 @@ export function Hero() {
           className="absolute inset-0 animate-fd-fade-in duration-800"
           colors={
             resolvedTheme === "dark"
-              ? ["#3c5230", "#202c18", "#1a241200"]
-              : ["#dce7cd", "#a8bc96", "#5c6e4a20"]
+              ? ["#3d5c00", "#1f2e00", "#16200000"]
+              : ["#e9f7b8", "#a3d929", "#4f7a0020"]
           }
           colorBack="#00000000"
           softness={1}
@@ -61,7 +61,7 @@ export function Hero() {
           width={720}
           height={720}
           colorBack="#00000000"
-          colorFront={resolvedTheme === "dark" ? "#a8bc96" : "#849a72"}
+          colorFront={resolvedTheme === "dark" ? "#8fd400" : "#76b900"}
           shape="sphere"
           type="4x4"
           scale={0.5}

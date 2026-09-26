@@ -11,31 +11,31 @@
     "Geist Mono", "Maple Mono", Menlo, "Cascadia Code", "Sarasa Gothic SC",
     "PingFang SC", "Microsoft YaHei", monospace;
 
-  /* sage green brand palette, taken from public/favicon.svg */
-  --color-brand: #849a72;
-  --color-brand-foreground: hsl(0, 0%, 98%);
-  --color-brand-200: #94aa82;
-  --color-landing-foreground: #47543c;
+  /* NVIDIA green brand palette, taken from public/favicon.svg */
+  --color-brand: #76b900;
+  --color-brand-foreground: #0a0f00;
+  --color-brand-200: #8fd400;
+  --color-landing-foreground: #3d5c00;
 }
 
 .dark {
-  --color-brand: #a8bc96;
-  --color-brand-foreground: hsl(0, 0%, 9%);
-  --color-brand-200: #bdd0aa;
-  --color-landing-foreground: #d5ddca;
+  --color-brand: #76b900;
+  --color-brand-foreground: #0a0f00;
+  --color-brand-200: #8fd400;
+  --color-landing-foreground: #c5e86a;
 }
 
-/* sage green primary, unified across all docs sections */
+/* NVIDIA green primary, unified across all docs sections */
 :root {
-  --color-fd-primary: #849a72;
-  --color-fd-primary-foreground: hsl(0, 0%, 98%);
-  --color-fd-ring: #9caf88;
+  --color-fd-primary: #76b900;
+  --color-fd-primary-foreground: #0a0f00;
+  --color-fd-ring: #76b900;
 }
 
 .dark {
-  --color-fd-primary: #a8bc96;
-  --color-fd-primary-foreground: hsl(0, 0%, 9%);
-  --color-fd-ring: #9caf88;
+  --color-fd-primary: #76b900;
+  --color-fd-primary-foreground: #0a0f00;
+  --color-fd-ring: #76b900;
 }
 
 html {
@@ -52,4 +52,10 @@ html {
 html > body[data-scroll-locked] {
   margin-right: 0px !important;
   --removed-body-scroll-bar-size: 0px !important;
+}
+
+/* keep mermaid diagrams inside their container and scale with the column */
+.mermaid-diagram svg {
+  max-width: 100%;
+  height: auto;
 }

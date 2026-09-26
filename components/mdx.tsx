@@ -7,6 +7,8 @@ import { Tab, Tabs } from "@fumadocs/base-ui/components/tabs";
 import { TypeTable } from "@fumadocs/base-ui/components/type-table";
 import type { MDXComponents } from "mdx/types";
 
+import { Mermaid } from "@/components/mermaid";
+
 export function getMDXComponents(components?: MDXComponents) {
   return {
     ...defaultMdxComponents,
@@ -15,6 +17,7 @@ export function getMDXComponents(components?: MDXComponents) {
     Accordions,
     Banner,
     InlineTOC,
+    Mermaid,
     Tabs,
     Tab,
     TypeTable,

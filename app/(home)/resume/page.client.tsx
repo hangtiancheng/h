@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import dynamic from "next/dynamic";
-import { createAntiCopy } from "@yukino.js/anti-copy";
+// import { createAntiCopy } from "@yukino.js/anti-copy";
 
 const ReactResume = dynamic(
   () => import("@/components/wc/resume.react").then((m) => m.ReactResume),
@@ -10,17 +10,17 @@ const ReactResume = dynamic(
 );
 
 export function ResumeClient() {
-  useEffect(() => {
-    const antiCopy = createAntiCopy({
-      mode: "replace",
-      print: false,
-      devtools: true,
-      copy: false,
-    });
-    antiCopy.enable();
+  // useEffect(() => {
+  //   const antiCopy = createAntiCopy({
+  //     mode: "replace",
+  //     print: false,
+  //     devtools: true,
+  //     copy: false,
+  //   });
+  //   antiCopy.enable();
 
-    return () => antiCopy.destroy();
-  }, []);
+  //   return () => antiCopy.destroy();
+  // }, []);
 
   return <ReactResume />;
 }

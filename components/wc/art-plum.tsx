@@ -10,8 +10,8 @@ const LEN = 6;
 const FRAME_INTERVAL = 1000 / 40;
 const MASK = "radial-gradient(circle, transparent, black)";
 
-const LIGHT_COLOR = "#849a7225";
-const DARK_COLOR = "#a8bc9625";
+const LIGHT_COLOR = "#76b90025";
+const DARK_COLOR = "#8fd40025";
 
 type Step = () => void;
 
