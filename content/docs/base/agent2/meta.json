@@ -1,4 +1,4 @@
 {
   "title": "agent2",
-  "pages": ["llm", "rag"]
+  "pages": ["llm", "rag", "workflow", "context"]
 }

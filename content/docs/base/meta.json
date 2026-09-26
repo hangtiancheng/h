@@ -1,5 +1,15 @@
 {
   "root": true,
   "title": "base",
-  "pages": ["index", "agent", "css", "git", "go", "js", "linux", "network"]
+  "pages": [
+    "index",
+    "agent",
+    "agent2",
+    "css",
+    "git",
+    "go",
+    "js",
+    "linux",
+    "network"
+  ]
 }

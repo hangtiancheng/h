@@ -68,7 +68,7 @@ export function Hero() {
           size={3}
           speed={0}
           frame={5000 * 120}
-          className="absolute animate-fd-fade-in duration-400 max-lg:bottom-[-50%] max-lg:left-[-200px] lg:top-[-5%] lg:right-0"
+          className="absolute animate-fd-fade-in duration-400 max-lg:bottom-[-50%] max-lg:-left-50 lg:top-[-5%] lg:right-0"
           minPixelRatio={1}
         />
       )}
