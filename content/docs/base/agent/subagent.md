@@ -8,8 +8,6 @@ title: "Subagent"
 
 Agent 和 Tool 抽象同构, 可以将 Agent 包装为 Tool, 注册到 ToolRegistry
 
-<!-- 源码: src/tools/types.ts -->
-
 ```ts
 export type ToolCategory = "read" | "write" | "command";
 
@@ -26,8 +24,6 @@ interface Tool {
 ```
 
 ## properties (parameters)
-
-<!-- 源码: src/subagent/agent-tool.ts -->
 
 ```json
 {
@@ -59,8 +55,6 @@ subagent_type 不能为空, 是预定义的 subagent 角色
 示例: .yukino/agents/code-review.md
 
 负责代码审查的 subagent 不能再 fork 一个 subagent、不能写文件、不能执行 Bash 命令, 是只读的代码审查专家
-
-<!-- 源码: src/subagent/loader.ts -->
 
 ```md
 ---
@@ -164,8 +158,6 @@ background: true
 
 ## Subagent markdown 配置
 
-<!-- 源码: src/subagent/loader.ts -->
-
 |                              | Skill                     | Subagent                                                                                                                  |
 | ---------------------------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
 | body                         | 注入 messages 的 SOP 指令 | 对于定义式 subagent, 作为 system prompt; 对于 fork 的 subagent, body 使用 `<fork_boilerplate />` 标签包裹注入到 user 消息 |
@@ -181,8 +173,6 @@ background: true
 | frontmatter.disallowed_tools | X                         | 工具黑名单                                                                                                                |
 | frontmatter.permission_mode  | X                         | 例如 `permissionMode: "acceptEdits"` 调用工具, 不弹出对话框                                                               |
 | frontmatter.max_turns        | X                         | 最大 agent loop 次数数                                                                                                    |
-
-<!-- 源码: src/subagent/definition.ts -->
 
 ```ts
 /** Memory scope for a subagent. Mirrors Go's AgentMemoryScope. */
@@ -209,8 +199,6 @@ export interface AgentDefinition {
 }
 ```
 
-<!-- 源码: src/subagent/loader.ts -->
-
 Agent 定义文件, 优先级从低到高
 
 - 内置级: Yukino 内置 (BUILTIN_AGENTS)
@@ -227,16 +215,12 @@ subagent loop 和主 agent loop 的区别
 
 ## Subagent 不能继续 spawn
 
-<!-- 源码: src/subagent/tool-filter.ts -->
-
 1. 全局 subagent: 工具黑名单 ALL_AGENT_DISALLOWED_TOOLS, 该黑名单包含 Agent, AskUserQuestion, ...
 2. 后台异步运行的 subagent: 工具白名单 ASYNC_AGENT_ALLOWED_TOOLS, 该白名单不包括 AgentTool、AskUserQuestion
 3. 自定义 subagent: 额外工具黑名单 CUSTOM_AGENT_DISALLOWED_TOOLS
 4. Subagent markdown 配置 frontmatter 中的 tools、disallowed_tools
 
 具体的
-
-<!-- 源码: src/subagent/tool-filter.ts -->
 
 - 预定义的 subagent 不能继续 spawn: 通过全局 subagent 工具黑名单 ALL_AGENT_DISALLOWED_TOOLS, 该黑名单包含 Agent, AskUserQuestion, ...
 - fork 的 subagent 不能继续 fork
@@ -262,8 +246,6 @@ yukino 没有管理后台异步任务的 Slash Command, 后台异步任务通过
 
 ### Explore
 
-<!-- 源码: src/subagent/definition.ts -->
-
 ```md
 ---
 name: explore
@@ -288,8 +270,6 @@ permission_mode: plan
 
 ### Plan
 
-<!-- 源码: src/subagent/definition.ts -->
-
 ```md
 ---
 name: plan
@@ -311,8 +291,6 @@ permission_mode: plan
 ```
 
 ### General Purpose
-
-<!-- 源码: src/subagent/definition.ts -->
 
 ```md
 ---

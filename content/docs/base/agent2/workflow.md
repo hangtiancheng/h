@@ -86,32 +86,41 @@ export function buildGraph(checkpointer?: BaseCheckpointSaver) {
 ```
 
 ```mermaid
-%%{init: {'themeVariables': {'fontFamily': 'Yukino'}}}%%
+%%{init: {'themeVariables': {'fontFamily': 'Yukino, Geist Mono, Menlo, Cascadia Code, Sarasa Gothic SC, PingFang SC, Microsoft YaHei'}}}%%
 flowchart TD
   START([START]) --> resolve_reference["指代消解"]
-  resolve_reference --> classify_intent{"意图识别"}
+  resolve_reference --> classify_intent{"意图识别 (9 意图 -> 5 出口)"}
 
-  subgraph react["主力 agent loop"]
+  subgraph react["主力 agent loop (ReAct)"]
     main_agent["主力 agent"]
     agent_tools["工具调用"]
-    main_agent -->|"continue 有 tool_use"| agent_tools
+    main_agent -->|"continue 有 tool_use 并且未超过步数上限"| agent_tools
     agent_tools --> main_agent
   end
 
-  classify_intent -->|"escalate 投诉"| complaint_reply["安慰 + 创建工单 / 转人工"]
-  classify_intent -->|"fallback_script 闲聊"| script_reply["固定话术"]
-  classify_intent -->|"knowledge 知识"| retrieve_knowledge["RAG 相似度搜索 + BM25 关键词检索"]
-  classify_intent -->|"refund_flow 退换货"| fetch_order["获取订单"]
-  classify_intent -->|"business 订单/物流"| main_agent
+  subgraph refund["退换货确定性子流程"]
+    fetch_order["获取订单"] --> retrieve_policy["查询售后政策"]
+  end
 
-  fetch_order --> retrieve_policy["查询售后政策"]
+  subgraph exits["确定性出口 (不进 agent loop)"]
+    complaint_reply["安慰 + 创建工单 / 转人工"]
+    script_reply["固定话术"]
+    fallback_reply["兜底话术 + 记录到数据飞轮"]
+  end
+
+  classify_intent -->|"complaint 投诉 -> escalate"| complaint_reply
+  classify_intent -->|"chitchat/other 闲聊/其他 -> fallback_script"| script_reply
+  classify_intent -->|"product_inquiry 商品咨询 -> knowledge"| retrieve_knowledge["RAG 相似度搜索 + BM25 关键词检索"]
+  classify_intent -->|"refund_return/after_sales 退换货/售后 -> refund_flow"| fetch_order
+  classify_intent -->|"order/logistics/human_agent 订单/物流/转人工 -> business (未知意图默认)"| main_agent
+
   retrieve_policy --> main_agent
 
-  retrieve_knowledge --> confidence_check{"置信度判断"}
-  confidence_check -->|"strong"| main_agent
-  confidence_check -->|"weak"| fallback_reply["兜底话术 + 记录到数据飞轮"]
+  retrieve_knowledge --> confidence_check{"置信度判断 evidenceStrong"}
+  confidence_check -->|"strong 证据充分"| main_agent
+  confidence_check -->|"weak 证据不足"| fallback_reply
 
-  main_agent -->|"stop 没有 tool_use / 超过最大步数"| log
+  main_agent -->|"stop 没有 tool_use / steps 超过 maxAgentSteps"| log
 
   complaint_reply --> log
   script_reply --> log
@@ -150,18 +159,47 @@ query: 我想退货
 ## 意图识别
 
 1. 关键词匹配: 每个意图对应一个关键词清单
-2. 训练一个 bert 分类器, 缺点是无法结局
-3. LLM Prompt
+2. 训练一个 bert 分类器, 缺点是依赖样本数据和数据标注, 无法解决意图漂移, bert 分类器适合单条用户消息分类, 不适合多轮对话的会话上下文; 除非输入整个会话上下文到 bert 分类器
+3. LLM Prompt, 不依赖样本数据和数据标注, 可以输入整个会话上下文
 
-### 意图数量很多?
+- 可以使用能力较强的 LLM, 输出意图
+- 可以使用能力较弱的 LLM, 输出意图 + 置信度
+- few-shot: 提供几个真实问题和对应意图的示例
 
-- 两级分类
-  - 1 级: 售前 / 物流 / 售后
-  - 2 级: 细分意图
-- RAG + 意图识别: RAG 召回最相关的 topK 个候选意图, 提供给模型选择
+### 意图数量很多
+
+意图数量很多, 难以在 prompt 中枚举
+
+- 多层意图树
+  - 一级分类: 售前 / 物流 / 售后
+  - 二级分类: 细分子意图
+- 检索式意图识别, 为每个意图的描述文档建立一个向量库, 对用户 query 相似度搜索, 召回最相关的 topK 个候选意图, 提供给模型选择
 
 ## 意图分流
 
-```
+```ts
+// Nine intents -> five exits; single source shared with build.ts conditional edge keys.
+export const INTENT_TO_ROUTE: Record<string, RouteKey> = {
+  // 投诉 -> 先安慰, 再提供创建工单和转人工选项
+  complaint: "escalate",
+  // 闲聊 -> 固定话术
+  chitchat: "fallback_script",
+  // 其他 -> 固定话术
+  other: "fallback_script",
+  // 商品咨询 -> 知识检索
+  product_inquiry: "knowledge",
+  // 退货退款 -> 确定性子流程: 获取订单、查询售后政策
+  refund_return: "refund_flow",
+  // 售后 -> 确定性子流程: 获取订单、查询售后政策
+  after_sales: "refund_flow",
+  // 转人工: 直接转到主力 agent loop
+  human_agent: "business",
+  // 订单、物流: 直接转到主力 agent loop
+  logistics: "business",
+  order: "business",
+};
 
+export function routeByIntent(state: GraphState): RouteKey {
+  return INTENT_TO_ROUTE[state.intent] ?? "business";
+}
 ```

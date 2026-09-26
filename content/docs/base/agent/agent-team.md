@@ -81,8 +81,6 @@ interface Member {
 }
 ```
 
-<!-- 源码差异: 源码中 mode 是 team 级别, 不是 member 级别, 一个 team 中所有 teammate 的运行后端相同 -->
-
 - mode: 运行后端 (team 级别, 一个 team 中所有 teammate 的运行后端相同)
   - tmux, iterm: teammate 是 tmux/iterm pane 中的独立进程, 和 leader 完全隔离, 隔离性强
   - in-process: teammate 和 leader 运行在同一个进程, 隔离性弱, 但更轻量
@@ -153,16 +151,12 @@ Agent.prototype.execute({
 - 只有 leader 可以 spawn teammate
 - tmux/iterm pane 的 teammate 可以调用 Agent 工具, 即可以 spawn subagent, 但是不能 spawn teammate
 
-<!-- TODO: 源码中, teammate 不能调用 Agent 工具 -->
-
 如果没有 tmux/iterm, 则 fallback 到 in-process 进程内后端, teammate 和 leader 运行在同一个进程, 但是有独立的工具集
 
 in-process 更轻量, 但是:
 
 - teammate 的生命周期绑定 leader, leader 退出, 所有 in-process 的 teammate 都退出
 - in-process 的 teammate 可以调用 Agent 工具, 但只能 spawn 同步 subagent, 禁止 spawn 后台异步 subagent、禁止 spawn teammate
-
-<!-- TODO: 源码中, teammate 不能调用 Agent 工具 -->
 
 ## 协调机制
 
@@ -204,8 +198,6 @@ SendMessage.prototype.execute({
   - \* 广播, 发送给所有 teammates
 
 SendMessage 也支持结构化邮件:
-
-<!-- TODO: shutdown_request 只有 leader 可以发送 shutdown_request 结构化邮件 -->
 
 - shutdown_request: 请求某个 teammate 优雅退出, 目标 teammate 可以响应 shutdown_response 表示同意或拒绝
 - shutdown_response: shutdown_request 请求的响应, 包含 approve 或 reject 的原因, 只能发送给 leader
@@ -332,8 +324,6 @@ teammate (任务执行者) 的工具集包括:
   - 通信工具: SendMessage, 使得 leader/teammate 间可以相互发送邮件
 - 任务实施工具: ReadFile、WriteFile、Bash ...
 
-<!-- TODO: 真的是使用 Agent 工具传递的吗? -->
-
 leader 调用 Agent 工具或 SpawnTeammate 工具传递 prompt 给 teammate 后 (Agent 工具和 SpawnTeammate 工具都可以 spawn 一个 teammate), teammate 进入自己的 agent loop
 
 1. teammate 调用 TaskList 工具, 查看共享任务列表, 共享任务列表包含任务状态: 是否已完成、是否正在执行
@@ -394,8 +384,6 @@ SendMessage.prototype.execute({
 - subagent 对话历史不会被持久化到磁盘
 
 ## 清理
-
-<!-- src/tui/app.tsx taskListRef -->
 
 leader 删除 teammate, 删除 worktree (如果有)、删除 team 目录、删除共享任务列表文件
 
@@ -492,8 +480,6 @@ const COORDINATOR_ALLOWED_TOOLS = new Set([
 ```
 
 ## Coordinator Workflow
-
-<!-- TODO: 源码中注入的 coordinator system prompt 在哪? -->
 
 coordinator 模式不仅限制工具集 (排除 WriteFile、EditFile), 还会注入 coordinator system prompt, 提示 leader 使用 coordinator 4 阶段工作流
 

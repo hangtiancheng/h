@@ -6,8 +6,6 @@ title: "工具调用"
 
 调用 LLM API 时, 可以通过 tools 参数告诉 LLM 有哪些工具, 包括名称 name, 描述 description, 参数格式 input_schema
 
-<!-- 源码: src/tools/descriptions.ts, src/tools/read-file.ts -->
-
 ```json
 {
   "tools": [
@@ -96,8 +94,6 @@ LLM 负责决策, 请求调用工具; CLI 负责执行工具调用, 将工具调
 
 ## 工具接口设计
 
-<!-- 源码: src/tools/types.ts -->
-
 - 身份信息: name, description, schema (input_schema)
 - 元信息 (提供给 UI 渲染)
   - category 分类
@@ -105,8 +101,6 @@ LLM 负责决策, 请求调用工具; CLI 负责执行工具调用, 将工具调
   - system? 内部工具
   - concurrencySafe? 是否可以和其他工具并发执行
 - 行为: execute、validateInput?
-
-<!-- 源码: src/tools/types.ts -->
 
 ```ts
 export interface ToolResult {
@@ -118,8 +112,6 @@ export interface ToolResult {
 
 ### ReadFile
 
-<!-- 源码: src/tools/read-file.ts -->
-
 - properties: file_path, offset, limit
 - 元信息: 只读、非破坏性, `category: read`
 - 行号: 读文件需要带行号前缀, 方便定位代码位置 `"1\tfunction main() {\n2\t  console.log(\"javascript newbie\")\n3\t}"`
@@ -128,15 +120,11 @@ export interface ToolResult {
 
 ### WriteFile
 
-<!-- 源码: src/tools/write-file.ts -->
-
 - properties: file_path, content
 - 元信息: 非只读、非破坏性, `category: write`
 - 创建或重写, 创建时需要递归的创建父目录
 
 ### EditFile
-
-<!-- 源码: src/tools/edit-file.ts -->
 
 - properties: file_path, old_string, new_string, replace_all
 - 元信息: 非只读、非破坏性, `category: write`
@@ -147,8 +135,6 @@ export interface ToolResult {
 - new_string 为空, 表示删除 old_string
 
 ### Bash
-
-<!-- 源码: src/tools/bash.ts -->
 
 - properties: command, timeout
 - 元信息: 非只读、破坏性, `category: command`
@@ -161,8 +147,6 @@ export interface ToolResult {
 
 ### Glob
 
-<!-- 源码: src/tools/glob.ts -->
-
 - properties: pattern, path
 - 元信息: 只读、非破坏性, `category: read`
 - glob 查找文件名
@@ -171,15 +155,11 @@ export interface ToolResult {
 
 ### Grep
 
-<!-- 源码: src/tools/grep.ts -->
-
 - properties: pattern, path, include
 - 元信息: 只读、非破坏性, `category: read`
 - grep 找文件内容
 - 输出格式: 文件路径:行号:匹配的内容
 - 最多返回 100 个匹配结果
-
-<!-- 源码: src/tools/types.ts (ToolCategory = "read" | "write" | "command") -->
 
 | 工具      | 分类    | 只读 | 破坏性 | 场景            |
 | --------- | ------- | ---- | ------ | --------------- |

@@ -6,8 +6,6 @@ Slash Command: 以 / 开头的输入会被命令解析器拦截
 
 ## 命令的分类
 
-<!-- 源码: src/commands/commands.ts -->
-
 - local: 不参与 agent loop
 - local_ui: 不参与 agent loop, 需要重新渲染 UI
 - prompt: 参与 agent loop, CLI 负责构造 prompt
@@ -22,8 +20,6 @@ Slash Command: 以 / 开头的输入会被命令解析器拦截
 ## local 命令
 
 `/help` 打印帮助信息
-
-<!-- 源码: src/commands/commands.ts -->
 
 ```txt
 - /help, /h, /?   打印帮助信息
@@ -40,8 +36,6 @@ Slash Command: 以 / 开头的输入会被命令解析器拦截
 ```
 
 `/compact` 手动触发上下文压缩, `/compact [description]` 指定上下文保留重点; 如果当前上下文窗口 <= 5k token, 直接提示无需压缩
-
-<!-- 源码: src/commands/commands.ts -->
 
 `/session` 会话信息
 
@@ -67,8 +61,6 @@ Slash Command: 以 / 开头的输入会被命令解析器拦截
 
 `/status` 打印当前状态
 
-<!-- 源码: src/commands/commands.ts -->
-
 ```txt
 Yukino Status
 ──────────────
@@ -82,21 +74,15 @@ Yukino Status
 
 `/skills` skill 管理
 
-<!-- 源码: src/commands/commands.ts -->
-
 - `/skills list` 打印 skill 列表
 - `/skills info <name>` 打印指定 skill 的 frontmatter 和路径
 - `/skills reload` 重新扫描并加载所有 skill
 
 `/mcp` MCP 服务器连接状态
 
-<!-- 源码: src/commands/commands.ts -->
-
 - `/mcp` 打印 MCP 服务器连接状态
 
 `/code-review` 代码审查 agent team 管理
-
-<!-- 源码: src/commands/commands.ts -->
 
 - `/code-review`, `/cr` 管理代码审查 agent team
 - `/cr create` TODO
@@ -107,8 +93,6 @@ Yukino Status
 
 ## local_ui 命令
 
-<!-- 源码: src/commands/commands.ts -->
-
 - `/clear` 开启新对话, 关闭当前会话, 持久化到磁盘的 jsonl 会话日志
 - `/compact, /c` 强制上下文压缩
 - `/plan, /p` 切换 plan 模式 (toggle), `/plan [description]` 指定任务描述
@@ -118,7 +102,5 @@ Yukino Status
 - `/worktree, /wt` 管理 git worktree
 
 ## prompt 命令
-
-<!-- 源码: src/commands/commands.ts -->
 
 `/review` CLI 将预设的代码审查 prompt 发送给 LLM API, 分析未提交的代码变更, `/review [description]` 指定代码审查重点; prompt 命令消耗 token

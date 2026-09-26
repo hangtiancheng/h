@@ -18,8 +18,6 @@ title: "Hook"
 
 3 个配置文件按顺序加载, 后加载的 hook 配置不会覆盖先加载的 hook 配置, 多个 hook 配置会被拼接; 一个事件有多个 hook 时, 按 yaml 中的顺序逐个执行
 
-<!-- 源码: src/config/config.ts HookConfigSchema -->
-
 ```yaml
 hooks:
   - event: post_tool_use
@@ -29,8 +27,6 @@ hooks:
       command: "prettier -w $YUKINO_FILE_PATH"
 ```
 
-<!-- 源码: src/hooks/hooks.ts 环境变量 YUKINO_EVENT, YUKINO_TOOL, YUKINO_FILE_PATH -->
-
 每当 Agent 调用 WriteFile 工具写文件后, 自动 format 代码
 
 - 事件: post_tool_use
@@ -38,8 +34,6 @@ hooks:
 - 动作: format 代码
 
 ## 事件
-
-<!-- 源码: src/hooks/hooks.ts EventName 类型定义 -->
 
 ### 会话级
 
@@ -93,17 +87,11 @@ hooks:
     reject: true
 ```
 
-<!-- 源码: src/hooks/hooks.ts -->
-
 reject: true 是 pre_tool_use 事件的特殊字段, reject: true 时, 工具调用被拒绝, CLI 将 hook 抛出的错误 reason 作为工具调用结果 `{ content: reason, isError: true }` 返回给 LLM, LLM 调整策略
 
 pre_tool_use 事件的动作默认同步执行 (`async: false`)、阻塞等待返回值, 检查是否拒绝
 
-<!-- 源码: src/hooks/hooks.ts reject 仅在 pre_tool_use 事件中断循环 -->
-
 ## 条件
-
-<!-- 源码: src/hooks/hooks.ts evaluateSingleCondition -->
 
 - == 等于, equal match
 - != 不等于, not equal match
@@ -119,11 +107,7 @@ pre_tool_use 事件的动作默认同步执行 (`async: false`)、阻塞等待�
 - message 匹配 ctx.message
 - 其他变量名在工具参数字典 ctx.args 中按 key 查找, 例如 path 匹配 args.path, command 匹配 args.command
 
-<!-- 源码: src/hooks/hooks.ts getContextValue -->
-
 ## 动作
-
-<!-- 源码: src/hooks/hooks.ts executeAction -->
 
 四种动作执行器
 
@@ -140,17 +124,11 @@ action:
   command: "prettier -w $YUKINO_FILE_PATH"
 ```
 
-<!-- 源码: src/hooks/hooks.ts executeAction command 分支 -->
-
 - 执行 shell 命令, shell 命令执行前会设置环境变量 YUKINO_EVENT, YUKINO_TOOL, YUKINO_FILE_PATH
 - 启动一个 shell 子进程执行命令, 拿到输出和退出码
 - timeout 字段指定命令超时时间
 
-<!-- 源码: src/hooks/hooks.ts timeout 硬编码 30000ms, HookConfigSchema 没有 timeout 字段 -->
-
 ### prompt
-
-<!-- 源码: src/hooks/hooks.ts executeAction prompt 分支 -->
 
 ```yaml
 action:
@@ -164,16 +142,12 @@ action:
 
 ### http
 
-<!-- 源码: src/hooks/hooks.ts executeAction http 分支 -->
-
 ```yaml
 action:
   type: http
   url: https://api.example.com
   method: POST
 ```
-
-<!-- 源码: src/hooks/hooks.ts http 请求体固定为 JSON.stringify(context), HookConfigSchema 没有 body 字段 -->
 
 发送 http 请求, 请求体是 HookContext 的 json 字符串 (包含 event, toolName, args, filePath, message 字段), 场景有: 发送 App 通知、日志收集、监控报警
 
@@ -184,8 +158,6 @@ action:
   type: agent
   prompt: "review 刚刚写入的 $YUKINO_FILE_PATH 是否有安全漏洞"
 ```
-
-<!-- 源码: src/hooks/hooks.ts executeAction agent 分支 -->
 
 启动 subagent, 见 subagents
 
@@ -198,8 +170,6 @@ action:
   - fail 标记 hook 执行错误
   - reject 拒绝工具调用
 - 错误捕获: hook 执行错误不能中断 Agent
-
-<!-- 源码: src/hooks/hooks.ts on_error 处理逻辑 -->
 
 ```yaml
 hooks:
@@ -222,8 +192,6 @@ hooks:
 
 事件触发时, 创建一个 HookContext 对象, 包含事件的上下文信息:
 
-<!-- 源码: src/hooks/hooks.ts HookContext 接口定义 -->
-
 HookContext 属性:
 
 - event 事件名 $YUKINO_EVENT
@@ -231,8 +199,6 @@ HookContext 属性:
 - args 工具参数字典
 - filePath 文件路径 $YUKINO_FILE_PATH
 - message 消息内容
-
-<!-- 源码: src/hooks/hooks.ts 暴露 YUKINO_EVENT, YUKINO_TOOL, YUKINO_FILE_PATH 环境变量 -->
 
 ## 示例配置
 

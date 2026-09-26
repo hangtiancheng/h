@@ -28,8 +28,6 @@ curl https://api.deepseek.com/anthropic/v1/messages \
 
 响应 Demo
 
-<!-- 源码: src/llm/anthropic.ts (usage 字段) -->
-
 ```json
 {
   "id": "<uuid-v4>", // equals to signature
@@ -78,8 +76,6 @@ message_start 整个响应开始, 携带 input_tokens 输入 token 数、cache_r
 message_delta 消息增量 (output_tokens 输出 token 数, stop_reason 停止原因)
 message_stop 整个响应结束
 ```
-
-<!-- 源码: src/llm/events.ts (StreamEvent) -->
 
 封装层将 LLM API 的 SSE 事件映射到 CLI 的 StreamEvent:
 
