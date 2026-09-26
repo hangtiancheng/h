@@ -4,7 +4,7 @@ import { WcResumeElement } from "./wc-resume";
 import type { ToggleLocaleEvent } from "./resume-header";
 
 export const ReactResume = createComponent({
-  tagName: "resume-view",
+  tagName: "wc-resume",
   elementClass: WcResumeElement,
   react: React,
   events: {
