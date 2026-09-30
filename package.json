@@ -1,0 +1,69 @@
+{
+  "name": "homepage",
+  "version": "0.0.0",
+  "private": true,
+  "packageManager": "pnpm@12.4.2",
+  "description": "homepage",
+  "keywords": [
+    "@yukino.js",
+    "hangtiancheng",
+    "homepage"
+  ],
+  "license": "MIT",
+  "author": "https://github.com/hangtiancheng",
+  "type": "module",
+  "scripts": {
+    "turbo": "turbo run build",
+    "dev": "next dev",
+    "build": "pnpm typecheck && next build",
+    "typecheck:chunk": "tsc -p tsconfig.build.json --noEmit",
+    "format": "prettier -w ./ --experimental-cli",
+    "lint": "eslint --fix --cache --quiet .",
+    "build:chunk": "tsc -p tsconfig.build.json",
+    "build:go": "go build ./...",
+    "typecheck": "next typegen && tsc --noEmit",
+    "git:commit": "git add -A && git commit -m \"feat: Introduce new features\"",
+    "git:commit:skip": "git add -A && git commit -m \"feat: Introduce new features [skip ci]\"",
+    "git:push": "pnpm git:commit && git push origin main",
+    "git:push:skip": "pnpm git:commit:skip && git push origin main"
+  },
+  "lint-staged": {
+    "*.{json,jsonc,js,cjs,mjs,jsx,ts,cts,mts,tsx,html,vue,css,scss,md,mdx}": [
+      "pnpm format"
+    ]
+  },
+  "dependencies": {
+    "@fumadocs/base-ui": "^16.15.15",
+    "@paper-design/shaders-react": "^0.0.81",
+    "class-variance-authority": "^0.7.1",
+    "cn": "^0.3.3",
+    "fumadocs-core": "^16.15.15",
+    "fumadocs-mdx": "^15.4.5",
+    "lucide-react": "^1.48.0",
+    "marked": "^18.0.14",
+    "mermaid": "^12.0.0",
+    "next": "^16.3.6",
+    "next-themes": "^0.4.6",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/mdx": "^2.0.14",
+    "@types/node": "^24.19.0",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "eslint": "^10.11.0",
+    "globals": "^17.12.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.6.0",
+    "postcss": "^8.5.28",
+    "prettier": "^3.9.9",
+    "tailwindcss": "^4.3.3",
+    "tailwindcss-animate": "^1.0.7",
+    "turbo": "^2.11.5",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.71.0"
+  }
+}

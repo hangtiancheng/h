@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": false,
+    "experimentalDecorators": true,
+    "noCheck": true,
+    "noEmit": false,
+    "outDir": "./dist",
+    "rootDir": "./",
+    "sourceMap": true
+  },
+  "exclude": ["node_modules", "dist", "chucks/**/*.test.ts"],
+  "extends": "./tsconfig.json",
+  "include": ["chucks/**/*.ts", "chucks/**/*.js"]
+}

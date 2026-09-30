@@ -1,0 +1,16 @@
+{
+  "root": true,
+  "title": "base",
+  "pages": [
+    "index",
+    "agent",
+    "agent2",
+    "agent3",
+    "css",
+    "git",
+    "go",
+    "js",
+    "linux",
+    "network"
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "title": "agent",
+  "pages": [
+    "agent-team",
+    "agents-md-and-memory",
+    "context-compaction",
+    "function-calling",
+    "hook",
+    "llm",
+    "mcp",
+    "permission",
+    "react-and-agent-loop",
+    "skills",
+    "slash-command",
+    "subagent",
+    "system-prompt",
+    "what-is-an-agent",
+    "worktree"
+  ]
+}
