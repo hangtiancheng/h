@@ -3,9 +3,9 @@
   "title": "base",
   "pages": [
     "index",
+    "yukino",
     "agent",
     "agent2",
-    "agent3",
     "css",
     "git",
     "go",

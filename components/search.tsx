@@ -26,7 +26,7 @@ import { useTreeContext } from "@fumadocs/base-ui/contexts/tree";
 import { useDocsSearch } from "fumadocs-core/search/client";
 import { staticClient } from "fumadocs-core/search/client/orama-static";
 import type { Item, Node } from "fumadocs-core/page-tree";
-import { cn } from "@/lib/cn";
+import { cn } from "cn";
 
 const items = [
   {

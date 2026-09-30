@@ -1,4 +1,4 @@
 {
-  "title": "agent2",
+  "title": "yukino-agent2",
   "pages": ["context", "llm", "mcp", "observable", "rag", "workflow"]
 }

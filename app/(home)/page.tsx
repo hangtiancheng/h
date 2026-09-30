@@ -2,7 +2,7 @@ import { AppWindow, Library, Server } from "lucide-react";
 import Link from "next/link";
 import { cva } from "class-variance-authority";
 import { Hero } from "@/app/(home)/page.client";
-import { cn } from "@/lib/cn";
+import { cn } from "cn";
 import { gitConfig } from "@/lib/shared";
 import { source } from "@/lib/source";
 

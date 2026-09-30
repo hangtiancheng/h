@@ -1,0 +1,27 @@
+{
+  "title": "yukino",
+  "pages": [
+    "a2a",
+    "acp",
+    "agent-team",
+    "agents-md-and-memory",
+    "code-review",
+    "context-compaction",
+    "function-calling",
+    "hook",
+    "llm",
+    "mcp",
+    "permission",
+    "print-mode",
+    "react-and-agent-loop",
+    "remote",
+    "sandbox",
+    "skills",
+    "slash-command",
+    "subagent",
+    "system-prompt",
+    "telemetry",
+    "what-is-an-agent",
+    "worktree"
+  ]
+}
