@@ -6,10 +6,12 @@ Slash Command: 以 / 开头的输入会被命令解析器拦截
 
 ## 命令的分类
 
-- local: 不参与 agent loop
-- local_ui: 不参与 agent loop, 需要重新渲染 UI
-- prompt: 参与 agent loop, CLI 负责构造 prompt
-- skill_fork: skill 加载后自动注册为 Slash Command (prompt 命令)
+四种命令类型 (源码: src/commands/commands.ts)
+
+- local: 不参与 agent loop, 不需要重新渲染 UI, handler 返回的字符串直接作为系统消息展示
+- local_ui: 不参与 agent loop, 需要 UI 处理 (打开对话框、切换模式、重载状态)
+- prompt: 参与 agent loop, handler 构造 prompt 作为用户消息发送给 LLM API
+- skill_fork: skill 加载后自动注册的 fork 型命令, UI 构造 fork host 执行
 
 > 不参与 agent loop != 不调用 LLM API
 >
@@ -17,90 +19,63 @@ Slash Command: 以 / 开头的输入会被命令解析器拦截
 
 命令拦截时机: 消息发送给 LLM API 前, 用户按下回车, 先判断输入是不是命令, 如果是命令则走命令处理逻辑, 不是命令才发送给 LLM API
 
-## local 命令
+解析规则: 以 `/` 开头; 首个空白之前是命令名, 之后是 args; 命令名包含 `/` 时视为文件路径, 按普通用户消息处理; 同名注册直接抛错 (先注册者赢)
 
-`/help` 打印帮助信息
+## 内置命令清单
 
-```txt
-- /help, /h, /?   打印帮助信息
-- /compact, /c    压缩上下文
-- /clear          清除对话历史
-- /plan, /p       切换到 plan 模式
-- /session        会话管理
-- /memory         记忆管理
-- /permission     权限管理
-- /status, /s     打印状态信息
-- /review         代码审查
+| 命令                   | 类型     | 行为                                                                                 |
+| ---------------------- | -------- | ------------------------------------------------------------------------------------ |
+| /login                 | local_ui | 打开表单配置、保存并激活一个 LLM provider                                            |
+| /provider              | local_ui | 切换当前 provider (仅终端 UI 注册)                                                   |
+| /model [model]         | local_ui | 切换当前 provider 的模型; 无参数时打开模型选择器                                     |
+| /help [command]        | local    | 列出全部命令 (不含 skill), 或单个命令的详情                                          |
+| /status                | local    | 当前会话状态: 模式、模型、provider、token、工具、沙箱、记忆、skills、MCP、会话、目录 |
+| /session               | local    | 确认当前会话活跃; 历史会话用 /resume                                                 |
+| /memory                | local    | 列出记忆; `/memory clear` 清空记忆                                                   |
+| /skills                | local_ui | 列出 skills; `/skills reload` 从磁盘热重载                                           |
+| /skill `<name>` [args] | -        | 按名运行 skill (等价于 `/<name> [args]`; `/skill reload` 路由到 /skills reload)      |
+| /plan                  | local_ui | 进入 plan 模式 (只读调查)                                                            |
+| /compact               | local_ui | 强制上下文压缩                                                                       |
+| /clear                 | local_ui | 重置会话并清屏                                                                       |
+| /resume [id]           | local_ui | 列出或恢复历史会话                                                                   |
+| /rewind                | local_ui | 打开检查点回退对话框 (见 agents-md-and-memory 的文件历史)                            |
+| /sandbox [mode]        | local_ui | 配置沙箱: auto (开启+自动放行) / manual (开启+手动确认) / off                        |
+| /worktree              | local_ui | 列出 git worktrees                                                                   |
+| /mcp                   | local    | 显示 MCP server 连接状态; `/mcp reload` 重读配置并 reconcile                         |
+| /thinking [level]      | local    | 无参数打开思考强度选择器; 带参数设置 (off...max), 持久化到 config.yaml               |
+| /code-review           | local_ui | 打开代码审查表单 (workspace / branch-range / commit)                                 |
+| /quit                  | local_ui | 退出                                                                                 |
 
-输入 /help <命令名> 查看详细用法
+## 用户自定义命令
+
+两层目录, 按顺序加载, 同名项目级赢
+
+1. 用户级: ~/.yukino/commands/
+2. 项目级: ${workDir}/.yukino/commands/
+
+格式: 递归扫描 `*.md` 文件; 子目录命名空间化 (`sub/dir/foo.md` 注册为 `sub:dir:foo`); 路径段小写、空格转 `-`; 与内置命令冲突时保留内置
+
+```md
+---
+description: 生成周报
+argument-hint: [本周重点]
+---
+
+请根据本周的 git log 生成一份周报, 重点关注:
+$ARGUMENTS
 ```
 
-`/compact` 手动触发上下文压缩, `/compact [description]` 指定上下文保留重点; 如果当前上下文窗口 <= 5k token, 直接提示无需压缩
+- frontmatter 只支持 `description` 和 `argument-hint` (解析失败时忽略 frontmatter, 保留正文)
+- 自定义命令固定是 prompt 类型, `$ARGUMENTS` 占位符替换用户参数
+- description 缺省是 "custom command"
 
-`/session` 会话信息
+## 使用频率追踪
 
-- `/session` 打印当前会话信息
-- `/session list` 打印历史会话列表
-- `/session resume <id>` 切换到指定 ID 的会话
-- `/session new` 开启新会话
-- `/session delete <id>` 删除指定 ID 的会话
+`CommandUsageTracker` 将命令使用记录持久化到 `${workDir}/.yukino/command_usage.json` (usageCount + lastUsedAt):
 
-`/memory` 记忆管理
-
-- `/memory list` 打印记忆列表
-- `/memory add <content>` 添加一条记忆
-- `/memory clear` 清空记忆, 需要用户确认
-
-`/permission` 权限管理
-
-- `/permission` 打印权限模式和生效的权限规则数量
-- `/permission mode <plan | default | acceptEdits | bypassPermissions>` 切换权限模式
-- `/permission rules` 打印生效的权限规则列表
-- `/permission add <rule> <effect>` 添加一条本地权限规则
-- `/permission reset` 重置本地权限规则
-
-`/status` 打印当前状态
-
-```txt
-Yukino Status
-──────────────
-  Mode:      default
-  Tokens:    45230 in / 1200 out
-  Tools:     6 enabled
-  Memories:  8 entries
-  Model:     claude-sonnet-4-20250514
-  Directory: /path/to/project
-```
-
-`/skills` skill 管理
-
-- `/skills list` 打印 skill 列表
-- `/skills info <name>` 打印指定 skill 的 frontmatter 和路径
-- `/skills reload` 重新扫描并加载所有 skill
-
-`/mcp` MCP 服务器连接状态
-
-- `/mcp` 打印 MCP 服务器连接状态
-
-`/code-review` 代码审查 agent team 管理
-
-- `/code-review`, `/cr` 管理代码审查 agent team
-- `/cr create` TODO
-- `/cr add <name>` TODO
-- `/cr remove <name>` TODO
-- `/cr list` TODO
-- `/cr status` TODO
-
-## local_ui 命令
-
-- `/clear` 开启新对话, 关闭当前会话, 持久化到磁盘的 jsonl 会话日志
-- `/compact, /c` 强制上下文压缩
-- `/plan, /p` 切换 plan 模式 (toggle), `/plan [description]` 指定任务描述
-- `/quit, /exit, /q` 退出 Yukino
-- `/resume, /r` 恢复以前的会话
-- `/rewind` 回退对话到以前的检查点
-- `/worktree, /wt` 管理 git worktree
+- 得分 = 使用次数 × recency 权重 (半衰期 7 天, 下限 0.1)
+- 输入补全时按得分取最近使用的 5 个命令优先展示
 
 ## prompt 命令
 
-`/review` CLI 将预设的代码审查 prompt 发送给 LLM API, 分析未提交的代码变更, `/review [description]` 指定代码审查重点; prompt 命令消耗 token
+prompt 类型的命令由 CLI 构造 prompt 发送给 LLM API, 消耗 token; 来源有两类: 用户自定义命令 (上文) 和自动注册的 inline skill (见 skills)

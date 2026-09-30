@@ -94,82 +94,140 @@ LLM 负责决策, 请求调用工具; CLI 负责执行工具调用, 将工具调
 
 ## 工具接口设计
 
-- 身份信息: name, description, schema (input_schema)
-- 元信息
-  - category 分类 (read / write / command)
-  - deferred? 延迟加载 (例如 MCP 工具)
-  - isConcurrencySafe?(args) 工具调用是否可以并发执行 (未指定 isConcurrencySafe 时 fallback 到 category === "read")
-- 行为: schema()、execute()
-
 ```ts
+export type ToolCategory = "read" | "write" | "command";
+
+export interface Tool {
+  // 身份信息
+  name: string;
+  description: string;
+  schema(): ToolSchema; // input_schema
+  // 元信息
+  category: ToolCategory; // 分类, 权限矩阵和并发默认值的依据
+  deferred?: boolean; // 延迟加载 (只有 MCP 工具为 true, 内置工具永不 defer)
+  isConcurrencySafe?(args): boolean; // 本次实参是否可并发 (缺省 fallback 到 category === "read")
+  // 行为
+  execute(ctx: ToolContext, args: Record<string, unknown>): Promise<ToolResult>;
+}
+
 export interface ToolResult {
   output: string;
-  // 多模态工具调用结果: 可选的富内容块 (图片、文档等)
+  // 多模态工具调用结果: 可选的富内容块
   contentBlocks?: ToolResultContentBlock[];
   // 工具执行失败对于 LLM 是有价值的反馈, 提示 LLM 调整策略
   isError: boolean;
 }
 ```
 
+- contentBlocks 支持的类型: text、image (base64 的 jpeg/png/gif/webp 或 url)、document (base64 PDF / 纯文本 / url)、tool_reference (native 延迟加载展开)、search_result
+- ToolContext: workDir、toolCallId、sessionId、abortSignal、taskManager (后台任务, null 显式禁用)、fileHistory (文件快照)、fileStateCache (读写门禁)、permissionChecker、onPermissionRequest 等
+
+## 内置工具
+
+| 工具            | 分类    | 只读 | 破坏性 | 场景                 |
+| --------------- | ------- | ---- | ------ | -------------------- |
+| ReadFile        | read    | 是   | 否     | 读文件/读图片        |
+| WriteFile       | write   | 否   | 否     | 创建或重写文件       |
+| EditFile        | write   | 否   | 否     | 精确替换修改文件     |
+| Bash            | command | 否   | 是     | 执行 shell 命令      |
+| PowerShell      | command | 否   | 是     | Windows/pwsh 命令    |
+| Glob            | read    | 是   | 否     | 查找文件名           |
+| Grep            | read    | 是   | 否     | 查找文件内容         |
+| WebFetch        | read    | 是   | 否     | 抓取 URL 转 Markdown |
+| ComputerUse     | command | 否   | 是     | 操作本机 GUI         |
+| AskUserQuestion | read    | 是   | 否     | 向用户提选择题       |
+
 ### ReadFile
 
 - properties: file_path, offset, limit
 - 元信息: 只读、非破坏性, `category: read`
-- 行号: 读文件需要带行号前缀, 方便定位代码位置 `"1\tfunction main() {\n2\t  console.log(\"javascript newbie\")\n3\t}"`
-- 大文件: 支持 offset 和 limit 参数, offset 默认 0, limit 默认 2000, 指定从第 offset 行开始读、读 limit 行, 使得 LLM 可以分段读文件
-- 二进制文件: 通过读文件的前 512 字节, 如果包含 NUL 字符 (\x00), 则判定为二进制文件并拒绝读取, 提示 LLM 使用 bash 工具处理
+- 行号: 读文件需要带行号前缀 `"1\tfunction main() {\n2\t..."` (1-based), 方便定位代码位置
+- 大文件: offset 默认 0 (0-based), limit 默认 2000, 分段读文件; 尾部追加 `[N more lines in file. Use offset=X to continue.]`
+- 输出预算: 单次输出上限 50KB; 整文件读取的准入上限 10MB (超过提示改用 Grep/head/tail)
+- 图片: 按扩展名 (png/jpg/jpeg/gif/webp) 识别, 返回 `[Image: mediaType]` + base64 image 内容块, 忽略 offset/limit
+- 读后校验: 重新 stat 比对 mtime/size, 读取期间文件被改则拒绝注册缓存并报错; 成功则 `fileStateCache.record(path, mtimeMs)`
 
-### WriteFile
+### WriteFile / EditFile
+
+WriteFile
 
 - properties: file_path, content
-- 元信息: 非只读、非破坏性, `category: write`
-- 创建或重写, 创建时需要递归的创建父目录
+- 创建或重写, 创建时递归创建父目录
+- 读写门禁: 文件已存在 (或已在缓存中) 时, 必须先 ReadFile 才允许写; 全新文件跳过门禁
+- 成功输出 `Successfully wrote to <path> (N lines)`
 
-### EditFile
+EditFile
 
 - properties: file_path, old_string, new_string, replace_all
-- 元信息: 非只读、非破坏性, `category: write`
-- 如果 replace_all === false, 则 old_string 必须唯一匹配
-  - 如果匹配多个, 报错提示: 该 old_string 匹配 N 个, 请提供更多的上下文使得 old_string 唯一匹配
-  - 如果没有找到, 说明 LLM 记忆的文件内容可能过时
-- 替换成功后, 返回 "Successfully edited ${filePath}", 提供给 LLM 确认修改是否正确
+- old_string == new_string 直接报错; replace_all === false 时 old_string 必须唯一匹配
+  - 匹配多个: `Error: old_string found N times in file. It must be unique. Add more surrounding context, or set replace_all to true`
+  - 没有找到: `Error: old_string not found in file`, 说明 LLM 记忆的文件内容可能过时 (file-state-cache 会给出「文件已被修改, 重新读取」的提示)
+- 成功输出包含 diff (前后缀公共行算法, 上下文 3 行, 200 行截断) 和 additions/removals 计数
 - new_string 为空, 表示删除 old_string
+- 替换使用函数形式避免 `$&` 等特殊替换; 写操作按 realpath 经文件互斥队列串行化, 不同文件并发
+- 写前 fileHistory.trackEdit 备份原内容 (支持 /rewind 回退)
 
-### Bash
+### Bash / PowerShell
 
-- properties: command, timeout
-- 元信息: 非只读、破坏性, `category: command`
-- 工作目录: 项目根目录, 超时: 120s
-- 输出: stdout、stderr 合并到一个流; 输出过长时截断, 保留前面的部分和截断标记
-- 命令退出码的语义
-  - 默认非 0 退出码 isError: true
-  - grep 退出码 1 表示: 没有找到匹配, 退出码 >=2 视为 error
-  - diff 退出码 1 表示文件有差异, 退出码 >=2 视为 error
+Bash
+
+- properties: command, timeout, run_in_background
+- 工作目录: 项目根目录; 超时默认 120s, 上限 600s (超过钳制)
+- 并发安全: `isConcurrencySafe(args) = isSafeCommand(command)` (权限层的安全命令白名单, 元字符命令不并发)
+- 执行: `spawn("bash", ["-c", command])`, detached 独立进程组; stdout+stderr 直写共享 fd (输出不经过 JS 堆, 后台化只是记账切换)
+- 终止: SIGTERM, 3s 宽限后 SIGKILL; kill 整个进程组
+- 输出: 前台截断上限 10MB, 后台任务 5GB; 500ms 轮询文件大小的 watchdog; UTF-8 安全截断
+- 后台机制: `run_in_background: true` 显式后台 / Ctrl+B 手动转后台 / 超时自动转后台 (裸 sleep 命令不自动转, 防止把 sleep 循环当任务); 后台输出写入会话目录的 `shell-<hex>.output` 文件, 完成通知的正文预算 30KB, 超过则通知携带文件路径 + 预览
+- 退出码提示: 非零退出码附加语义提示 (grep/rg 的 1 是没有匹配, diff 的 1 是文件有差异, git 的 128 是 fatal, 126/127/130/137/143 等通用信号码)
+
+PowerShell
+
+- win32 用 `powershell.exe`, 其他平台用 `pwsh`; Windows 推荐用它替代 Bash
+- 参数 `-NoProfile -NonInteractive -ExecutionPolicy Bypass -Command`, 输出编码强制 UTF-8
+- 进程树终止用 `taskkill /T`; 没有沙箱包装 (OS 沙箱只包 bash)
 
 ### Glob
 
 - properties: pattern, path
-- 元信息: 只读、非破坏性, `category: read`
-- glob 查找文件名
-- 搜索结果按修改时间倒序排序, 最新修改的排在前面
-- 最多返回 1000 个匹配结果
+- glob 查找文件名; 搜索结果按修改时间倒序, 同 mtime 字典序; 最多返回 1000 个匹配结果
+- 默认包含 dotfiles, 跳过固定目录 (.git/.yukino/.agents/node_modules/dist/\_\_pycache\_\_ 等), 符号链接目录不下钻
+- 无匹配输出 "No files matched the pattern."
 
 ### Grep
 
 - properties: pattern, path, include
-- 元信息: 只读、非破坏性, `category: read`
-- grep 找文件内容
-- 输出格式: 文件路径:行号:匹配的内容
-- 最多返回 500 个匹配结果
+- grep 找文件内容; 输出格式 `文件路径:行号:匹配的内容` (1-based); 最多返回 500 个匹配行
+- 正则是 JS 风格, 大小写不敏感 (iu 标志); `\w`、`\b`、`\d` 重写为 Unicode property escapes 以支持 CJK
+- include 是 minimatch glob: 裸模式 (无 /) 匹配任意深度的文件名, 含 / 匹配 workDir 相对路径
+- 二进制检测: 前 8KB 嗅探 NUL 字符; 超过 25MB 的文件跳过; 遍历上限 10000 个条目 / 深度 25
 
-| 工具      | 分类    | 只读 | 破坏性 | 场景            |
-| --------- | ------- | ---- | ------ | --------------- |
-| ReadFile  | read    | 是   | 否     | 读文件          |
-| WriteFile | write   | 否   | 否     | 创建或重写文件  |
-| EditFile  | write   | 否   | 否     | 修改文件        |
-| Bash      | command | 否   | 是     | 执行 shell 命令 |
-| Glob      | read    | 是   | 否     | 查找文件名      |
-| Grep      | read    | 是   | 否     | 查找文件内容    |
+### WebFetch
+
+- properties: url
+- 仅 http/https; 重定向自动跟随, 最终 URL 不同时输出前缀 `[Redirected to ...]`
+- 上限: 单响应 10MB (content-length 预检 + 实际字节复检), fetch 超时 60s, Markdown 截断 100k 字符
+- HTML → Markdown 用 turndown (移除 script/style); 二进制 content-type 拒绝
+- 缓存: 按 URL 15 分钟 TTL, 总预算 50MB, 插入序最旧先逐出
+
+### ComputerUse
+
+- 操作本机 GUI: 截图、点击、输入、滚动、缩放; 动作集包括 key、type、left_click、double_click、drag、scroll、screenshot、zoom、wait 等, 兼容 OpenAI 风格的批量 actions[] (单批 ≤100, 批后强制返回截图)
+- 平台实现: macOS 用 Swift helper + screencapture, Windows 用 PowerShell 编译 C# helper, Linux 用 xdotool + gnome-screenshot/scrot/import
+- 坐标空间: 截图缩放到 ≤1366x900, 动作坐标以缩放空间为准, 内部换算回物理像素
+- category 是 command, isConcurrencySafe 恒 false (GUI 操作必须串行)
+
+### AskUserQuestion
+
+- properties: `questions[1..4]`, 每题 `{ question, header (≤12 字符), options[2..4] { label, description? }, multiSelect }`
+- UI 弹出选择对话框, 自动追加 "Other" 自定义输入项; 返回 `Record<问题文本, 答案>`
+- 只在需要用户决策的材料性歧义时使用, 不重复请求已给出的授权
+
+## 工具注册的装配
+
+- 交互式 UI: createToolRegistry 注册 18 个基础工具, client 就绪后再注册 LoadSkill、InstallSkill、AskUserQuestion、Agent、SyntheticOutput 和团队工具 (TeamCreate、SpawnTeammate、SendMessage、ListTeams、TeamDelete、TaskStop)
+- remote: 17 个基础工具 (无 WebFetch) + LoadSkill/AskUserQuestion/团队工具/Agent
+- print 模式: 16 个 (无 todo/worktree/plan/skill/WebFetch)
+- teammate 进程: 实施类工具 + SendMessage + 团队任务工具, 无 Agent/TeamCreate/TeamDelete (调用树终止)
 
 ## 流式 tool_use 解析: 拼接 partialJson JSON 碎片
 
@@ -186,6 +244,7 @@ content_block_delta -> type: "input_json_delta", partial_json: ": \"/main.js\"}"
 content_block_stop
 ```
 
+- 碎片累积完成后统一 JSON.parse; 解析失败不中断循环, parseError 作为错误工具结果反馈给 LLM 自纠
 - tool_use 工具调用请求的 role 是 assistant, tool_result 工具调用结果的 role 是 user
 - 一条 assistant 消息可能同时包含 text 内容块和 tool_use 内容块, 必须在同一条 assistant 消息中, 不能拆成两条 assistant 消息
 - 如果一条 assistant 消息包含多个 tool_use 内容块, 即 LLM 请求同时调用多个工具, 则多个 tool_result 内容块必须在同一条 user 消息中, 通过 id 配对

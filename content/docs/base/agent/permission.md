@@ -10,29 +10,43 @@ title: "Permission"
 
 ## 多层防御
 
-1. 危险命令拦截, 例如 rm -rf / 绝对拒绝
-2. 路径沙箱: 工作目录外的文件操作需要用户确认
-   - 计算绝对路径
-   - 解析符号链接 TODO
-   - 检查路径前缀, 判断是否在工作目录内
-3. 权限规则
-   - `allow: ["Bash(git *)"]`
-4. 权限模式
-   - plan: 读放行, 写确认, shell 命令确认; 通过 prompt 约束 LLM 行为, 使得 LLM 只读
-   - default: 读放行, 写确认, shell 命令确认
-   - acceptEdits: 读写放行, shell 命令确认
-   - bypassPermissions: 绕过权限, 读/写/ shell 命令全部放行, 但仍然拒绝 rm -rf / 等危险命令
-5. HITL (Human-in-the-Loop): 人在回路, 用户确认
+权限系统 (src/permissions/index.ts) 的判定入口是 `PermissionChecker.check(toolName, args)`, 返回 `allow / ask / deny` 三种决策, ask 会触发 HITL 确认
 
-## 第 1 层: 命令分类 (安全命令自动放行 / 危险命令拦截)
+判定按以下顺序逐层进行, 前面的层命中即短路
 
-命令分类只针对 command 类工具 (Bash); ReadFile, WriteFile 工有路径沙箱保护
+1. 显式规则 (deny / ask 短路): 权限规则文件中命中的 deny 或 ask 规则立即返回; 显式 allow 规则故意不在这里短路, 放行到后面的层, 使得沙箱等层可以先介入
+2. plan 模式文件例外: plan 模式下, WriteFile/EditFile 的目标是 plan 文件时直接 allow (只读模式的唯一写例外)
+3. 安全只读命令放行: command 类工具 (Bash) 命中安全命令白名单时直接 allow
+4. 危险命令拦截: 预留层, 当前 `DANGEROUS_PATTERNS` 有意为空数组 (见下文)
+5. 沙箱自动放行: OS 沙箱开启且 `auto_allow: true` 时, Bash 命令在沙箱内执行, 免人工确认 (deny/ask 规则仍然生效)
+6. 路径沙箱: read/write 类工具的路径参数越出允许的根目录时返回 ask (bypassPermissions 模式跳过; 显式规则可以覆盖)
+7. 规则再评估: 第 1 层放行的显式 allow 规则在这里生效
+8. 权限模式矩阵兜底
 
-```js
-const DANGEROUS_PATTERNS: DangerousPattern[] = [];
-```
+## 权限模式
 
-**安全只读命令自动放行**: `SAFE_PREFIXES` 列举了一批只读命令前缀 (cat, echo, grep, head, ls, pwd, stat, tail, ...), `isSafeCommand` 判断命令是否以安全前缀开头, 并且拒绝包含任何 shell 元字符 (& | ; < > ` ( ) { } [ ] 等) 的命令, 防止通过管道/链式/重定向绕过
+四种权限模式 (Shift+Tab 循环切换, 初始值来自 config.yaml 的 `permission_mode`, 环境变量 `YUKINO_BYPASS_PERMISSIONS=1` 优先)
+
+| 模式              | 只读工具 (read) | 写工具 (write) | 命令工具 (command) |
+| ----------------- | --------------- | -------------- | ------------------ |
+| default           | Allow           | Ask            | Ask                |
+| acceptEdits       | Allow           | Allow          | Ask                |
+| plan              | Allow           | Ask            | Ask                |
+| bypassPermissions | Allow           | Allow          | Allow              |
+
+- plan 模式和 default 模式的权限矩阵相同, 区别在于 plan 模式通过每轮注入的 system-reminder 约束 LLM 只读, 并且 plan 文件的写入不需要确认
+- bypassPermissions 在权限层放行一切; 对危险命令的防护来自权限规则 (deny)、hook (pre_tool_use reject) 和 OS 沙箱, 而不是权限模式本身
+
+> 注意: 源码中 `DANGEROUS_PATTERNS` 是有意为空的数组, 没有 `rm -rf /` 之类的硬编码危险命令拦截; detectDangerous 层保持惰性, 直到添加具体的模式
+
+## 第 3 层: 安全命令白名单
+
+命令分类只针对 command 类工具 (Bash); ReadFile、WriteFile 有路径沙箱保护
+
+`SAFE_PREFIXES` 包含约 110 个字符串前缀和约 70 条正则:
+
+- 字符串前缀: cat, echo, grep, head, ls, pwd, stat, tail, wc, diff, find 之外的只读命令 (basename, cksum, cut, df, du, jq, md5, ps, uname, which, ...)
+- 正则项覆盖带子命令语义的只读形态: `git status/log/diff/show/blame/ls-files/rev-parse` 等只读子命令、`npm/pnpm/yarn` 的查询子命令、各语言工具链的 `--version`、`docker/kubectl` 的只读子命令、`find` (禁止 -delete/-exec)、PowerShell 只读 cmdlet (Get-\*/Select-\*/Test-Path, 大小写不敏感) 等
 
 ```js
 // 源码: src/permissions/index.ts
@@ -43,146 +57,77 @@ export function isSafeCommand(command: string): boolean {
     return false;
   }
   return SAFE_PREFIXES.some((prefix) => {
-    // 字符串前缀精确匹配, 或正则匹配
+    // 字符串前缀: 全等或后跟空格/Tab; 正则: 每次匹配前重置 lastIndex
     ...
   });
 }
 ```
 
-命中 `isSafeCommand` 的命令直接 `allow` (reason: "Safe read-only command"), 不需要用户确认; 未命中的命令继续走后续沙箱、规则、权限模式、HITL
+- 元字符拒绝集: CR、LF、`&`、`|`、`;`、`<`、`>`、反引号、`(`、`)`、`{`、`}`、`[`、`]`, 命中任意一个即不安全, 防止通过管道/链式/重定向/命令替换绕过白名单
+- 命中 `isSafeCommand` 的命令直接 allow (reason: "Safe read-only command"), 不需要用户确认
+- Bash 工具的并发安全判定复用同一个函数: `isConcurrencySafe(args) = isSafeCommand(command)`
 
-## 第 2 层: 路径沙箱
+## 第 6 层: 路径沙箱
 
-- 计算绝对路径 (通过 path.resolve)
-- 解析符号链接
-- 检查路径前缀, 判断是否在允许的目录内
-- 默认允许两个目录
+- 允许的根目录默认两个
   - 项目根目录 (启动 Agent 的工作目录)
-  - 系统临时目录 (`os.tmpdir()`, MacOS 是 /var/folders, /tmp, Linux 是 /tmp, /var/tmp)
+  - 系统临时目录 (`os.tmpdir()`, macOS 是 /var/folders/... 而不是 /tmp, Linux 是 /tmp)
+- 检查流程: `path.resolve(projectDir, filePath)` 计算绝对路径 → `realpathSync` 解析符号链接 (支持尾部不存在的父目录逐级回退) → `path.relative` 判断是否在某个根内
+- write 类工具先查 deny-write 列表 (默认为空)
+- 越界时返回 ask (deny 会太激进, 用户可能确实需要写外部路径), bypassPermissions 模式跳过该层; ask 之前先重查一次显式规则, 显式规则可以覆盖沙箱决策
 
-## 第 3 层: 权限规则
+## 权限规则
 
-权限规则
+权限规则回答这类需求
 
 - 允许执行 git push, 但不允许执行 `git push --force`
 - 允许读取 src/ 目录下的文件, 但不允许读取 .env 文件
 - 允许运行 pnpm lint, 但不允许运行 pnpm lint:fix
 
-### Claude jsonl 配置
+两个规则文件, 按顺序加载后统一裁决
 
-```jsonl
-// 权限规则 (json)
-{
-  "permissions": {
-    "allow": ["Bash(pnpm add *)", "Bash(pnpm dev)"]
-  }
-}
+- 用户级 `~/.yukino/permissions.yaml`
+- 项目级 `${workDir}/.yukino/permissions.yaml`
 
-// 权限模式 (json)
-{
-  "permissions": {
-    "defaultMode": "auto"
-  },
-}
-```
-
-- 本地规则 .yukino/permissions.local.yaml (优先级最高)
-- 项目规则 .yukino/permissions.yaml
-- 全局规则 ~/.yukino/permissions.yaml (优先级最低)
+格式是顶层 YAML 列表, 每项三个字段
 
 ```yaml
-# 权限规则 (yaml)
 - rule: Bash(git *)
   effect: allow
 
 - rule: Bash(git push --force*)
   effect: deny
 
-- rule: ReadFile(/path/to/src/*)
-  effect: allow
-
 - rule: ReadFile(*.env*)
   effect: deny
 
-- rule: EditFile(*.ts)
+- rule: EditFile(src/*)
   effect: allow
 ```
 
-```js
-function evaluate(toolName, content) {
-  for (const path of [userPath, projectPath, localPath]) {
-    const rules = loadRulesFile(path);
-    // 从后往前遍历, 后面的规则覆盖前面的规则
-    for (let i = rules.length - 1; i >= 0; i--) {
-      const r = rules[i];
-      if (r.tool !== toolName && r.tool !== "*") continue;
-      if (globMatch(r.pattern, content)) {
-        return r.effect; // 返回 "allow" 或 "deny"
-      }
-    }
-  }
-  return null; // 无匹配规则
-}
-```
+- `rule` 的语法是 `Tool(pattern)`, Tool 是工具名或 `*`, pattern 是 glob
+- `effect` 枚举: allow / deny / ask
+- 裁决优先级: deny > ask > allow, 跨文件、跨行统一裁决 (deny 立即返回, ask 覆盖 allow), 与文件加载顺序和行顺序无关
+- glob 语义: `*` 匹配任意字符串 (包括 `/`), `?` 匹配单个字符
+- 格式非法的条目跳过, 不中断加载; 规则文件按 mtime+size 缓存
 
-## 第 4 层: 权限模式
+### 「始终允许」
 
-- plan: 读放行, 写确认, shell 命令确认; 通过 prompt 约束 LLM 行为, 使得 LLM 只读
-- default: 读放行, 写确认, shell 命令确认
-- acceptEdits: 读写放行, shell 命令确认
-- bypassPermissions: 绕过权限, 读/写/ shell 命令全部放行, 但仍然拒绝 rm -rf / 等危险命令
+HITL 确认对话框提供「Yes, and don't ask again for this pattern」选项; 用户选择后, CLI 生成一条 allow 规则追加到项目级规则文件 (`.yukino/permissions.yaml`):
 
-| 模式              | 只读工具 (read) | 写工具 (write) | 命令工具 (command) |
-| ----------------- | --------------- | -------------- | ------------------ |
-| default           | Allow           | Ask            | Ask                |
-| acceptEdits       | Allow           | Allow          | Ask                |
-| plan              | Allow           | Ask            | Ask                |
-| bypassPermissions | Allow           | Allow          | Allow              |
+- ReadFile/WriteFile/EditFile: pattern 是目标文件的父目录 + `/*`
+- 其他工具: pattern 是参数内容的前 1-2 个词 + `*`
+- 追加前按 `{tool, pattern, effect}` 去重, 整个文件用 yaml.dump 重写
 
-## 第 5 层: HITL 人在回路
+## HITL 人在回路
 
-前 4 层都无法确认时, 权限系统会阻塞 agent loop, 弹出对话框让用户确认; 提供「始终允许」选项; 需要确认时, 发送一个权限请求 (permission_request) 事件到事件流, 阻塞等待用户确认; 如果用户选择「始终允许」, 则会将新规则 (CLI 生成) 追加到本地配置文件
+前面的层都无法确认时 (决策是 ask), agent loop 阻塞, 通过 `onPermissionRequest` 回调发起权限请求:
 
-权限被拒绝时, 将权限拒绝作为一个 `isError: true` 的工具调用结果返回给 LLM, agent loop 继续运行; LLM 在下一轮 agent loop turn 中看到这个工具调用错误, 调整策略
+1. `describeToolAction` 从工具参数中提取人类可读的描述 (Bash → command、ReadFile/WriteFile/EditFile → file_path、Glob/Grep → pattern、ComputerUse → action、McpCall → server\_\_tool), 展示在确认对话框中
+2. 权限请求作为 `permission_request` 事件进入事件流, UI 层弹出对话框 (终端 UI 的 PermissionDialog、remote 的 permission_request WS 消息、ACP 的 session/requestPermission、A2A 的 input-required)
+3. 用户决策三选一: `allow` (本次允许) / `deny` (拒绝) / `allowAlways` (始终允许, 写入项目级规则文件)
+4. 拒绝时, 将拒绝理由包装为 `isError: true` 的工具调用结果返回给 LLM, agent loop 继续运行; LLM 在下一轮看到这个工具调用错误, 调整策略
 
 ## OS 级沙箱
 
-- MacOS: seatbelt, 通过一个策略文件定义进程的行为边界
-- Linux: bubblewrap + seccomp, bubblewrap 是一个轻量级的用户空间容器工具, 通过 linux 的 namespace 机制创建一个隔离环境, 通过 bubblewrap 执行命令
-- OS 级沙箱模式默认断网, 防止数据泄漏
-- OS 级沙箱不需要弹权限请求对话框, 用户可以通过 /sandbox 命令在三种模式间切换
-  - 开启沙箱 + autoAllow 自动放行
-  - 开启沙箱 + 手动确认
-  - 关闭沙箱
-
-```txt
-(version 1)
-(deny default) ;; 默认拒绝
-(allow process-exec) ;; 允许执行程序
-(allow process-fork) ;; 允许 fork 子进程
-(allow file-read* (subpath "/")) ;; 允许读整个文件系统
-(allow file-write* (subpath "/project")) ;; 只允许写项目目录
-(allow file-write* (subpath "/tmp")) ;; 只允许写临时目录
-(deny file-write* (subpath "/project/.yukino/config.yaml")) ;; 禁止写配置文件
-(deny network*) ;; 禁止访问网络
-```
-
-```bash
-bwrap \
---unshare-user \                  # 独立的用户 namespace
---unshare-pid \                   # 独立的进程 namespace
---ro-bind / / \                   # 整个文件系统挂载为只读
---bind /project /project \        # 项目目录可写
---ro-bind /project/.yukino/config.yaml /project/.yukino/config.yaml \  # 配置文件挂载为只读
---unshare-net \                   # 独立的网络 namespace, 禁止访问网络
---proc /proc \                    # 独立的 proc
-bash -C "用户命令"
-```
-
-seccomp 在系统调用入口过滤: 可以禁止 ptrace 防止调试注入、禁止 mount 防止重新挂载文件系统以逃逸命名空间
-
-### 禁止写项目目录内的敏感路径
-
-- .yukino/config.yaml
-- .yukino/permissions.local.yaml
-- .yukino/skills
+权限系统之外, Yukino 还支持 OS 级沙箱, 把 Bash 命令放进操作系统提供的隔离环境执行 (macOS seatbelt / Linux bubblewrap), 沙箱开启后可以配置 auto_allow 免人工确认; 详见 sandbox

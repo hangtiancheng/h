@@ -4,7 +4,7 @@ title: "AGENTS.md and Memory"
 
 - 工作记忆: 上下文窗口
 - 长期记忆: 持久化到磁盘
-  - 指令文件 YUKINO.md, AGENTS.md
+  - 指令文件 AGENTS.md
   - 会话持久化
   - 自动记忆: Agent 在对话中自动积累的经验, 例如用户的编码偏好、项目的技术架构
 
@@ -42,17 +42,15 @@ Enforced by `eslint.config.js`.
 - Promises: must be awaited or voided.
 ```
 
-### 优先级
+### 发现顺序
 
-`discoverInstructions` 按以下顺序发现并加载指令文件, 优先级从低到高
+指令文件的发现顺序, 优先级从低到高
 
-1. `~/.yukino/YUKINO.md` 用户级, 最先加载
-2. `~/.yukino/AGENTS.md` 用户级
-3. projectRoot 仓库根目录到 workDir 工作目录的每一层目录的 `YUKINO.md` 和 `AGENTS.md`
-4. `${workDir}/.yukino/INSTRUCTIONS.md` legacy 兼容
-5. `${workDir}/YUKINO.local.md` 本地覆盖, 最后加载, 最高优先级
+1. `~/.yukino/AGENTS.md` 用户全局级, 最先加载
+2. 从 git 仓库根目录到工作目录的每一层目录, 依次加载该层的 `AGENTS.md`
+3. 同一层目录中 `.yukino/AGENTS.md` 的优先级高于 `AGENTS.md`
 
-指令文件按顺序加载, 后加载的指令文件不会覆盖先加载的指令文件, 多个指令文件会被拼接, 使用 --- 分隔
+指令文件按顺序加载, 后加载的指令文件不会覆盖先加载的指令文件, 多个指令文件会被拼接, 使用 `---` 分隔
 
 prompt 中靠后的内容, 得到的 LLM 注意力更多, 冲突时优先级更高
 
@@ -61,7 +59,7 @@ prompt 中靠后的内容, 得到的 LLM 注意力更多, 冲突时优先级更�
 可以在指令文件中使用 `@` 引用其他文件
 
 ```md
-# YUKINO.md
+# AGENTS.md
 
 @./docs/project.md
 @./docs/tech-stack.md
@@ -123,7 +121,7 @@ function expandIncludes(content, baseDir, seen, depth, projectRoot) {
 
 安全风险
 
-1. 无限递归: YUKINO.md 引用 CLAUDE.md, CLAUDE.md 引用 YUKINO.md, 导致无限递归; 使用 `depth` 参数限制最大递归深度
+1. 无限递归: AGENTS.md 引用 CLAUDE.md, CLAUDE.md 引用 AGENTS.md, 导致无限递归; 使用 `depth` 参数限制最大递归深度
 2. 重复 inline 同一个文件: 维护 `seen` 集合, 记录已 inline 的绝对路径, 遇到已 inline 的绝对路径直接跳过
 3. 路径越界: `@` 引用的路径必须在项目目录或 `~/.yukino` 内, 越界的路径会被替换为注释 `<!-- @include skipped: path outside project -->`
 
@@ -149,66 +147,83 @@ Yukino 的会话持久化使用 JSONL 格式 (JSON lines), 每行一个 JSON 对
   - 增量加载: 恢复会话时逐行读取, 遇到解析失败的行直接跳过
   - 如果写崩溃, 只损坏最后一行
 
+会话日志放在项目的 `.yukino/sessions/` 目录下, 文件名是 `<sessionId>.jsonl`; sessionId 由 base36 时间戳和 4 字节随机 hex 组成, 例如 `munwsuxu-2d76691f`
+
+消息使用 provider 无关的内部表示持久化, 切换 provider 后依然可以恢复会话
+
 ```json
 {
   "role": "user",
   "content": "Write a WeChat",
-  "timestamp": 1783277127000
-}
-{
-  "role": "assistant",
-  "content": [
-    { "type": "text", "text": "OK, let me ..." },
-    {
-      "type": "tool_use",
-      "id": "tool_use_abc123",
-      "name": "ReadFile",
-      "input": {
-        "path": "/path/to/project/main.ts",
-        "timestamp": 1783277280000
-      }
-    }
-  ]
-}
-// 对于 Claude API, tool_result 放在 role 为 user 的消息中, 使用 tool_result 类型的 content block 传递
-{
-  "role": "tool_result",
-  "tool_use_id": "tool_use_abc123",
-  "content": "import ...",
-  "timestamp": 1783277384000
+  "timestamp": 1783277127
 }
 {
   "role": "assistant",
   "content": "OK, let me ...",
-  "timestamp": 1783277510000
+  "timestamp": 1783277280,
+  "tool_uses": [
+    {
+      "tool_use_id": "toolu_abc123",
+      "tool_name": "ReadFile",
+      "arguments": { "file_path": "/path/to/project/main.ts" }
+    }
+  ]
+}
+{
+  "role": "user",
+  "timestamp": 1783277384,
+  "tool_results": [
+    {
+      "tool_use_id": "toolu_abc123",
+      "content": "import ...",
+      "is_error": false
+    }
+  ]
 }
 ```
 
-## 会话日志
-
-会话日志放在项目的 .yukino/sessions 目录下
+- `content` 可以是纯文本字符串, 也可以是 content block 数组 (例如携带 base64 图片块的消息原样持久化)
+- `tool_uses` / `tool_results` 通过 `tool_use_id` 配对
+- 上下文压缩时追加一条 `type: "compact_boundary"` 的记录, payload 是 `{ summary, keep[] }`: 对话摘要和逐字保留的近期消息
 
 追加消息时, 先写 jsonl 文件, 再更新内存
 
 - 如果先写 jsonl 文件再更新内存, 更新内存失败进程崩溃时, 恢复会话可以从 jsonl 文件重建
 - 如果先更新内存再写 jsonl 文件, 写 jsonl 文件失败进程崩溃时, 恢复会话消息丢失
 
-```txt
-.yukino/
-  sessions/
-    YYYY-MM-DD-hh:mm:ss-hash.jsonl
-```
+多个进程可能并发读写同一个会话文件 (teammate、后台任务), 读写前使用票据式文件锁串行化: 锁文件记录一个递增的票据号, 进程先读票据、写文件、再校验票据没有被抢占
 
 ## 恢复会话
 
-1. 逐行读取, 遇到解析失败的行直接跳过
-2. 校验消息链的完整性: 追踪所有的工具调用, 截断到最后一个「所有的工具调用都有结果」的位置, 避免 LLM 看到有一个工具调用但是没有结果, 感到困惑
-3. 检查 token 用量: 如果恢复的对话历史很长, token 用量可能超过压缩阈值, 直接触发上下文压缩
-4. 插入时间跨度提示词: 如果距离上次会话活跃超过 24h, 在对话历史中插入一条消息提醒 LLM: 距离上次会话活跃 ?h, 可能有代码变更, 建议重新读取相关文件, 避免 LLM 使用过期的文件内容做决策
+1. 逐行读取, 遇到解析失败的行直接跳过, 不中断加载
+2. 如果存在 compact_boundary 记录, 取最后一条有效 boundary, 从 boundary 的摘要和保留消息重建对话历史; boundary 之前的原始消息仍在文件中, 只是不再回放
+3. 恢复的历史中可能存在悬空的 tool_use (只有调用请求没有结果), 请求发送给 LLM API 前由 `ensureToolPairing` (src/conversation/pairing.ts) 修复配对
+4. 加载会话时刷新文件的 mtime, 用于过期清理和「最近使用」排序
 
 ## 过期会话清理
 
-Yukino 启动时, 自动清理 .yukino/sessions 目录下超过 30 天没有活跃的会话日志
+Yukino 启动时, 惰性清理 `.yukino/sessions/` 目录下超过 30 天没有活跃的会话日志
+
+## 文件历史和检查点回退
+
+EditFile 和 WriteFile 每次写文件前, 先将被修改文件的当前内容备份到 `.yukino/file-history/<sessionId>/` 目录 (备份文件名是 `<文件hash>@s<序号>`), 并记录该文件首次被跟踪时的基线状态 (已存在 / 不存在)
+
+每轮 agent loop 结束时, FileHistory 对所有被跟踪的文件做一次快照, 记录快照对应的消息序号、用户消息摘要、会话日志行数和每个文件的备份路径, 快照索引持久化到 `snapshots.json`
+
+`/rewind` 打开检查点回退对话框, 选择一个快照后, 有三种回退范围
+
+- code_and_conversation: 回退代码文件, 同时截断对话历史到该快照
+- conversation_only: 只截断对话历史, 不回退代码
+- code_only: 只回退代码文件, 保留对话历史
+
+代码回退的规则
+
+- 快照中记录的备份文件存在: 恢复文件内容
+- 备份文件不存在 (快照时该文件不存在): 删除该文件
+- 快照之后才被跟踪的文件: 恢复到首次跟踪时的基线 (已存在的恢复原内容, 新创建的删除)
+- 回退后删除该快照之后的所有快照及其备份, 不能 redo 前进
+
+对话历史的截断使用快照记录的会话日志行数, 直接截断 jsonl 文件
 
 ## 自动记忆
 
@@ -219,6 +234,20 @@ Yukino 启动时, 自动清理 .yukino/sessions 目录下超过 30 天没有活�
 
 每条记忆是一个独立的 .md 文件, 有 yaml frontmatter 描述元信息
 
+```md
+---
+name: no-type-assertions
+description: 禁止使用 any、非空断言、@ts-ignore 和 as 类型断言
+type: user
+---
+
+(记忆正文)
+```
+
+frontmatter 支持 `name`、`description`、`type` 三个字段 (兼容 `metadata.type`), type 缺省是 `reference`
+
+MEMORY.md 索引文件由扫描自动生成, 按 name 字母序, 每行一条记忆链接加描述; 索引注入到 messages 字段时有上限, 最多 200 行或 25KB, 先到为准, 超过截断, 防止记忆太多撑满上下文
+
 ```txt
 .yukino/memory/
   MEMORY.md # 索引文件, 注入到 messages 字段
@@ -226,24 +255,21 @@ Yukino 启动时, 自动清理 .yukino/sessions 目录下超过 30 天没有活�
   validate-runtime-data-with-zod.md
 ```
 
-MEMORY.md 索引文件注入到 messages 字段时有 token 上限, 最多 200 行或 25KB (2k-3k tokens), 超过会截断并附加警告, 防止记忆太多撑满上下文
-
-```md
-- [No `any`, no `!`, no `@ts-ignore`, no `as` casts](./no-type-assertions.md) — 禁止使用 any、非空断言、@ts-ignore 和 as 类型断言
-- [Validate runtime data with Zod](./validate-runtime-data-with-zod.md) — 使用 Zod 校验运行时数据
-```
-
 ## 记忆加载
 
 Yukino 开启新会话时, 自动读取指令文件和 MEMORY.md, 使用 `<system-reminder>` 标签包裹, 作为上下文注入到发送给 LLM API 的 messages 字段中; 如果某条记忆的 description 和当前任务相关, LLM 可以调用 ReadFile 读取对应的记忆文件
 
+除了被动读索引, Yukino 还支持主动 recall: 扫描两个记忆目录的头部信息 (name + description), 请求 LLM 选出和当前任务相关的记忆, 将选中的记忆全文渲染为一条 reminder, 开头固定是 `Relevant memories: prior evidence, not current authorization.`, 并标注每条记忆的年龄; 记忆是证据不是授权, 不能覆盖用户的当前指令
+
+`enable_memory: false` 关闭整个记忆管线: 索引注入、recall、后台记忆提取和记忆整理
+
 ## 记忆提取
 
-每轮 agent loop 结束后, 记忆提取 subagent 后台异步请求 LLM API (不阻塞下一轮对话的用户输入), `MemoryExtractor` 将
+每轮 agent loop 结束后, fire-and-forget 请求 LLM API 做记忆提取 (不阻塞下一轮对话的用户输入), `MemoryExtractor` 将
 
-- 对话历史
-- MEMORY.md 索引文件 (记忆提取 subagent 的 system prompt 中包含 MEMORY.md 索引文件)
-- 记忆文件的描述列表 (记忆提取 subagent 的 prompt 中包含记忆文件的描述列表)
+- 最近 40 条对话消息
+- MEMORY.md 索引文件 (记忆提取的 system prompt 中包含 MEMORY.md 索引文件)
+- 记忆文件的描述列表
 
 发送给 LLM; LLM 分析对话, 决定是否提取新记忆
 
@@ -253,9 +279,9 @@ Yukino 开启新会话时, 自动读取指令文件和 MEMORY.md, 使用 `<syste
 - user 和 feedback 类型的新记忆写入到 `~/.yukino/memory` 全局目录
 - 写入后自动调用 rebuildIndex 重建 MEMORY.md 索引文件
 
-## 记忆整理 (autoDream)
+## 记忆整理
 
-Yukino 后台定期执行「记忆整理」, fork 一个 subagent, grep 最近的会话日志
+Yukino 后台定期执行「记忆整理」, fork 一个 subagent, grep 最近的会话日志 (只在 remote 模式运行: 常驻进程适合跑周期任务; 交互式 UI 只有记忆提取)
 
 - 收集新记忆
 - 删除过时记忆
@@ -263,75 +289,44 @@ Yukino 后台定期执行「记忆整理」, fork 一个 subagent, grep 最近�
 - 修复冲突记忆
 - 更新索引文件
 
-记忆整理的触发条件
+记忆整理的触发门槛 (每轮 agent loop 结束时检查)
+
+- 记忆目录存在
+- 距离上一次成功的记忆整理 >= 24h (上一次成功的时间记录在锁文件的 mtime 里)
+- 扫描节流: 两次检查之间至少间隔 10 分钟, 避免每轮 loop 结束都去扫会话目录
+- 自上次整理以来, 有 >= 5 个会话被修改过
+- 获取运行锁成功
+
+对整理 subagent 工具调用的限制
+
+- 没有 shell 工具 (Bash 不可用)
+- WriteFile/EditFile 只允许修改记忆目录中的 Markdown 文件
+- 修改前必须先读取现有文件
+
+## 防止并发冲突: 两个锁文件
+
+如果同时打开两个 Yukino 会话 (或 remote 服务器与终端同时运行), 两个进程可能同时触发记忆整理; `.yukino/memory/` 下用两个文件分工:
+
+- `.consolidate-lock`: 不参与互斥, 只记录「上一次成功整理的时间」; 整理成功后写入空内容, mtime 即成为新的时间戳, 24h 时间门槛读的就是它的 mtime
+- `.consolidate-running`: 运行锁, 使用票据式文件锁 (和 teams 邮箱同一套 Lamport bakery 锁), 非阻塞获取: 拿不到锁说明别的进程正在整理, 直接放弃本次 (不排队、不重试, 等下一个触发时机)
 
 ```js
-function shouldAutoDream() {
-  if (记忆目录不存在 ||
-    距离上一次成功的记忆整理 < 24h ||
-    1h 内执行过记忆整理 ||
-    累积会话数量 < 5 ||
-    获取锁失败)
-    return false;
-  }
-  return true;
-}
+// maybeRun() 的核心判定顺序
+const lastAt = readLastConsolidatedAt(memDir); // .consolidate-lock 的 mtime
+if ((Date.now() - lastAt) / 3600_000 < 24) return; // 时间门槛
+if (Date.now() - lastScanAt < 10 * 60 * 1000) return; // 扫描节流
+if (listSessionsSince(workDir, lastAt).length < 5) return; // 会话门槛
+const releaseLock = tryAcquireFileSyncLock(join(memDir, ".consolidate-running"));
+if (!releaseLock) return; // 别的进程正在整理
+
+run(...)
+  .then(() => markConsolidationSucceeded(memDir)) // 写 .consolidate-lock, 更新 mtime
+  .finally(releaseLock);
 ```
 
-## 防止并发冲突: 锁文件
-
-如果同时打开两个终端运行 Yukino, 两个进程可能同时触发记忆整理
-
-Yukino 使用锁文件 .yukino/memory/.consolidate-lock 防止并发冲突, 锁文件保存占有锁的进程 PID, 锁文件的 mtimeMs (最近修改时间) 代表上一次记忆整理完成的时间
-
-获取锁
-
-1. 尝试获取锁文件的进程, 读取锁文件的 PID 和 mtimeMs
-
-- 如果锁文件的 mtimeMs 距离现在 < 1h, 则放弃
-- 如果锁文件的 mtimeMs 距离现在 >= 1h
-  - PID 不存在 ->
-    - 锁文件的 mtimeMs 距离现在 < 24h: 24h 内执行过记忆整理, 放弃
-    - 锁文件的 mtimeMs 距离现在 >= 24h: 写入 PID, 回读锁文件, 确保没有被其他进程抢占, 执行记忆整理
-  - PID 对应的进程存在 -> 上一次记忆整理超时: 杀死该进程, 重写锁文件
-  - PID 对应的进程死亡 -> 上一次记忆整理时进程崩溃: 重写锁文件
-
-2. 如果记忆整理成功, 则清空锁文件 (记录记忆整理完成时间)
-3. 如果记忆整理失败, 则清空锁文件, 使用 `utimesSync` 锁文件的 mtimeMs 重置为获取锁文件前的值
-4. 如果记忆整理时进程崩溃 (PID 残留), 下一次记忆整理时, 进程读取锁文件后, 如果 PID 对应的进程死亡, 则重写锁文件
-5. 如果记忆整理超时 (1h), 下一次记忆整理时, 进程读取锁文件后, 如果 PID 对应的进程存在, 并且锁文件的 mtimeMs 距离现在 >= 1h, 则杀死该进程, 重写锁文件
-
-```js
-import { statSync, writeFileSync, utimesSync } from "node:fs";
-
-const { mtimeMs } = statSync("/path/to/.yukino/memory/.consolidate-lock");
-
-// 记忆整理失败
-writeFileSync("/path/to/.yukino/memory/.consolidate-lock", "");
-utimesSync(
-  "/path/to/.yukino/memory/.consolidate-lock",
-  Date.now() /** atimeMs, last access time */,
-  mtimeMs /** last modify time */,
-);
-```
-
-### 记忆整理过程
-
-记忆整理由 fork 的一个 subagent 执行, 不阻塞用户交互
-
-对 subagent 工具调用的限制
-
-- Bash 工具: 只允许执行只读命令
-- WriteFile 工具: 只允许写入 .yukino/memory 目录
-
-记忆整理 prompt
-
-- 定位阶段: `ls .yukino/memory`, 读 MEMORY.md 索引文件, 读记忆文件
-- 收集阶段: grep 最近的会话日志, 收集新记忆
-- 整理阶段: 删除过时记忆, 合并重复记忆, 修复冲突记忆
-- 更新索引文件: 更新 MEMORY.md
+整理失败不更新时间戳: 下一个触发窗口会重新满足时间门槛, 自动重试
 
 ## 记忆提取和记忆整理
 
-- 记忆提取每轮 agent loop turn 结束后都可能触发, 频率高、消耗小、影响小
+- 记忆提取每轮 agent loop 结束后都可能触发, 频率高、消耗小、影响小
 - 记忆整理每隔 24h 才可能触发, 频率低、消耗大、影响大

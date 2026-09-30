@@ -4,129 +4,119 @@ title: "Worktree"
 
 文件系统隔离
 
-subagent 的会话被持久化到 .yukino/worktree_session.json, 如果 yukino 进程崩溃, 重新启动时可以通过 --resume 切换回 worktree 会话, 跳过 git worktree add 创建 worktree
+subagent / teammate 指定 `isolation: "worktree"` 时, 在独立的 git worktree 中工作: 并发的文件修改互不覆盖, 结果由主 agent 决定是否合并; 用户也可以直接调用 EnterWorktree / ExitWorktree 工具
 
-## git 命令的环境变量
+## 路径与分支格式
 
-```bash
-# 禁止 git 提示输入用户名或密码
-GIT_ASKPASS=""
-# 禁止 git 的交互式提示
-GIT_TERMINAL_PROMPT=0
+```js
+const worktreeDir = join(gitRoot, ".yukino", "worktrees", slug);
+const branch = `worktree-${slug}`;
 ```
+
+- worktree 目录在仓库根的 `.yukino/worktrees/` 下
+- 分支名加 `worktree-` 前缀
+- slug 需要安全校验, 防止路径遍历 (../../etc/passwd): EnterWorktree 工具要求 slug 匹配 `/^[a-zA-Z0-9_-]+$/`; ref 名另有 isSafeRefName 校验 (拒绝空串、以 `-` 或 `/` 开头、包含 `..`、任何一段为 `.` 或空, 字符集限定 `[a-zA-Z0-9/._+@-]`)
+- subagent 的 worktree slug 自动生成: `agent-a<7位hex>`
 
 ## git worktree 命令
 
 ```bash
-git worktree add <worktreePath> <worktreeBranch>
+# 分支不存在: 创建新分支
+git worktree add -b worktree-<slug> -- <worktreeDir>
 
-# -B: worktree 分支存在时, 强制覆盖旧的 worktree 分支
-git worktree add -B <worktreeBranch> <worktreePath> <baseBranch>
-# 等价于
-git branch -f <worktreeBranch> <baseBranch>
-git worktree add <worktreePath> <worktreeBranch>
+# 分支已存在: 重挂现有分支 tip, 不重置
+git worktree add -- <worktreeDir> worktree-<slug>
 ```
 
-- 需要 slug 安全验证, 防止路径遍历 ../../etc/password
-- worktree 目录在 .yukino/worktrees
-- 分支名加 `worktree-` 前缀
+分支已存在时用重挂而不是强制覆盖 (`-B`): 并发场景下另一个 agent 可能刚在这个分支上提交了工作, `-B` 会把分支重置到 base, 悄悄丢掉这些提交
 
-```js
-const worktreeDir = join(projectRoot, ".yukino", "worktrees", slug);
-const branch = `worktree-${slug}`;
-```
+目录已存在时的复用: 先验证它确实是这个 worktree 的根 (`git rev-parse --show-toplevel` + realpath 对比), 是则直接复用, 不是则报错; 避免把无关目录当成 worktree 使用
 
-脆弱实现
+## HEAD 读取: 纯文件系统优先
 
-如果 worktree 目录已存在, 则跳过 git worktree add 创建 worktree, 直接复用
+创建 worktree 后要拿到 HEAD 的 commit SHA (退出时做变更检测的基准), `git worktree add` 之后立刻 `git rev-parse HEAD` 需要 spawn 子进程, 而读 HEAD 有纯文件系统的捷径 (目标 10ms 以内, 失败再回退 `git rev-parse HEAD`):
 
-- 先读 worktree 目录下的 .git 指针文件, 得到 gitdir 路径
-- 再读 HEAD 文件, 如果 HEAD 是符号引用 ref: refs/head/..., 则继续读 refs 得到 commit SHA
-  git worktree add 创建 worktree 对于大型仓库需要数秒: 检出全量文件树、写入 worktree 目录
-
-后续优化
-
-```bash
-# 列出所有 worktree、路径、分支、commit SHA
-git worktree list --porcelain
-# 查询某个 worktree 当前的 commit SHA
-git -C <worktree-path> rev-parse HEAD
-```
+1. 读 worktree 目录下的 `.git` 指针文件, 得到 gitdir 路径
+2. 读 gitdir 下的 HEAD 文件
+3. HEAD 是符号引用 (`ref: refs/heads/...`) 时, 先查 gitdir 的 refs, 再查 commondir 的 refs 和 packed-refs, 解析出 commit SHA (支持 SHA-1 40 位和 SHA-256 64 位)
 
 ## worktree 创建后
 
-```bash
-# 列出被 .gitignore 忽略的文件和目录
-# --directory: 如果整个目录被忽略, 则只打印目录
-git ls-files --other --ignored --exclude-standard --directory
-```
+`performPostCreationSetup` 创建后执行, 所有步骤 best-effort (失败只记日志, 不中断创建):
 
-`performPostCreationSetup` worktree 创建后执行:
+1. 复制 `.yukino/` 配置的允许清单: `permissions.yaml`、`agents`、`commands`、`memory`; 运行态目录 (sessions、file-history、plans、logs、teams) 明确排除, `worktrees/` 绝不复制 (否则复制源包含目标目录)
+2. 复制 `.agents/` 的允许清单: `AGENTS.md`、`skills`
+3. 共享 git hooks: worktree 没有既有 `core.hooksPath` 且仓库根存在 `.husky/` 目录时, `git config extensions.worktreeConfig true` + `git config --worktree core.hooksPath <.husky 绝对路径>`; worktree 级配置, 不污染主仓库的共享配置
+4. node_modules 符号链接: 源仓库有 node_modules 而 worktree 没有时, 直接 symlink, 免去重装依赖
+5. 读取 `.worktreeinclude` 文件 (每行一个路径, 跳过空行和 `#` 注释, 跳过包含 `..` 的行), 将 include 的文件和目录复制到 worktree, 单项失败跳过
 
-1. 复制 `.yukino/` 配置目录到 worktree
-2. 设置 git hooks: 先使用 `.husky/`, 再使用 `.git/hooks/`, 通过 `git config core.hooksPath` 共享主仓库的 hooks (源码: src/worktree/worktree.ts)
-3. 安装依赖 (pnpm install、go mod tidy): 源码缺陷 TODO
-4. 读取 `.worktreeinclude` 文件 (每行一个路径, 跳过空行和 `#` 注释), 将 include 的文件和目录复制到 worktree; 跳过以 / 开头或包含 .. 的路径, 防止路径遍历
+没有自动的依赖安装步骤 (pnpm install / go mod tidy): node_modules 靠 symlink, 其他生态靠 .worktreeinclude 或用户在 worktree 内自行安装
 
 ## 进入 worktree
 
-- 不切换进程级 cwd: 防止后台异步 subagent、agent team 并发调用 Bash 工具切换进程级 cwd;
-- 将 worktree 路径保存到 session 状态, (sub)agent 调用 Bash、ReadFile、WriteFile 等工具时, 显式的从 `session.worktreePath` 拿到 worktree 路径
+- 不切换进程级 cwd: 防止后台异步 subagent、agent team 并发调用 Bash 工具时互相踩 cwd
+- worktree 路径写入工具调用的 workDir 覆盖, subagent 调用 Bash、ReadFile、WriteFile 等工具时在 worktree 内解析路径
+- subagent 的 prompt 前置一条 worktree 通知 (buildWorktreeNotice):
+
+```txt
+You are working in a git worktree at: <wtPath>
+The parent project is at: <parentCwd>
+Changes made here are isolated from the parent working tree.
+```
+
+- 你 (subagent) 继承父 agent 的对话历史
+- 你 (subagent) 在 git worktree 工作, 你需要翻译父 agent 对话历史中的路径为 worktree 中的路径, 修改文件前重新读取文件
 
 ## 退出 worktree
+
+ExitWorktree 工具的参数: `path`、`branch`、`git_root` 必填, `head_commit` 可选 (worktree 创建时的 HEAD SHA)
+
+变更检测 `hasWorktreeChanges(path, headCommit)`:
 
 ```bash
 # 是否有未 commit 的修改
 git status --porcelain
 
-# 是否有新增的 commit (相对 worktree 创建时的 HEAD)
-git rev-list --count ${headCommit}..HEAD
+# 当前 HEAD SHA 是否等于 headCommit (worktree 创建时的基准)
+git rev-parse HEAD
 ```
 
-- `hasWorktreeChanges` 两种实现:
-  - worktree.ts: 先执行 `git status --porcelain`, 再对比当前 HEAD SHA 与 `headCommit` (worktree 创建时的 HEAD) 是否相同, 不使用 `git rev-list`
-  - changes.ts: 执行 `git rev-list --count ${headCommit}..HEAD` 统计新增 commit 数量, `headCommit` 是 worktree 创建时的 HEAD
-- 是否删除 worktree: worktree 中是否有未 commit 的修改、是否有新增的 commit
-- 清空 session 状态
+- porcelain 输出非空 → 有变更
+- HEAD SHA ≠ headCommit → 有新 commit
+- 检测本身报错 → 保守返回有变更
 
-## 清理过期的 worktree
+退出策略 (没有交互式确认, 按检测结果直接决定):
 
-- 进程崩溃、用户强制退出, 会导致 .yukino/worktree 堆积大量的 worktree 目录
-  - workflow 创建的 worktree: `wf-[hash]`, 会被自动清理
-  - subagent 创建的 worktree: `agent-[hash]`, 会被自动清理
-  - agent team leader 指定 teammate `isolation: "worktree"`, leader 创建的 worktree: `team-${teamNae}/${teammateName}`, 见 agent-team
-  - 用户手动创建的 worktree, 不会被自动清理
-- 如果 worktree 没有未 commit 的修改, 也没有新增的 commit, 则可以自动清理
-- 如果 worktree 已过期、有新增的 commit 并且推送到远端, 则可以自动清理
+- 没传 head_commit: 无法判断新增 commit, 保留 worktree 并在输出中说明
+- 无变更: 清理
+
+```bash
+git worktree remove -- <path>   # git 自己会复查 dirty/locked
+git branch -d -- <branch>       # -d 而不是 -D: 分支有未合并提交时拒绝删除, 保留 tip
+```
+
+- 有变更: 保留 worktree, 输出提示路径, 等待主 agent 或用户处理
+
+## 清理
+
+没有按前缀扫描的定时 GC: worktree 的唯一自动删除路径是 ExitWorktree 判定无变更时的清理; subagent 结束后 worktree 显式保留 (输出 `Worktree retained at: <path>`), 有变更的 worktree 永远不自动删除
+
+> 进程崩溃、用户强制退出, 会导致 .yukino/worktrees 下残留 worktree 目录; 用户可以调用 Bash 工具执行 `git worktree list` / `git worktree remove` 手动清理, 或 /worktree 命令查看列表
 
 ## worktree 与 subagent
 
 subagent 使用 `isolation: "worktree"` 时, subagent 的启动流程
 
 1. 创建 worktree
-2. 创建 subagent, 将 worktree 路径保存到 session 状态
+2. 创建 subagent, 工具调用的 workDir 替换为 worktree 路径
 3. 运行 subagent
 4. subagent loop 结束后在 worktree 中提交
-5. 离开、清理 worktree
-6. 返回结果给主 agent
-7. 主 agent cr, 决定是否合并
-
-```ts
-export function buildWorktreeNotice(parentCwd: string, wtPath: string): string {
-  return (
-    `You are working in a git worktree at: ${wtPath}\n` +
-    `The parent project is at: ${parentCwd}\n` +
-    `Changes made here are isolated from the parent working tree.`
-  );
-}
-```
-
-- 你 (subagent) 继承父 agent 的对话历史
-- 你 (subagent) 在 git worktree 工作, 你需要翻译父 agent 对话历史中的路径为 worktree 中的路径, 修改文件前重新读取文件
+5. worktree 保留, 返回结果给主 agent (附 worktree 路径)
+6. 主 agent review, 决定是否合并
 
 > 考虑以下场景
 
-subagent 在 worktree 中修改并提交了 server.ts, 主 agent 期望将该 subagent 的变更merge/rebase/cherry-pick 到主分支; Yukino 没有内置的 merge/rebase/cherry-pick 工具, 主 agent 调用 Bash 工具, 执行 `git merge/rebase/cherry-pick`
+subagent 在 worktree 中修改并提交了 server.ts, 主 agent 期望将该 subagent 的变更 merge/rebase/cherry-pick 到主分支; Yukino 没有内置的 merge/rebase/cherry-pick 工具, 主 agent 调用 Bash 工具, 执行 `git merge/rebase/cherry-pick`
 
 为什么 Yukino 没有将 merge/rebase/cherry-pick 作为内置工具?
 
