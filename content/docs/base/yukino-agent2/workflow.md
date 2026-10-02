@@ -16,7 +16,7 @@ title: "workflow"
 
 ## 主力 agent loop
 
-ReAct: Thinking -> Act -> Observe
+ReAct: Reasoning -> Acting -> Observation
 
 2 种 agent loop 退出条件
 

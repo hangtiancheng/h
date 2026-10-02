@@ -4,9 +4,9 @@ title: "ReAct and Agent Loop"
 
 ReAct (Reasoning + Acting)
 
-- Thinking 解释为什么要做这一步 (text)
-- Act 选择调用一个工具 (tool_use)
-- Observe (tool_result) 分析工具调用结果, 决定下一步怎么做
+- Reasoning 解释为什么要做这一步 (text)
+- Acting 选择调用一个工具 (tool_use)
+- Observation (tool_result) 分析工具调用结果, 决定下一步怎么做
 
 ## ReAct 对比其他范式
 

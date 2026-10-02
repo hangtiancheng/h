@@ -4,8 +4,8 @@
   "pages": [
     "index",
     "yukino",
-    "agent",
-    "agent2",
+    "yukino-agent",
+    "yukino-agent2",
     "css",
     "git",
     "go",
