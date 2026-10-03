@@ -11,7 +11,7 @@ curl https://api.deepseek.com/anthropic/v1/messages \
   -H "X-Api-Key: $ANTHROPIC_API_KEY"                \
   -d '{
     "max_tokens": 1024,
-    "model": "deepseek-v4-flash",
+    "model": "deepseek-flash",
     "messages": [
       {
         "role": "user",
@@ -33,7 +33,7 @@ curl https://api.deepseek.com/anthropic/v1/messages \
   "id": "<uuid-v4>", // equals to signature
   "type": "message",
   "role": "assistant",
-  "model": "deepseek-v4-flash",
+  "model": "deepseek-flash",
   "content": [
     {
       "type": "thinking",
