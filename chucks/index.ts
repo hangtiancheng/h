@@ -1,35 +1,34 @@
-function lexGreaterPermutation(s: string, target: string): string {
-  const aCharCode = "a".charCodeAt(0);
-
-  const left = new Array<number>(26).fill(0);
-  for (let i = 0; i < s.length; i++) {
-    left[s.charCodeAt(i) - aCharCode]++;
-    left[target.charCodeAt(i) - aCharCode]--;
-  }
-
-  tag: for (let i = s.length - 1; i >= 0; i--) {
-    const b = target.charCodeAt(i) - aCharCode;
-    left[b]++;
-    for (const c of left) {
-      if (c < 0) {
-        continue tag;
-      }
+function generateParenthesis(n: number): string[] {
+  const ans: string[] = [];
+  const dfs = (left: number, right: number, path: string) => {
+    if (right === n) {
+      ans.push(path);
+      return;
     }
+    if (left < n) {
+      dfs(left + 1, right, path + "(");
+    }
+    if (right < left) {
+      dfs(left, right + 1, path + ")");
+    }
+  };
+  dfs(0, 0, "");
+  return ans;
+}
 
-    for (let j = b + 1; j < 26; j++) {
-      if (left[j] === 0) {
-        continue;
-      }
-      left[j]--;
-      const ans = Array.from(target.slice(0, i + 1));
-      ans[i] = String.fromCharCode(aCharCode + j);
-      for (let k = 0; k < left.length; k++) {
-        const c = left[k];
-        const ch = String.fromCharCode(aCharCode + k);
-        ans.push(Array.from({ length: c }, () => ch).join(""));
-      }
-      return ans.join("");
+function isValid(s: string): boolean {
+  const stack: string[] = [];
+  for (const ch of s) {
+    if (ch === "(" || ch === "[" || ch === "{") {
+      stack.push(ch);
+      continue;
+    }
+    if (stack.length > 0 && ch === stack[stack.length - 1]) {
+      stack.pop();
+      continue;
+    } else {
+      return false;
     }
   }
-  return "";
+  return stack.length === 0;
 }
