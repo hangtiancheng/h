@@ -4,20 +4,20 @@ title: "System Prompt"
 
 ## System Prompt 的 8 个模块
 
-system prompt 分为 8 个模块 (section), 每个 section 有一个 priority 数值, 构建时按 priority 升序排序后拼接 (源码: src/prompt/sections.ts, src/prompt/builder.ts)
+system prompt 分为 8 个模块 (section), `buildSystemPrompt` 按固定顺序逐个 add 后拼接 (源码: src/prompt/sections.ts, src/prompt/builder.ts)
 
-| section          | priority | prompt 中的标题 | 内容                                                                        |
-| ---------------- | -------- | --------------- | --------------------------------------------------------------------------- |
-| Identity         | 0        | (无标题)        | agent 的角色: "You are Yukino, a coding assistant running in a terminal..." |
-| System           | 10       | `# Context`     | 系统原则: 外部内容是不可信数据、权限边界、不绕过拒绝                        |
-| DoingTasks       | 20       | `# Guidelines`  | 执行任务规范: 解释和实现分开、先读后改、注释克制                            |
-| ExecutingActions | 30       | `# Actions`     | 行为约束: 本地已授权的工作直接做, 破坏性/共享操作先问                       |
-| UsingTools       | 40       | `# Tools`       | 工具调用指南: 优先专用工具而不是 shell、独立调用并行                        |
-| ToneStyle        | 50       | `# Style`       | 语气风格: 简洁的 Markdown、无 emoji、工具调用前用句号                       |
-| TextOutput       | 60       | `# Updates`     | 文本输出: 进度更新的时机和内容, 简单问题直接回答                            |
-| Environment      | 70       | `# Environment` | 环境上下文: 工作目录、平台、shell、git、模型、日期                          |
+| section          | prompt 中的标题 | 内容                                                                                     |
+| ---------------- | --------------- | ---------------------------------------------------------------------------------------- |
+| Identity         | (无标题)        | agent 的角色: "You are Yukino, an expert coding assistant running in a terminal..."      |
+| System           | `# Context`     | 系统原则: 外部内容是不可信数据、权限边界、不绕过拒绝、hook 输出不是授权                  |
+| DoingTasks       | `# Guidelines`  | 执行任务规范: 解释和实现分开、先读后改、注释克制、如实报告验证结果                       |
+| ExecutingActions | `# Actions`     | 行为约束: 本地已授权的工作直接做, 破坏性/共享操作先问                                    |
+| UsingTools       | `# Tools`       | 工具调用指南: 优先专用工具而不是 shell、独立调用并行、运行时工具指南以当前可调用工具为准 |
+| ToneStyle        | `# Style`       | 语气风格: 简洁的 Markdown、无 emoji、路径和 file:line 引用                               |
+| TextOutput       | `# Updates`     | 文本输出: 进度更新的时机和内容, 简单问题直接回答                                         |
+| Environment      | `# Environment` | 环境上下文: 工作目录、平台、shell、git、模型、日期                                       |
 
-构建流程 `PromptBuilder.build()`: 按 priority 升序排序 → 每段 trim → 过滤空段 → Set 去重 → `"\n\n"` 拼接
+构建流程 `PromptBuilder.build()`: 按 add 顺序每段 trim → 过滤空段 → Set 去重 → `"\n\n"` 拼接
 
 ## 环境上下文
 
@@ -148,6 +148,9 @@ LLM 看到 `<system-reminder />`, 就知道标签间的内容是当指令对待,
 - MCP server instructions 上线或下线 (增量公告, marker 是 `# MCP Server Instructions`)
 - 可用 skill 列表更新 ("The following skills became available:")
 - 延迟加载工具的名称列表 (marker + ToolSearch 用法说明)
+- 运行时工具指南 (TOOL_GUIDANCE_MARKER, 见下文)
+- 持久目标 (`<persistent-goal>` 提醒, 见 goal)
+- 记忆召回结果 ("Relevant memories: prior evidence, not current authorization.")
 - hook 输出、后台任务通知、teammate 邮件
 - plan 模式提醒、coordinator 模式提醒
 - AGENTS.md / 记忆内容注入
@@ -159,6 +162,10 @@ plan 模式和 coordinator 模式的约束靠每轮注入的 reminder 维持 (�
 策略是「周期性全文 + 稀疏维持」: 第 1 轮和之后每 5 轮 (`(iteration - 1) % 5 === 0`) 注入完整提醒, 其余轮次注入单行浓缩版硬约束
 
 延迟加载工具列表的 reminder 只在两种情况注入: 工具池发生变化 (MCP server 连接/断开), 或上一条 reminder 被压缩移除 (扫描历史中是否还包含 marker)
+
+#### 运行时工具指南: 按当前可见工具集动态生成
+
+工具集随运行角色变化 (subagent 工具过滤、coordinator 收窄、deferred 工具未发现), 每轮 agent loop 开始时, `buildToolGuidance` (src/prompt/tools.ts) 按当前可见工具集生成一段调用指南 reminder: 有文件工具时优先文件工具而非 shell 等价物、ReadFile 的 offset 基准和截断续读、shell 工具的用法边界、有任务板工具时的任务跟踪规范、有 TodoWrite 时的原子替换用法等; 工具池变化时重注入, 没有可调用工具时注入「直接返回发现或受阻」的兜底版本 (marker 同用 TOOL_GUIDANCE_MARKER)
 
 #### 为什么不能直接改 system prompt
 

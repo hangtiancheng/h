@@ -48,7 +48,6 @@ Enforced by `eslint.config.js`.
 
 1. `~/.yukino/AGENTS.md` 用户全局级, 最先加载
 2. 从 git 仓库根目录到工作目录的每一层目录, 依次加载该层的 `AGENTS.md`
-3. 同一层目录中 `.yukino/AGENTS.md` 的优先级高于 `AGENTS.md`
 
 指令文件按顺序加载, 后加载的指令文件不会覆盖先加载的指令文件, 多个指令文件会被拼接, 使用 `---` 分隔
 
@@ -147,7 +146,32 @@ Yukino 的会话持久化使用 JSONL 格式 (JSON lines), 每行一个 JSON 对
   - 增量加载: 恢复会话时逐行读取, 遇到解析失败的行直接跳过
   - 如果写崩溃, 只损坏最后一行
 
-会话日志放在项目的 `.yukino/sessions/` 目录下, 文件名是 `<sessionId>.jsonl`; sessionId 由 base36 时间戳和 4 字节随机 hex 组成, 例如 `munwsuxu-2d76691f`
+## 存储布局
+
+所有会话和运行态统一存放在 `~/.yukino` 下 (源码: src/storage/paths.ts), 项目目录不再承载运行态数据; 按项目隔离的命名空间是项目规范路径的 sha256 (`projectKey = sha256(canonicalPath(cwd))`)
+
+```txt
+~/.yukino/
+  sessions/<projectKey>/           # 会话日志
+    <sessionId>.jsonl
+  sessions/artifacts/<sessionId>/  # 会话产物 (按 sessionId 隔离)
+    file-history/                  # 文件快照和备份 (见下文)
+    tool-results/                  # 溢出的大工具结果 (见 context-compaction)
+    shell-<hex>.output             # 后台 shell 输出
+    tasks.json                     # 私有任务板 (见 task-tracking)
+  projects/<projectKey>/           # 项目命名空间
+    memory/                        # 项目记忆
+    permissions.yaml               # 项目权限规则 (见 permission)
+  worktrees/<projectKey>/<slug>/   # git worktree (见 worktree)
+  teams/<projectKey>/<team>/       # agent team (见 agent-team)
+  plans/                           # plan 模式的 plan 文件
+  memory/                          # 用户全局记忆
+  skills/                          # InstallSkill 的安装目标 (见 skills)
+  agents/                          # 用户自定义 subagent 定义 (见 subagent)
+  prompts/                         # 用户自定义 slash command 的提示词模板 (见 slash-command)
+```
+
+会话日志路径是 `~/.yukino/sessions/<projectKey>/<sessionId>.jsonl`; sessionId 由 base36 时间戳和 4 字节随机 hex 组成, 例如 `munwsuxu-2d76691f`
 
 消息使用 provider 无关的内部表示持久化, 切换 provider 后依然可以恢复会话
 
@@ -202,11 +226,11 @@ Yukino 的会话持久化使用 JSONL 格式 (JSON lines), 每行一个 JSON 对
 
 ## 过期会话清理
 
-Yukino 启动时, 惰性清理 `.yukino/sessions/` 目录下超过 30 天没有活跃的会话日志
+Yukino 启动时, 惰性清理超过 30 天没有活跃 (mtime) 的会话: 删除 jsonl 日志和 `sessions/artifacts/<sessionId>/` 下的全部产物 (工具结果、文件快照、后台输出)
 
 ## 文件历史和检查点回退
 
-EditFile 和 WriteFile 每次写文件前, 先将被修改文件的当前内容备份到 `.yukino/file-history/<sessionId>/` 目录 (备份文件名是 `<文件hash>@s<序号>`), 并记录该文件首次被跟踪时的基线状态 (已存在 / 不存在)
+EditFile 和 WriteFile 每次写文件前, 先将被修改文件的当前内容备份到 `~/.yukino/sessions/artifacts/<sessionId>/file-history/` 目录 (备份文件名是 `<文件hash>@s<序号>`), 并记录该文件首次被跟踪时的基线状态 (已存在 / 不存在)
 
 每轮 agent loop 结束时, FileHistory 对所有被跟踪的文件做一次快照, 记录快照对应的消息序号、用户消息摘要、会话日志行数和每个文件的备份路径, 快照索引持久化到 `snapshots.json`
 
@@ -230,7 +254,7 @@ EditFile 和 WriteFile 每次写文件前, 先将被修改文件的当前内容�
 例如要求 Agent: 缩进用 2 个空格, 不要用 4 个空格
 
 - 用户偏好, 存储到 `~/.yukino/memory`
-- 项目知识, 存储到 `${workDir}/.yukino/memory`
+- 项目知识, 存储到 `~/.yukino/projects/<projectKey>/memory`
 
 每条记忆是一个独立的 .md 文件, 有 yaml frontmatter 描述元信息
 
@@ -249,7 +273,7 @@ frontmatter 支持 `name`、`description`、`type` 三个字段 (兼容 `metadat
 MEMORY.md 索引文件由扫描自动生成, 按 name 字母序, 每行一条记忆链接加描述; 索引注入到 messages 字段时有上限, 最多 200 行或 25KB, 先到为准, 超过截断, 防止记忆太多撑满上下文
 
 ```txt
-.yukino/memory/
+~/.yukino/projects/<projectKey>/memory/
   MEMORY.md # 索引文件, 注入到 messages 字段
   no-type-assertions.md
   validate-runtime-data-with-zod.md
@@ -275,13 +299,22 @@ Yukino 开启新会话时, 自动读取指令文件和 MEMORY.md, 使用 `<syste
 
 提取的新记忆根据类型路由到不同目录
 
-- project 和 reference 类型的新记忆写入到 `${workDir}/.yukino/memory` 工作目录
+- project 和 reference 类型的新记忆写入到 `~/.yukino/projects/<projectKey>/memory` 项目命名空间
 - user 和 feedback 类型的新记忆写入到 `~/.yukino/memory` 全局目录
 - 写入后自动调用 rebuildIndex 重建 MEMORY.md 索引文件
 
+### 提取的实现: 带工具的小 subagent
+
+`MemoryExtractor` (src/memory/extractor.ts) 不是裸 LLM 调用, 而是一个带只读/写记忆工具的小 subagent (ReadFile / WriteFile / EditFile / Glob / Grep):
+
+- 触发: 每次 agent loop 结束 (onLoopComplete) 且新增消息 >= 2 条时, fire-and-forget 启动; 输入是最近 40 条消息的 `[role]: content` 序列化文本 (过滤过短的行)
+- 去重: 提取前扫描两个记忆目录生成 manifest (`[type] 文件名: description`), 随请求发给 LLM, 避免重复提取已有记忆
+- 并发合并: inProgress + pendingContext 队列, 至多排队一个待跑的摘要, 且只跑最新排队的
+- 回退: subagent 没有经工具写出任何记忆文件时, 解析其流式文本中的结构化记忆块落盘
+
 ## 记忆整理
 
-Yukino 后台定期执行「记忆整理」, fork 一个 subagent, grep 最近的会话日志 (只在 remote 模式运行: 常驻进程适合跑周期任务; 交互式 UI 只有记忆提取)
+Yukino 后台定期执行「记忆整理」, fork 一个 subagent, grep 最近的会话日志 (交互式 UI 和 remote 模式都会运行)
 
 - 收集新记忆
 - 删除过时记忆
@@ -305,10 +338,12 @@ Yukino 后台定期执行「记忆整理」, fork 一个 subagent, grep 最近�
 
 ## 防止并发冲突: 两个锁文件
 
-如果同时打开两个 Yukino 会话 (或 remote 服务器与终端同时运行), 两个进程可能同时触发记忆整理; `.yukino/memory/` 下用两个文件分工:
+如果同时打开两个 Yukino 会话 (或 remote 服务器与终端同时运行), 两个进程可能同时触发记忆整理; 项目记忆目录 (`~/.yukino/projects/<projectKey>/memory/`) 下用两个文件分工:
 
 - `.consolidate-lock`: 不参与互斥, 只记录「上一次成功整理的时间」; 整理成功后写入空内容, mtime 即成为新的时间戳, 24h 时间门槛读的就是它的 mtime
 - `.consolidate-running`: 运行锁, 使用票据式文件锁 (和 teams 邮箱同一套 Lamport bakery 锁), 非阻塞获取: 拿不到锁说明别的进程正在整理, 直接放弃本次 (不排队、不重试, 等下一个触发时机)
+
+交互式 UI 中, 整理进度经 appendSystem 回调以系统消息展示在对话里
 
 ```js
 // maybeRun() 的核心判定顺序

@@ -31,10 +31,11 @@ fork_context: 可选的, 仅 fork 模式生效: none (默认) / recent / full
 
 ## skills 目录, 优先级从低到高
 
-1. 用户级: ~/.agents/skills/
-2. 项目级: ${workDir}/.agents/skills/
+1. 用户级 (跨工具共享): ~/.agents/skills/
+2. 用户级 (Yukino 专属): ~/.yukino/skills/
+3. 项目级: ${workDir}/.agents/skills/
 
-两层目录按顺序扫描, 同名 skill 后扫描的覆盖先扫描的, 即项目级赢; 每个 skill 是 `<目录>/<skill-name>/SKILL.md`
+三层目录按顺序扫描, 同名 skill 后扫描的覆盖先扫描的, 即项目级赢; 每个 skill 是 `<目录>/<skill-name>/SKILL.md`; 扫描支持分组目录递归发现 (带 visited 集合防环), 遇到声明了 SKILL.md 的目录就停止下钻
 
 ## skill 执行模式
 
@@ -90,7 +91,7 @@ fork 模式的实现:
 
 - source: 本地文件路径或 SKILL.md 的原始内容 URL (拒绝 HTML 页面和仓库页面); URL 下载超时 30s
 - name: 可选的名称覆盖 (校验 `^[a-zA-Z0-9_-][a-zA-Z0-9._-]*$` 且不以 `.` 结尾, 会重写 frontmatter 的 name)
-- 安装位置: 项目级 `${workDir}/.agents/skills/<name>/SKILL.md`
+- 安装位置: 用户级 `~/.yukino/skills/<name>/SKILL.md` (所有项目可用)
 - 安全: 路径的 symlink 逐段拒绝; 临时文件 + rename 原子替换; 安装完成后重载 catalog 并重新注册 slash command
 
 ## 自动注册为 Slash Command

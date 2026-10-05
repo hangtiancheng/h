@@ -70,9 +70,8 @@ _去中心化协调_
 - TeamCreate 工具: 创建 team
   - team_name: 必填; description 可选
   - 创建 TeamFile、检测运行后端、注册 leader (主 agent 自己)
-- Agent 工具: 向 team 中 spawn 一个 teammate (team_name 参数), team 不存在时自动创建
-- SpawnTeammate 工具: 独立的 teammate 创建工具, 支持 team 不存在时自动创建
-  - team / name / task 全部必填; name 校验 `^[a-zA-Z0-9_-]+$` 且不能是 `leader`; 成员已存在报错
+- Agent 工具: 向 team 中 spawn 一个 teammate (team_name 参数), team 不存在时自动创建指定的 team, leader 不需要先调 TeamCreate
+  - name: 可选的稳定 teammate 名字, 校验 `^[a-zA-Z0-9_-]+$` 且不能是 `leader`; 成员已存在报错
 - ListTeams 工具: 无参数, 输出 `name [mode]: members (active 标记)`
 - TeamDelete 工具: 停止成员、注销名字、删除 team 目录
 
@@ -83,19 +82,12 @@ TeamCreate.execute({
   description: "迁移 react-router 到 @tanstack/router",
 });
 
-// 调用 SpawnTeammate 工具 spawn 一个 teammate `jane`
-SpawnTeammate.execute({
-  team: "migrate-react-app",
-  name: "jane",
-  task: "迁移 swr 到 @tanstack/query",
-});
-
-// 调用 Agent 工具 (team_name 参数) spawn 一个 teammate
+// 调用 Agent 工具 (team_name 参数) spawn 一个 teammate `jane`
 Agent.execute({
   team_name: "migrate-react-app",
-  name: "antd-migrator",
-  description: "迁移 antd 到 shadcn",
-  prompt: "迁移 antd 到 shadcn",
+  name: "jane",
+  description: "迁移 swr 到 @tanstack/query",
+  prompt: "迁移 swr 到 @tanstack/query",
 });
 ```
 
@@ -121,7 +113,7 @@ teammate 的唤醒完全靠邮箱轮询 (in-process 每 500ms 空闲轮询, 独�
 
 agent team 给 teammate 额外注入两组协调工具
 
-- 任务管理工具: TeamTaskCreate、TeamTaskGet、TeamTaskList、TeamTaskUpdate; 工具名和主对话的 todo 工具完全相同, 注册进 teammate 的工具表时覆盖继承的版本, 实际操作的是团队共享任务板 (跨进程共享, 多 assignee / blocks / blockedBy 依赖字段)
+- 任务管理工具: TeamTaskCreate、TeamTaskGet、TeamTaskList、TeamTaskUpdate; 实现上继承主对话的任务板工具 (TaskCreate/TaskGet/TaskList/TaskUpdate, 见 task-tracking), 工具名完全相同, 注册进 teammate 的工具表时覆盖继承的版本, 底层 board 换成团队共享任务板 (SharedTaskStore, tasks.json, 跨进程共享, 多 assignee / blocks / blockedBy 依赖字段)
 - 通信工具: SendMessage, 使得 leader/teammate 间可以相互发送邮件
 
 ```txt
@@ -130,8 +122,10 @@ teammate 注入的协调工具:
   SendMessage                                   <- 邮箱通信
 ```
 
+leader 侧的任务工具同样被替换为团队感知版本 (registerLeaderTaskTools): 存在 team 上下文时操作共享任务板, 没有 team 时回落到 leader 的私有任务板; 因此 leader 不需要切换工具就能同时管理私有任务和团队任务
+
 - teammate 和 leader (主 agent) 都有 SendMessage 工具
-- subagent 没有 SendMessage 工具
+- 普通 subagent 没有 SendMessage 工具 (委派策略剥离, 见 subagent)
 
 ## SendMessage 工具
 
@@ -234,16 +228,22 @@ coordinator 模式下 leader 的工具白名单 (src/teams/coordinator.ts):
 
 ```js
 const COORDINATOR_ALLOWED_TOOLS = new Set([
+  "Goal", // 持久目标状态
   "Agent", // spawn 和管理 teammate
   "SendMessage", // 向 teammate 发送邮件
   "TaskStop", // 停止 teammate 或后台任务
   "SyntheticOutput", // 交付结构化结果
   "TeamDelete", // 删除 team
+  "TaskCreate", // 共享任务板调度
+  "TaskGet",
+  "TaskList",
+  "TaskUpdate",
+  "TodoWrite",
 ]);
 // MCP 工具同样被排除
 ```
 
-分界不是读/写, 而是「是否会把大量内容灌进 leader 的上下文」: ReadFile/Glob/Grep/Bash 的输出会占用 leader 的上下文窗口, 探索和执行都应该委派给 teammate; 只保留让 leader 能调度、通信、停止、交付结果的最小工具集
+分界不是读/写, 而是「是否会把大量内容灌进 leader 的上下文」: ReadFile/Glob/Grep/Bash 的输出会占用 leader 的上下文窗口, 探索和执行都应该委派给 teammate; 共享任务板是调度元数据, 属于编排而不是探索, 所以任务板工具保留; 只保留让 leader 能调度、通信、停止、交付结果的最小工具集 (TeamCreate 不需要: Agent 的 team_name 路径会自动建 team)
 
 ### Coordinator 工作流
 

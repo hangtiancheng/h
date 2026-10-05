@@ -16,7 +16,7 @@ yukino --acp-ws 0      # OS 分配端口, 实际 ws:// 地址打印到 stderr
 ```
 
 - stdio 传输: 编辑器把 Yukino 作为子进程启动, 经 stdin/stdout 通信, 是编辑器的标准用法
-- WebSocket 传输: 独立监听, 路径 `/acp`; 和 A2A / remote 一样, 只绑定 loopback 地址 (没有内置鉴权)
+- WebSocket 传输: 独立监听, 路径 `/acp`; 和 A2A / remote 一样只绑定 loopback 地址; 升级握手经 websocket-security 校验: 启动时生成一次性访问 token (URL 携带, 时序安全比较) + Origin 同源检查 (见 remote)
 - 两种传输背后是同一套 agent 实现 (src/acp/agent.ts)
 
 ## 方法清单
@@ -43,7 +43,7 @@ agent 侧实现的 ACP 方法:
 ## 会话管理
 
 - 一个 ACP session 对应一个 Yukino session, 复用完整的 agent 装配 (createRemoteAgent: 工具、skills、hooks、MCP、记忆)
-- session/load 校验 cwd 一致性 (不匹配报 invalidParams); 从 `.yukino/sessions/<id>.jsonl` 恢复历史, replay 参数控制是否把历史作为 session/update 通知回放给编辑器
+- session/load 校验 cwd 一致性 (不匹配报 invalidParams); 从 `~/.yukino/sessions/<projectKey>/<id>.jsonl` 恢复历史, replay 参数控制是否把历史作为 session/update 通知回放给编辑器
 - 每个 session 的 runtime 独立持有 ConversationManager、权限检查器、上下文窗口; dispose 时统一清理
 
 ## 事件转换
@@ -62,13 +62,13 @@ Yukino 的 AgentEvent 转换为 ACP 的 SessionUpdate (源码: src/acp/conversio
 tool_call 的 kind 分类:
 
 ```js
-ReadFile                          -> "read"
-WriteFile | EditFile              -> "edit"
-Glob | Grep | ToolSearch          -> "search"
-Bash | PowerShell | ComputerUse   -> "execute"
-Agent | Task*                     -> "think"
-ExitPlanMode                      -> "switch_mode"
-其他                              -> "other"
+ReadFile                                      -> "read"
+WriteFile | EditFile                          -> "edit"
+Glob | Grep | ToolSearch | LSP | WebSearch    -> "search"
+Bash | PowerShell | ComputerUse               -> "execute"
+Agent | TaskCreate/Get/List/Update/Stop/Output | TodoWrite -> "think"
+ExitPlanMode                                  -> "switch_mode"
+其他                                          -> "other"
 ```
 
 locations 从参数中的 file_path/path 提取 (相对路径按 workDir 解析), 编辑器可以据此高亮相关文件

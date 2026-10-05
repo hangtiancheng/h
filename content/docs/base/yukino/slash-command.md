@@ -23,37 +23,36 @@ Slash Command: 以 / 开头的输入会被命令解析器拦截
 
 ## 内置命令清单
 
-| 命令                   | 类型     | 行为                                                                                 |
-| ---------------------- | -------- | ------------------------------------------------------------------------------------ |
-| /login                 | local_ui | 打开表单配置、保存并激活一个 LLM provider                                            |
-| /provider              | local_ui | 切换当前 provider (仅终端 UI 注册)                                                   |
-| /model [model]         | local_ui | 切换当前 provider 的模型; 无参数时打开模型选择器                                     |
-| /help [command]        | local    | 列出全部命令 (不含 skill), 或单个命令的详情                                          |
-| /status                | local    | 当前会话状态: 模式、模型、provider、token、工具、沙箱、记忆、skills、MCP、会话、目录 |
-| /session               | local    | 确认当前会话活跃; 历史会话用 /resume                                                 |
-| /memory                | local    | 列出记忆; `/memory clear` 清空记忆                                                   |
-| /skills                | local_ui | 列出 skills; `/skills reload` 从磁盘热重载                                           |
-| /skill `<name>` [args] | -        | 按名运行 skill (等价于 `/<name> [args]`; `/skill reload` 路由到 /skills reload)      |
-| /plan                  | local_ui | 进入 plan 模式 (只读调查)                                                            |
-| /compact               | local_ui | 强制上下文压缩                                                                       |
-| /clear                 | local_ui | 重置会话并清屏                                                                       |
-| /resume [id]           | local_ui | 列出或恢复历史会话                                                                   |
-| /rewind                | local_ui | 打开检查点回退对话框 (见 agents-md-and-memory 的文件历史)                            |
-| /sandbox [mode]        | local_ui | 配置沙箱: auto (开启+自动放行) / manual (开启+手动确认) / off                        |
-| /worktree              | local_ui | 列出 git worktrees                                                                   |
-| /mcp                   | local    | 显示 MCP server 连接状态; `/mcp reload` 重读配置并 reconcile                         |
-| /thinking [level]      | local    | 无参数打开思考强度选择器; 带参数设置 (off...max), 持久化到 config.yaml               |
-| /code-review           | local_ui | 打开代码审查表单 (workspace / branch-range / commit)                                 |
-| /quit                  | local_ui | 退出                                                                                 |
+| 命令                   | 类型     | 行为                                                                                                                                                                                     |
+| ---------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| /login                 | local_ui | 打开表单配置、保存并激活一个 LLM provider                                                                                                                                                |
+| /provider              | local_ui | 切换当前 provider (仅终端 UI 注册)                                                                                                                                                       |
+| /model [model]         | local_ui | 切换当前 provider 的模型; 无参数时打开模型选择器                                                                                                                                         |
+| /help [command]        | local    | 列出全部命令 (不含 skill), 或单个命令的详情                                                                                                                                              |
+| /status                | local    | 当前会话状态: 模式、模型、provider、token、工具、沙箱、记忆、skills、MCP、会话、目录                                                                                                     |
+| /session               | local    | 确认当前会话活跃; 历史会话用 /resume                                                                                                                                                     |
+| /memory                | local    | 列出记忆; `/memory clear` 清空记忆                                                                                                                                                       |
+| /skills                | local_ui | 列出 skills; `/skills reload` 从磁盘热重载                                                                                                                                               |
+| /skill `<name>` [args] | -        | 按名运行 skill (等价于 `/<name> [args]`; `/skill reload` 路由到 /skills reload)                                                                                                          |
+| /plan                  | local_ui | 进入 plan 模式 (只读调查)                                                                                                                                                                |
+| /goal [args]           | prompt   | 设置/查看持久目标 (status、pause、resume、continue、complete、clear、replace, `--budget <tokens>`); UI 拦截本地处理, 不消耗 LLM token, 只在目标设置/替换时注入 prompt 启动循环 (见 goal) |
+| /compact               | local_ui | 强制上下文压缩                                                                                                                                                                           |
+| /clear                 | local_ui | 重置会话并清屏                                                                                                                                                                           |
+| /resume [id]           | local_ui | 列出或恢复历史会话                                                                                                                                                                       |
+| /rewind                | local_ui | 打开检查点回退对话框 (见 agents-md-and-memory 的文件历史)                                                                                                                                |
+| /sandbox [mode]        | local_ui | 配置沙箱: auto (开启+自动放行) / manual (开启+手动确认) / off                                                                                                                            |
+| /worktree              | local_ui | 列出 git worktrees                                                                                                                                                                       |
+| /mcp                   | local    | 显示 MCP server 连接状态; `/mcp reload` 重读配置并 reconcile                                                                                                                             |
+| /thinking [level]      | local    | 无参数打开思考强度选择器; 带参数设置 (off...max), 持久化到 config.yaml                                                                                                                   |
+| /code-review           | local_ui | 打开代码审查表单 (workspace / branch-range / commit)                                                                                                                                     |
+| /quit                  | local_ui | 退出                                                                                                                                                                                     |
 
 ## 用户自定义命令
 
-两层目录, 按顺序加载, 同名项目级赢
+用户级单目录: `~/.yukino/prompts/` (src/commands/loader.ts, 递归扫描 `*.md`, 没有项目级)
 
-1. 用户级: ~/.yukino/commands/
-2. 项目级: ${workDir}/.yukino/commands/
-
-格式: 递归扫描 `*.md` 文件; 子目录命名空间化 (`sub/dir/foo.md` 注册为 `sub:dir:foo`); 路径段小写、空格转 `-`; 与内置命令冲突时保留内置
+- 子目录命名空间化 (`sub/dir/foo.md` 注册为 `sub:dir:foo`); 路径段小写、空格转 `-`; 与内置命令冲突时保留内置
+- 自定义命令固定是 prompt 类型
 
 ```md
 ---
@@ -66,12 +65,20 @@ $ARGUMENTS
 ```
 
 - frontmatter 只支持 `description` 和 `argument-hint` (解析失败时忽略 frontmatter, 保留正文)
-- 自定义命令固定是 prompt 类型, `$ARGUMENTS` 占位符替换用户参数
-- description 缺省是 "custom command"
+- description 缺省是 "custom command" (有 argument-hint 时附带参数提示)
+
+### 参数替换
+
+模板支持带引号的位置参数解析 (`"a b" c` 解析为两个参数) 和一组占位符:
+
+- `$1`, `$2`, ...: 第 N 个位置参数; `$@`: 全部位置参数拼接
+- `$ARGUMENTS`: 保留用户参数的原文, 包括引号和间距
+- `${1:-main}`: 缺省值; `${@:2:3}`: 位置参数切片 (从第 2 个起取 3 个)
+- 替换只做一遍, 参数内的占位符文本保持字面; 模板没有任何占位符时, 参数追加到正文末尾
 
 ## 使用频率追踪
 
-`CommandUsageTracker` 将命令使用记录持久化到 `${workDir}/.yukino/command_usage.json` (usageCount + lastUsedAt):
+`CommandUsageTracker` 将命令使用记录持久化到 `~/.yukino/command_usage.json` (用户全局, usageCount + lastUsedAt):
 
 - 得分 = 使用次数 × recency 权重 (半衰期 7 天, 下限 0.1)
 - 输入补全时按得分取最近使用的 5 个命令优先展示

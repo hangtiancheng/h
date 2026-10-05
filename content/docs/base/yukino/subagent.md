@@ -52,7 +52,7 @@ interface Tool {
 
 subagent_type 是预定义的 subagent 角色, 枚举值来自已加载的 agent 定义
 
-示例: .yukino/agents/code-review.md
+示例: ~/.yukino/agents/code-review.md
 
 负责代码审查的 subagent 不能再 fork 一个 subagent、不能写文件、不能执行 Bash 命令, 是只读的代码审查专家
 
@@ -84,7 +84,6 @@ Agent 定义文件, 加载顺序从低到高, 同名后者覆盖
 
 1. 内置级: Yukino 内置 (BUILTIN_AGENTS)
 2. 用户级: ~/.yukino/agents/
-3. 项目级: ${workDir}/.yukino/agents/
 
 ```ts
 export interface AgentDefinition {
@@ -125,7 +124,7 @@ export interface AgentDefinition {
 
 > 为什么需要 fork boilerplate 约束 subagent 的行为?
 
-fork 的 subagent 继承父 Agent 的 system prompt, system prompt 可能包含: "你可以创建 subagent", "你需要向用户确认" 等; boilerplate 覆盖继承的默认行为: 你是 fork 出来的 worker, 不是父 agent; 继承的对话是背景上下文; 不要再次 fork; 不要和用户对话或请求确认; 直接使用工具完成任务; 严格待在分配的任务范围内
+fork 的 subagent 继承父 Agent 的 system prompt, system prompt 可能包含: "你可以创建 subagent", "你需要向用户确认" 等; boilerplate 覆盖继承的默认行为: 你是 fork 出来的 worker, 不是父 agent; 继承的对话是背景上下文, 只做随后分配的任务; 不要再次 fork; 不要和用户对话或请求确认; 尊重当前权限, 受阻时向父 agent 汇报; 返回简洁的发现/变更报告、相关路径、实际跑过的检查和剩余工作
 
 fork 的 subagent 默认前台同步运行, 结果内联返回; `run_in_background: true` 时先取对话快照再启动后台任务 (父对话继续演进, 不影响快照)
 
@@ -165,23 +164,25 @@ subagent loop 和主 agent loop 的区别
 
 工具过滤 (src/subagent/tool-filter.ts) 按五层顺序组合:
 
-1. 全局黑名单 `SUBAGENT_DISALLOWED_TOOLS`: ComputerUse, AskUserQuestion, ExitPlanMode, Agent, TaskStop; 所有 subagent 都拿不到 Agent 工具, 调用树在 subagent 层终止 (mcp\_\_\* 工具豁免这一层)
-2. 后台异步 subagent: 白名单 `ASYNC_AGENT_ALLOWED_TOOLS` (14 个): ReadFile, WebFetch, Grep, Glob, Bash, PowerShell, EditFile, WriteFile, LoadSkill, SyntheticOutput, ToolSearch, EnterWorktree, ExitWorktree, McpCall; 没有交互式工具, 后台任务不能阻塞等用户
-3. 定义的 disallowedTools 黑名单
-4. 定义的 tools 白名单 (`["*"]` 关闭该层)
-5. teammate 额外剥离 `TEAMMATE_DISALLOWED_TOOLS`: TeamCreate, TeamDelete (只有 leader 管理 team)
+1. 主 agent 专属工具 `MAIN_AGENT_ONLY_TOOLS`: ComputerUse (独占物理屏幕/键鼠)、AskUserQuestion (独占模态对话框)、ExitPlanMode (需要主线程审批对话框)、Goal (持久目标是会话级状态); 所有委派 agent (fork 和定义式) 都剥离
+2. 委派策略限制 `SUBAGENT_EXTRA_TOOLS`: Agent (递归 spawn, 调用树在 subagent 层终止; fork 例外, 保留打标克隆)、TeamCreate、TeamDelete (只有 leader 管理 team)、SendMessage (委派 agent 不继承 leader 的通信权限); mcp\_\_\* 工具豁免这两层
+3. 后台异步 subagent: 白名单 `ASYNC_AGENT_ALLOWED_TOOLS` (23 个): TaskCreate, TaskGet, TaskList, TaskUpdate, TodoWrite, TaskOutput, TaskStop, LSP, WebSearch, ReadFile, WebFetch, Grep, Glob, Bash, PowerShell, EditFile, WriteFile, LoadSkill, SyntheticOutput, ToolSearch, EnterWorktree, ExitWorktree, McpCall; 没有交互式工具, 后台任务不能阻塞等用户
+4. 定义的 disallowedTools 黑名单
+5. 定义的 tools 白名单 (`["*"]` 关闭该层)
+
+TaskStop 保留给委派 agent: 它只能停自己启动的任务, 不会越权
 
 fork 的 subagent 不能继续 fork, 双重检测:
 
 - fork 时克隆的 registry 中, Agent 工具是原型级克隆并打 `querySource = "agent:builtin:fork"` 标记; 带标记的 Agent 工具再被调用时报错 "cannot fork from a forked agent" (上下文压缩后仍然有效)
 - 扫描对话历史中的 fork boilerplate 标记, 命中同样拒绝
 
-fork 的 registry 只剥离主 agent 专属工具 (ComputerUse, AskUserQuestion, ExitPlanMode), 保留 TaskStop
+fork 的 registry 只剥离主 agent 专属工具 (ComputerUse, AskUserQuestion, ExitPlanMode, Goal), 保留打标的 Agent 和 TaskStop
 
 ## 后台异步运行模式
 
 1. 调用 AgentTool 时指定 `run_in_background: true`, subagent 以后台异步任务启动, 主 agent 立即收到 task ID: `Background agent '<desc>' started (task_id: agent-N). Its result will arrive as a task notification.`
-2. 后台任务由 TaskManager 管理: 任务 id 前缀区分类型 (agent- / bash- / ps-), 状态 running | completed | failed | cancelled, 完成的任务保留上限 200 条
+2. 后台任务由 TaskManager 管理: 任务 id 前缀区分类型 (agent- / bash- / ps-), 状态 running | completed | failed | cancelled, 完成的任务保留上限 200 条; TaskOutput 工具可以按 task_id 查看运行中的后台任务或等待一次完成 (有界超时, 见 task-tracking)
 3. 任务结束后, 结果使用 `<task-notification />` 标签包裹, 经 agent loop 的通知 drain 作为 system-reminder 注入主 agent 的上下文:
 
 ```xml
@@ -194,6 +195,8 @@ name=explore-agent
 4. TaskStop 工具停止后台任务: `task_id` (先查本轮的 TaskManager, 再回退宿主级) 或 `teammate` (按名停团队成员) 二选一
 
 > 注意: Bash/PowerShell 有「超时自动转后台」和 Ctrl+B 手动转后台; Agent 没有超时自动后台化, esc 对前台 Agent 是中断而不是转后台
+
+Agent 工具的 isConcurrencySafe 恒 true: LLM 在同一批里请求多个 Agent 调用时, 多个 subagent 并行运行 (各自独立的工具执行上下文), 完成序流式上报
 
 ## 内置 subagent_type
 

@@ -9,11 +9,12 @@ subagent / teammate 指定 `isolation: "worktree"` 时, 在独立的 git worktre
 ## 路径与分支格式
 
 ```js
-const worktreeDir = join(gitRoot, ".yukino", "worktrees", slug);
+const worktreeDir = yukinoPath("worktrees", projectKey(gitRoot), slug);
+// ~/.yukino/worktrees/<projectKey>/<slug>
 const branch = `worktree-${slug}`;
 ```
 
-- worktree 目录在仓库根的 `.yukino/worktrees/` 下
+- worktree 目录在 `~/.yukino/worktrees/<projectKey>/` 下 (projectKey 是仓库根规范路径的 sha256), 不在仓库内, 不污染工作区
 - 分支名加 `worktree-` 前缀
 - slug 需要安全校验, 防止路径遍历 (../../etc/passwd): EnterWorktree 工具要求 slug 匹配 `/^[a-zA-Z0-9_-]+$/`; ref 名另有 isSafeRefName 校验 (拒绝空串、以 `-` 或 `/` 开头、包含 `..`、任何一段为 `.` 或空, 字符集限定 `[a-zA-Z0-9/._+@-]`)
 - subagent 的 worktree slug 自动生成: `agent-a<7位hex>`
@@ -44,11 +45,10 @@ git worktree add -- <worktreeDir> worktree-<slug>
 
 `performPostCreationSetup` 创建后执行, 所有步骤 best-effort (失败只记日志, 不中断创建):
 
-1. 复制 `.yukino/` 配置的允许清单: `permissions.yaml`、`agents`、`commands`、`memory`; 运行态目录 (sessions、file-history、plans、logs、teams) 明确排除, `worktrees/` 绝不复制 (否则复制源包含目标目录)
-2. 复制 `.agents/` 的允许清单: `AGENTS.md`、`skills`
-3. 共享 git hooks: worktree 没有既有 `core.hooksPath` 且仓库根存在 `.husky/` 目录时, `git config extensions.worktreeConfig true` + `git config --worktree core.hooksPath <.husky 绝对路径>`; worktree 级配置, 不污染主仓库的共享配置
-4. node_modules 符号链接: 源仓库有 node_modules 而 worktree 没有时, 直接 symlink, 免去重装依赖
-5. 读取 `.worktreeinclude` 文件 (每行一个路径, 跳过空行和 `#` 注释, 跳过包含 `..` 的行), 将 include 的文件和目录复制到 worktree, 单项失败跳过
+1. 复制 `.agents/` 的允许清单: `AGENTS.md`、`skills` (项目级配置如 permissions.yaml、agents 定义、commands、记忆已经全局存放在 `~/.yukino` 下, worktree 直接共享, 不需要复制)
+2. 共享 git hooks: worktree 没有既有 `core.hooksPath` 且仓库根存在 `.husky/` 目录时, `git config extensions.worktreeConfig true` + `git config --worktree core.hooksPath <.husky 绝对路径>`; worktree 级配置, 不污染主仓库的共享配置
+3. node_modules 符号链接: 源仓库有 node_modules 而 worktree 没有时, 直接 symlink, 免去重装依赖
+4. 读取 `.worktreeinclude` 文件 (每行一个路径, 跳过空行和 `#` 注释, 跳过包含 `..` 的行), 将 include 的文件和目录复制到 worktree, 单项失败跳过
 
 没有自动的依赖安装步骤 (pnpm install / go mod tidy): node_modules 靠 symlink, 其他生态靠 .worktreeinclude 或用户在 worktree 内自行安装
 
@@ -101,7 +101,7 @@ git branch -d -- <branch>       # -d 而不是 -D: 分支有未合并提交时�
 
 没有按前缀扫描的定时 GC: worktree 的唯一自动删除路径是 ExitWorktree 判定无变更时的清理; subagent 结束后 worktree 显式保留 (输出 `Worktree retained at: <path>`), 有变更的 worktree 永远不自动删除
 
-> 进程崩溃、用户强制退出, 会导致 .yukino/worktrees 下残留 worktree 目录; 用户可以调用 Bash 工具执行 `git worktree list` / `git worktree remove` 手动清理, 或 /worktree 命令查看列表
+> 进程崩溃、用户强制退出, 会导致 ~/.yukino/worktrees/<projectKey>/ 下残留 worktree 目录; 用户可以调用 Bash 工具执行 `git worktree list` / `git worktree remove` 手动清理, 或 /worktree 命令查看列表
 
 ## worktree 与 subagent
 

@@ -15,17 +15,18 @@ title: "Permission"
 判定按以下顺序逐层进行, 前面的层命中即短路
 
 1. 显式规则 (deny / ask 短路): 权限规则文件中命中的 deny 或 ask 规则立即返回; 显式 allow 规则故意不在这里短路, 放行到后面的层, 使得沙箱等层可以先介入
-2. plan 模式文件例外: plan 模式下, WriteFile/EditFile 的目标是 plan 文件时直接 allow (只读模式的唯一写例外)
-3. 安全只读命令放行: command 类工具 (Bash) 命中安全命令白名单时直接 allow
-4. 危险命令拦截: 预留层, 当前 `DANGEROUS_PATTERNS` 有意为空数组 (见下文)
-5. 沙箱自动放行: OS 沙箱开启且 `auto_allow: true` 时, Bash 命令在沙箱内执行, 免人工确认 (deny/ask 规则仍然生效)
-6. 路径沙箱: read/write 类工具的路径参数越出允许的根目录时返回 ask (bypassPermissions 模式跳过; 显式规则可以覆盖)
-7. 规则再评估: 第 1 层放行的显式 allow 规则在这里生效
-8. 权限模式矩阵兜底
+2. teammate 协调工具放行: teammate 的检查器 (teammate = true) 对团队内部协调工具 (SendMessage、共享任务板) 直接 allow: 无人值守的 agent 没有审批通道, 不能让协调工具落入自动拒绝的 ask
+3. plan 模式文件例外: plan 模式下, WriteFile/EditFile 的目标是 plan 文件 (`~/.yukino/plans/`) 时直接 allow (只读模式的唯一写例外)
+4. 安全只读命令放行: command 类工具 (Bash) 命中安全命令白名单时直接 allow
+5. 危险命令拦截: 预留层, 当前 `DANGEROUS_PATTERNS` 有意为空数组 (见下文)
+6. 沙箱自动放行: OS 沙箱开启且 `auto_allow: true` 时, Bash 命令在沙箱内执行, 免人工确认 (deny/ask 规则仍然生效)
+7. 路径沙箱 (仅 write 类): 写工具的路径参数越出允许的根目录时返回 ask; 读工具不再经过路径沙箱层 (读路径由 deny 规则按需拦截); bypassPermissions 模式跳过; 显式规则可以覆盖
+8. 规则再评估: 第 1 层放行的显式 allow 规则在这里生效
+9. 权限模式矩阵兜底
 
 ## 权限模式
 
-四种权限模式 (Shift+Tab 循环切换, 初始值来自 config.yaml 的 `permission_mode`, 环境变量 `YUKINO_BYPASS_PERMISSIONS=1` 优先)
+四种权限模式 (Shift+Tab 循环切换 default → acceptEdits → bypassPermissions, plan 不在循环里: 经 /plan 进入、退出时回到 default; 初始值来自 config.yaml 的 `permission_mode`, 环境变量 `YUKINO_BYPASS_PERMISSIONS=1` 优先)
 
 | 模式              | 只读工具 (read) | 写工具 (write) | 命令工具 (command) |
 | ----------------- | --------------- | -------------- | ------------------ |
@@ -41,7 +42,7 @@ title: "Permission"
 
 ## 第 3 层: 安全命令白名单
 
-命令分类只针对 command 类工具 (Bash); ReadFile、WriteFile 有路径沙箱保护
+命令分类只针对 command 类工具 (Bash); WriteFile 有路径沙箱保护, ReadFile 不再受路径沙箱约束
 
 `SAFE_PREFIXES` 包含约 110 个字符串前缀和约 70 条正则:
 
@@ -67,14 +68,16 @@ export function isSafeCommand(command: string): boolean {
 - 命中 `isSafeCommand` 的命令直接 allow (reason: "Safe read-only command"), 不需要用户确认
 - Bash 工具的并发安全判定复用同一个函数: `isConcurrencySafe(args) = isSafeCommand(command)`
 
-## 第 6 层: 路径沙箱
+## 第 7 层: 路径沙箱 (仅写)
 
+- 只对 write 类工具生效: ReadFile 等读工具不经过路径沙箱层, bypassPermissions 模式也跳过该层
 - 允许的根目录默认两个
   - 项目根目录 (启动 Agent 的工作目录)
   - 系统临时目录 (`os.tmpdir()`, macOS 是 /var/folders/... 而不是 /tmp, Linux 是 /tmp)
+- 额外的根: `allowExtraRoot(path)` 运行时追加可写根 (例如 subagent 的 worktree 目录), 主 agent 和委派 agent 的路径沙箱口径统一
 - 检查流程: `path.resolve(projectDir, filePath)` 计算绝对路径 → `realpathSync` 解析符号链接 (支持尾部不存在的父目录逐级回退) → `path.relative` 判断是否在某个根内
 - write 类工具先查 deny-write 列表 (默认为空)
-- 越界时返回 ask (deny 会太激进, 用户可能确实需要写外部路径), bypassPermissions 模式跳过该层; ask 之前先重查一次显式规则, 显式规则可以覆盖沙箱决策
+- 越界时返回 ask (deny 会太激进, 用户可能确实需要写外部路径); ask 之前先重查一次显式规则, 显式规则可以覆盖沙箱决策
 
 ## 权限规则
 
@@ -87,7 +90,7 @@ export function isSafeCommand(command: string): boolean {
 两个规则文件, 按顺序加载后统一裁决
 
 - 用户级 `~/.yukino/permissions.yaml`
-- 项目级 `${workDir}/.yukino/permissions.yaml`
+- 项目级 `~/.yukino/projects/<projectKey>/permissions.yaml` (projectKey 是项目规范路径的 sha256, 见 agents-md-and-memory 的存储布局)
 
 格式是顶层 YAML 列表, 每项三个字段
 
@@ -113,7 +116,7 @@ export function isSafeCommand(command: string): boolean {
 
 ### 「始终允许」
 
-HITL 确认对话框提供「Yes, and don't ask again for this pattern」选项; 用户选择后, CLI 生成一条 allow 规则追加到项目级规则文件 (`.yukino/permissions.yaml`):
+HITL 确认对话框提供「Yes, and don't ask again for this pattern」选项; 用户选择后, CLI 生成一条 allow 规则追加到项目级规则文件 (`~/.yukino/projects/<projectKey>/permissions.yaml`):
 
 - ReadFile/WriteFile/EditFile: pattern 是目标文件的父目录 + `/*`
 - 其他工具: pattern 是参数内容的前 1-2 个词 + `*`

@@ -124,18 +124,30 @@ export interface ToolResult {
 
 ## 内置工具
 
-| 工具            | 分类    | 只读 | 破坏性 | 场景                 |
-| --------------- | ------- | ---- | ------ | -------------------- |
-| ReadFile        | read    | 是   | 否     | 读文件/读图片        |
-| WriteFile       | write   | 否   | 否     | 创建或重写文件       |
-| EditFile        | write   | 否   | 否     | 精确替换修改文件     |
-| Bash            | command | 否   | 是     | 执行 shell 命令      |
-| PowerShell      | command | 否   | 是     | Windows/pwsh 命令    |
-| Glob            | read    | 是   | 否     | 查找文件名           |
-| Grep            | read    | 是   | 否     | 查找文件内容         |
-| WebFetch        | read    | 是   | 否     | 抓取 URL 转 Markdown |
-| ComputerUse     | command | 否   | 是     | 操作本机 GUI         |
-| AskUserQuestion | read    | 是   | 否     | 向用户提选择题       |
+createToolRegistry (src/bootstrap/tool-registry.ts) 注册的基础工具:
+
+| 工具                                                     | 分类    | 只读 | 破坏性 | 场景                                    |
+| -------------------------------------------------------- | ------- | ---- | ------ | --------------------------------------- |
+| ReadFile                                                 | read    | 是   | 否     | 读文件/读图片                           |
+| WriteFile                                                | write   | 否   | 否     | 创建或重写文件                          |
+| EditFile                                                 | write   | 否   | 否     | 批量精确替换修改文件                    |
+| Bash                                                     | command | 否   | 是     | 执行 shell 命令                         |
+| PowerShell                                               | command | 否   | 是     | Windows/pwsh 命令                       |
+| Glob                                                     | read    | 是   | 否     | 查找文件名                              |
+| Grep                                                     | read    | 是   | 否     | 查找文件内容                            |
+| WebFetch                                                 | read    | 是   | 否     | 抓取 URL 转 Markdown                    |
+| WebSearch                                                | read    | 是   | 否     | Bing 公开搜索页, 免 API Key             |
+| LSP                                                      | read    | 是   | 否     | 语言服务器语义查询 (见 lsp)             |
+| ComputerUse                                              | command | 否   | 是     | 操作本机 GUI                            |
+| AskUserQuestion                                          | read    | 是   | 否     | 向用户提选择题                          |
+| Goal                                                     | read    | 是   | 否     | 持久目标的查询和完成/受阻汇报 (见 goal) |
+| TaskCreate / TaskGet / TaskList / TaskUpdate / TodoWrite | read    | 是   | 否     | 私有任务板 (见 task-tracking)           |
+| TaskOutput                                               | read    | 是   | 否     | 查看后台任务状态和结果                  |
+| EnterWorktree / ExitWorktree                             | command | 否   | 部分   | git worktree 隔离 (见 worktree)         |
+| ExitPlanMode                                             | command | 否   | 否     | plan 模式的唯一出口                     |
+| ToolSearch / McpCall                                     | read    | 是   | 否     | MCP 延迟加载的发现和调用通道 (见 mcp)   |
+
+基础注册之外, 宿主再注册交互类工具: LoadSkill / InstallSkill (见 skills)、Agent (见 subagent)、SyntheticOutput、团队工具 (TeamCreate / SendMessage / ListTeams / TeamDelete / TaskStop, 见 agent-team)
 
 ### ReadFile
 
@@ -144,7 +156,7 @@ export interface ToolResult {
 - 行号: 读文件需要带行号前缀 `"1\tfunction main() {\n2\t..."` (1-based), 方便定位代码位置
 - 大文件: offset 默认 0 (0-based), limit 默认 2000, 分段读文件; 尾部追加 `[N more lines in file. Use offset=X to continue.]`
 - 输出预算: 单次输出上限 50KB; 整文件读取的准入上限 10MB (超过提示改用 Grep/head/tail)
-- 图片: 按扩展名 (png/jpg/jpeg/gif/webp) 识别, 返回 `[Image: mediaType]` + base64 image 内容块, 忽略 offset/limit
+- 图片: 扩展名命中 (png/jpg/jpeg/gif/webp) 或魔数嗅探命中 (无扩展名/假扩展名的图片也能识别) 时, 返回 `[Image: mediaType]` + base64 image 内容块, 忽略 offset/limit
 - 读后校验: 重新 stat 比对 mtime/size, 读取期间文件被改则拒绝注册缓存并报错; 成功则 `fileStateCache.record(path, mtimeMs)`
 
 ### WriteFile / EditFile
@@ -158,10 +170,12 @@ WriteFile
 
 EditFile
 
-- properties: file_path, old_string, new_string, replace_all
-- old_string == new_string 直接报错; replace_all === false 时 old_string 必须唯一匹配
-  - 匹配多个: `Error: old_string found N times in file. It must be unique. Add more surrounding context, or set replace_all to true`
-  - 没有找到: `Error: old_string not found in file`, 说明 LLM 记忆的文件内容可能过时 (file-state-cache 会给出「文件已被修改, 重新读取」的提示)
+- properties: file_path, edits[] (每项 old_string / new_string / replace_all, 一次写盘)
+- 批量编辑: 多个不相交的替换在一次调用里完成, 全部条目针对原始文件匹配, 重叠的条目在写盘前被拒绝 `edits[N] overlaps another edit`
+- old_string == new_string 直接报错 (`edits[N] would not change the file`); replace_all === false 时 old_string 必须唯一匹配
+  - 匹配多个: `Error: edits[N].old_string occurs more than once in file. It must be unique. Add more surrounding context, or set replace_all to true`
+  - 没有找到: `Error: edits[N].old_string not found in file`, 说明 LLM 记忆的文件内容可能过时 (file-state-cache 会给出「文件已被修改, 重新读取」的提示)
+- 匹配容错: LF 和 CRLF 行尾等价匹配; 匹配失败时, 剔除 old_string/new_string 中的游离回车 (CR) 后重试 (LLM 常把 CRLF 文件读成 LF 记忆)
 - 成功输出包含 diff (前后缀公共行算法, 上下文 3 行, 200 行截断) 和 additions/removals 计数
 - new_string 为空, 表示删除 old_string
 - 替换使用函数形式避免 `$&` 等特殊替换; 写操作按 realpath 经文件互斥队列串行化, 不同文件并发
@@ -209,6 +223,13 @@ PowerShell
 - HTML → Markdown 用 turndown (移除 script/style); 二进制 content-type 拒绝
 - 缓存: 按 URL 15 分钟 TTL, 总预算 50MB, 插入序最旧先逐出
 
+### WebSearch
+
+- properties: query (必填), num_results (1-20, 默认 8), allowed_domains, blocked_domains (各至多 100 个主机名, 互斥)
+- 免 API Key: 直接抓取 Bing 公开搜索页 `https://www.bing.com/search?q=...&count=...` (src/tools/bing-search.ts), 不依赖任何搜索 API 密钥
+- 结果解析: cheerio/slim 解析结果卡片, 提取标题/来源 URL/摘要; Bing 的跳转链接 (`/ck/a?u=...`) 解码 base64url 还原为真实 URL, 非 http(s)、带凭据或仍指向 Bing 自身的链接丢弃
+- 域名过滤: allowed_domains / blocked_domains 对结果主机名 (含子域名) 过滤; 网络受限或反爬拦截时如实报错, 不伪造结果
+
 ### ComputerUse
 
 - 操作本机 GUI: 截图、点击、输入、滚动、缩放; 动作集包括 key、type、left_click、double_click、drag、scroll、screenshot、zoom、wait 等, 兼容 OpenAI 风格的批量 actions[] (单批 ≤100, 批后强制返回截图)
@@ -224,10 +245,14 @@ PowerShell
 
 ## 工具注册的装配
 
-- 交互式 UI: createToolRegistry 注册 18 个基础工具, client 就绪后再注册 LoadSkill、InstallSkill、AskUserQuestion、Agent、SyntheticOutput 和团队工具 (TeamCreate、SpawnTeammate、SendMessage、ListTeams、TeamDelete、TaskStop)
-- remote: 17 个基础工具 (无 WebFetch) + LoadSkill/AskUserQuestion/团队工具/Agent
-- print 模式: 16 个 (无 todo/worktree/plan/skill/WebFetch)
-- teammate 进程: 实施类工具 + SendMessage + 团队任务工具, 无 Agent/TeamCreate/TeamDelete (调用树终止)
+基础注册 (createToolRegistry, 23 个): Goal、Task 系列 (TaskCreate/TaskGet/TaskList/TaskUpdate/TodoWrite)、TaskOutput、LSP、Bash、PowerShell、ComputerUse、EditFile、EnterWorktree、ExitPlanMode、ExitWorktree、ReadFile、ToolSearch、McpCall、WriteFile、Glob、Grep、WebFetch、WebSearch; 有 team 时再注册 leader 的团队任务工具 (见 agent-team)
+
+宿主在基础注册之上的差异:
+
+- 交互式 UI: + LoadSkill、InstallSkill、AskUserQuestion、Agent、SyntheticOutput、TeamCreate、SendMessage、ListTeams、TeamDelete、TaskStop
+- remote: 与 UI 相同的装配, 但没有 InstallSkill 和 ListTeams
+- print 模式: + Agent、SyntheticOutput、TeamCreate、SendMessage、TeamDelete、TaskStop (无 skills、无 AskUserQuestion, 没有审批通道)
+- teammate / subagent: 经工具过滤后的子集 (见 subagent)
 
 ## 流式 tool_use 解析: 拼接 partialJson JSON 碎片
 
@@ -248,3 +273,7 @@ content_block_stop
 - tool_use 工具调用请求的 role 是 assistant, tool_result 工具调用结果的 role 是 user
 - 一条 assistant 消息可能同时包含 text 内容块和 tool_use 内容块, 必须在同一条 assistant 消息中, 不能拆成两条 assistant 消息
 - 如果一条 assistant 消息包含多个 tool_use 内容块, 即 LLM 请求同时调用多个工具, 则多个 tool_result 内容块必须在同一条 user 消息中, 通过 id 配对
+
+## 工具执行的完成流
+
+工具调用经权限/hook 检查后交给 StreamingExecutor (src/agent/streaming-executor.ts): 批内的调用并发执行, 哪个先完成就先 yield 哪个的 tool_result 事件 (UI 即时渲染每个工具的完成); 对话历史和会话日志仍按 LLM 给出的原始调用顺序写入 tool_result 块, 保证配对和回放稳定 (见 react-and-agent-loop)

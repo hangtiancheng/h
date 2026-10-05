@@ -23,16 +23,16 @@ sandbox:
 - `/sandbox manual`: 开启沙箱 + 手动确认
 - `/sandbox off`: 关闭沙箱
 
-默认的沙箱策略 (UI 层组装):
+默认的沙箱策略 (configureBashSandbox 组装, src/bootstrap/sandbox.ts):
 
 ```js
 sandboxConfig = {
-  allowWrite: [workDir, "/tmp", os.tmpdir()], // 项目目录 + 临时目录
+  allowWrite: [cwd, os.tmpdir()], // 项目目录 + 临时目录
   denyWrite: [], // 默认没有写保护的洞
 };
 ```
 
-> tmpdir 必须在 allowWrite 里: mktemp、编译器、git、python tempfile 都依赖临时目录; macOS 的 tmpdir 是 /var/folders/... 而不是 /tmp, 所以两个都要加
+> tmpdir 必须在 allowWrite 里: mktemp、编译器、git、python tempfile 都依赖临时目录; macOS 的 tmpdir 是 /var/folders/... 而不是 /tmp; profile 生成时还会为每个路径补发 realpath 变体 (覆盖 /tmp → /private/tmp 这类符号链接)
 
 ## 沙箱接口
 

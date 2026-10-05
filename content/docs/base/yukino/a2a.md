@@ -48,7 +48,7 @@ Agent Card 是 A2A 的服务发现文档, 描述这个 agent 是谁、能做什�
       "protocolVersion": "1.0",
     },
   ],
-  "version": "0.0.8",
+  "version": "0.0.12", // 跟随当前运行的 Yukino 版本
   "capabilities": { "streaming": true, "pushNotifications": false },
   "defaultInputModes": ["text/plain"],
   "defaultOutputModes": ["text/plain"],

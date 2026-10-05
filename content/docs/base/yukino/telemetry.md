@@ -22,7 +22,7 @@ Langfuse:      LANGFUSE_PUBLIC_KEY 和 LANGFUSE_SECRET_KEY 同时设置
 Sentry:        SENTRY_DSN 设置
 ```
 
-运行模式 (TelemetryMode) 会作为 `yukino.mode` 属性附加到观测数据上: terminal / print / remote / teammate (未初始化时是 unknown); `--acp` 和 `--a2a` 模式不初始化遥测
+运行模式 (TelemetryMode) 会作为 `yukino.mode` 属性附加到观测数据上: terminal / print / remote / teammate / acp / a2a (未初始化时是 unknown); 六种运行模式都初始化遥测
 
 ```bash
 export OTEL_TRACES_EXPORTER=otlp
@@ -58,6 +58,7 @@ yukino.agent.run (一次 agent loop)
 
 - session id 经 sha256 哈希后取前 16 位作为 `session.hash`, 可关联同一会话的观测数据但不可逆推
 - 错误日志只上报错误类型和消息摘要, 不携带内容载荷
+- 文本载荷经 scrubTelemetryPayload 清洗 (src/telemetry/privacy.ts): 环境变量中命中 API_KEY / TOKEN / SECRET / PASSWORD / PRIVATE_KEY / DSN 模式的值 (含 URL 编码形态) 替换为 `[redacted]`, home 目录路径替换为 `~`
 
 ## 生命周期
 

@@ -21,7 +21,7 @@ LLM API 是无状态的, 每个 LLM API 请求, 都需要发送完整的对话�
 ```xml
 <persisted-output>
 Output too large (80KB). Full content saved to:
-.yukino/sessions/{sessionId}/tool-results/{toolUseId}.txt
+~/.yukino/sessions/artifacts/{sessionId}/tool-results/{toolUseId}.txt
 
 Preview (first 2KB):
 ...
@@ -150,7 +150,7 @@ Recent messages have been preserved verbatim.
 
 <!-- 会话记录日志路径 -->
 
-If you need specific details from before compaction (code snippets, error messages, etc.), use ReadFile to read the full session transcript: $HOME/path/to/.yukino/sessions/munwsuxu-2d76691f.jsonl
+If you need specific details from before compaction (code snippets, error messages, etc.), use ReadFile to read the full session transcript: ~/.yukino/sessions/<projectKey>/munwsuxu-2d76691f.jsonl
 
 ---
 

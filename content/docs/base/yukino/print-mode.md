@@ -19,11 +19,12 @@ yukino -p "fix the failing test" --output-format stream-json
 ## 与交互模式的差异
 
 - 权限: 固定 bypassPermissions, 不弹任何确认; print 模式有意绕过权限提示, 只应在可信的 prompt 上运行 (CI 里跑不可信输入等于任意代码执行)
-- 会话: 不写会话文件 (无 sessionId), 不可 --resume
-- 没有 HookEngine、没有 skills、没有 file-history 快照
+- 会话: 有临时 sessionId (供持久目标和会话产物使用), 但不写会话 jsonl, 不可 --resume; 退出时删除整个产物目录
+- 没有 HookEngine、没有 skills、没有 AskUserQuestion、没有 file-history 快照
+- 支持持久目标 (GoalManager): 单次非交互执行内目标可以自动续跑 (见 goal)
 - 遥测正常初始化 (mode: print)
 
-工具集是 16 个: ReadFile、Bash、PowerShell、ComputerUse、Glob、Grep、WriteFile、EditFile、ToolSearch、McpCall、Agent、SyntheticOutput、TeamCreate、SendMessage、TeamDelete、TaskStop
+工具集是完整的基础注册 (createToolRegistry 23 个, 含 Goal、Task 系列、LSP、WebSearch、WebFetch) + 团队工具 (TeamCreate、SendMessage、TeamDelete、TaskStop、leader 任务工具覆盖) + Agent + SyntheticOutput
 
 - 团队工具保留: 单次非交互执行内, leader 仍然可以组建 team 委派任务
 - 团队不从磁盘恢复: 退出时 stopAll 会停掉所有 team, 恢复交互会话留下的外部 teammate 会误杀它们
@@ -40,9 +41,11 @@ Agent 循环封装: run() 是一个 AsyncGenerator...
 
 ## stream-json 输出
 
-每个事件一行 JSON, 供程序消费:
+每个事件一行 JSON, 供程序消费; 除工具事件外, stream_text、thinking_text、turn_complete、loop_complete、steering_delivered、retry、compact 也逐行原样输出:
 
 ```jsonc
+// 流式文本增量
+{ "type": "stream_text", "text": "Agent 循环封装..." }
 // 工具调用开始
 { "type": "tool_use", "tool_name": "ReadFile", "tool_id": "toolu_1", "args": { "file_path": "src/agent/index.ts" } }
 // 工具调用结果
@@ -55,7 +58,7 @@ Agent 循环封装: run() 是一个 AsyncGenerator...
 { "type": "task_notification", "notification": "<task-notification ...>" }
 ```
 
-流式文本和 thinking 不逐行输出 (聚合进最终的 result), 结束时输出一行汇总:
+结束时输出一行汇总:
 
 ```jsonc
 {
@@ -63,15 +66,20 @@ Agent 循环封装: run() 是一个 AsyncGenerator...
   "result": "Agent 循环封装: run() 是一个 AsyncGenerator...",
   "duration_ms": 8420,
   "num_turns": 3,
-  "tool_calls": [{ "tool": "ReadFile", "elapsed": 0.02 }],
-  "usage": { "inputTokens": 12000, "outputTokens": 340 },
+  "tool_calls": [{ "tool": "ReadFile", "tool_id": "toolu_1", "elapsed": 0.02 }],
+  "usage": {
+    "inputTokens": 12000,
+    "outputTokens": 340,
+    "cacheReadInputTokens": 0,
+    "cacheCreationInputTokens": 0,
+  },
 }
 ```
 
 ## 退出行为
 
 - 只等待后台 Agent 任务的结果 (它们参与最终答案); 后台 shell 任务 (dev server、超时自动转后台的命令) 不等待, 否则 -p 永远挂住
-- finally 清理: 停止所有后台任务和 team、断开 MCP 子进程
+- finally 清理: 停止所有后台任务和 team、断开 MCP 子进程、删除本次的会话产物目录
 - 退出码: 正常结束 0; error 事件或 interrupted 置 1
 
 ## 结构化交付: SyntheticOutput

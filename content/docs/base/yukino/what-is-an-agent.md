@@ -40,12 +40,16 @@ Yukino 是一个基于终端的 AI coding agent: 单一 CLI 二进制, 连接可
 ## 文档地图
 
 - 核心循环: react-and-agent-loop (ReAct 与循环机制)、llm (三种协议的封装)、function-calling (工具抽象与内置工具)、system-prompt (prompt 工程)
-- 扩展能力: mcp (动态工具接入)、hook (生命周期事件)、skills (可移植 SOP)、slash-command (命令系统)
+- 扩展能力: mcp (动态工具接入)、hook (生命周期事件)、skills (可移植 SOP)、slash-command (命令系统)、lsp (语言服务器集成)、WebSearch/WebFetch (联网检索, 见 function-calling)
 - 记忆与上下文: context-compaction (两层压缩)、agents-md-and-memory (指令文件、会话持久化、自动记忆、文件历史)
+- 任务与目标: task-tracking (任务板与后台任务)、goal (持久目标与自动续跑)
 - 多 agent: subagent (主从委派)、agent-team (团队协作与 coordinator 模式)、worktree (文件系统隔离)
 - 安全: permission (权限系统)、sandbox (OS 级沙箱)
 - 对外集成: a2a、acp、remote、print-mode、telemetry (可观测性)
+- 交互: terminal-ui (终端 TUI 交互: 原生滚动、用户 Bash、快捷键)
 - 质量: code-review (结构化代码审查子系统)
+
+Yukino 以 npm 包发布 (`npm install -g @yukino.js/yukino`), 支持 `yukino update` 自更新到最新发布版; TUI 异步检查新版本并提示
 
 ## AI Coding 工作流
 

@@ -206,13 +206,16 @@ interface LLMClient {
 
 统一的错误类型 (src/llm/errors.ts), 两种协议的 classify 函数把 SDK 错误映射到同一组类型:
 
-| 类型                | 触发条件                                                         | agent loop 的反应   |
-| ------------------- | ---------------------------------------------------------------- | ------------------- |
-| ContextTooLongError | 413; 或 400 且消息匹配 prompt too long / context_length_exceeded | forceCompact 后重试 |
-| RateLimitError      | 429 (携带 retry-after 头)                                        | 最多 3 次退避重试   |
-| AuthenticationError | 401                                                              | 终止, 提示重新登录  |
-| LLMError            | 其他 API 错误                                                    | 终止本轮            |
-| NetworkError        | 非 API 错误、流未正常终止                                        | 终止本轮            |
+| 类型                | 触发条件                                                         | agent loop 的反应           |
+| ------------------- | ---------------------------------------------------------------- | --------------------------- |
+| ContextTooLongError | 413; 或 400 且消息匹配 prompt too long / context_length_exceeded | forceCompact 后重试         |
+| RateLimitError      | 429 (携带 retry-after 头)                                        | 可见输出前最多 3 次退避重试 |
+| ServerError         | 5xx 服务端错误                                                   | 可见输出前最多 3 次退避重试 |
+| NetworkError        | 非 API 错误、流未正常终止                                        | 可见输出前最多 3 次退避重试 |
+| AuthenticationError | 401                                                              | 终止, 提示重新登录          |
+| LLMError            | 其他 API 错误                                                    | 终止本轮                    |
+
+重试细节见 react-and-agent-loop 的错误自愈 (src/llm/retry.ts)
 
 ## 多轮对话如何实现
 
