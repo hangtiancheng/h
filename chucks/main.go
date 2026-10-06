@@ -169,26 +169,25 @@ func lexicographicallySmallestArray2(nums []int, limit int) []int {
 	return ans
 }
 
-
 func minimumDeletions(nums []int) int {
-  if (len(nums) <= 1) {
-    return len(nums);
-  }
-  minIdx, maxIdx := 0, 0
-  for i := range nums {
-    if nums[i] < nums[minIdx] {
-      minIdx = i
-    } else if nums[i] > nums[maxIdx] {
-      maxIdx = i;
-    }
-  }
-  if (minIdx == maxIdx) {
-    return 1;
-  }
-  return min(
-    max(minIdx, maxIdx) +1,
-    max(len(nums) - minIdx, len(nums) - maxIdx),
-    minIdx + len(nums) - maxIdx + 1,
-    maxIdx + len(nums) - minIdx + 1,
-  )
+	if len(nums) <= 1 {
+		return len(nums)
+	}
+	minIdx, maxIdx := 0, 0
+	for i := range nums {
+		if nums[i] < nums[minIdx] {
+			minIdx = i
+		} else if nums[i] > nums[maxIdx] {
+			maxIdx = i
+		}
+	}
+	if minIdx == maxIdx {
+		return 1
+	}
+	return min(
+		max(minIdx, maxIdx)+1,
+		max(len(nums)-minIdx, len(nums)-maxIdx),
+		minIdx+len(nums)-maxIdx+1,
+		maxIdx+len(nums)-minIdx+1,
+	)
 }

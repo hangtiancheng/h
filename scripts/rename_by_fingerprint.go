@@ -6,10 +6,12 @@
 //	go run rename_by_fingerprint.go [options] [directory...]
 //	go build -o rename-by-fingerprint rename_by_fingerprint.go
 //
-// Preview is the default. --apply reserves destinations with hard links and
-// unlinks only verified sources, without overwriting or deduplicating files.
-// Close files before applying: a concurrent writer can still race the final
-// unlink. An interruption can leave both names pointing to the same file.
+// Preview is the default. --apply directly renames verified sources and uses
+// numbered suffixes for existing destinations, without deduplicating files.
+// Each root's .meta.json caches MD5 values for files whose metadata is unchanged,
+// including in preview mode.
+// Close files before applying and avoid concurrent edits or renames: checking
+// a destination and renaming the source are separate operations.
 package main
 
 import (
@@ -33,6 +35,7 @@ import (
 )
 
 const hashBufferSize = 1 << 20
+const metadataFilename = ".meta.json"
 
 var defaultExcludes = []string{
 	".DS_Store", ".Spotlight-V100", ".Trashes", ".TemporaryItems", ".fseventsd",
@@ -122,10 +125,12 @@ Usage: go run rename_by_fingerprint.go [options] [directory...]
   --help, -h              Display this help.
 
 Requires Go 1.25+ on macOS or Linux. Hashes whole files, using 1 MiB per worker.
+Each directory argument stores an MD5 cache in .meta.json, also in preview mode.
+Files with unchanged size, modification time and change time reuse cached MD5s.
 Progress is written to stderr every second during hashing.
-Existing files and symbolic links are never overwritten. Duplicate hashes
-receive numbered suffixes. File contents and extension case are preserved.
-Close files before applying. Hard-link support is required for safe renames.
+Existing destination names and duplicate hashes receive numbered suffixes.
+File contents and extension case are preserved. Renames do not need hard links.
+Close files before applying and avoid concurrent edits or renames.
 Built-in exclusions: %s
 Exit codes: 0 completed, 1 file or directory errors, 2 invalid usage.
 `, strings.Join(defaultExcludes, ", "))
@@ -286,6 +291,9 @@ func collectFiles(roots []string, excludes exclusions, checks *directoryChecks) 
 		}
 		for _, entry := range entries {
 			filename := filepath.Join(directory, entry.Name())
+			if entry.Name() == metadataFilename || strings.HasPrefix(entry.Name(), metadataFilename+"-") {
+				continue
+			}
 			if excludes.matches(filename) || entry.Type()&os.ModeSymlink != 0 {
 				collected.skipped++
 				continue
@@ -337,6 +345,96 @@ type fingerprint struct {
 	file, hash string
 	stat       os.FileInfo
 	err        error
+}
+
+type metadataEntry struct {
+	MD5     string `json:"md5"`
+	Size    int64  `json:"size"`
+	MtimeNS int64  `json:"mtimeNs"`
+	CtimeNS int64  `json:"ctimeNs"`
+}
+
+type metadata struct {
+	Files map[string]metadataEntry `json:"files"`
+}
+
+func loadMetadata(roots []string) map[string]metadataEntry {
+	entries := make(map[string]metadataEntry)
+	for _, root := range roots {
+		file, err := os.OpenFile(filepath.Join(root, metadataFilename), os.O_RDONLY|syscall.O_NOFOLLOW|syscall.O_NONBLOCK, 0)
+		if err != nil {
+			continue // Missing or unreadable caches simply cause a fresh hash.
+		}
+		var stored metadata
+		err = json.NewDecoder(file).Decode(&stored)
+		_ = file.Close()
+		if err != nil {
+			continue
+		}
+		for name, entry := range stored.Files {
+			if filepath.IsLocal(name) {
+				entries[filepath.Join(root, name)] = entry
+			}
+		}
+	}
+	return entries
+}
+
+func fingerprintFromCache(filename string, entry metadataEntry, checks *directoryChecks) (fingerprint, bool) {
+	if len(entry.MD5) != md5.Size*2 || entry.MD5 != strings.ToLower(entry.MD5) {
+		return fingerprint{}, false
+	}
+	if _, err := hex.DecodeString(entry.MD5); err != nil {
+		return fingerprint{}, false
+	}
+	if err := checks.check(filepath.Dir(filename)); err != nil {
+		return fingerprint{}, false
+	}
+	info, err := os.Lstat(filename)
+	if err != nil || !info.Mode().IsRegular() || info.Size() != entry.Size ||
+		info.ModTime().UnixNano() != entry.MtimeNS || changeTime(info).UnixNano() != entry.CtimeNS {
+		return fingerprint{}, false
+	}
+	return fingerprint{file: filename, hash: entry.MD5, stat: info}, true
+}
+
+func saveMetadata(root string, values []fingerprint, inodeStates map[string]os.FileInfo, checks *directoryChecks) error {
+	if err := checks.check(root); err != nil {
+		return err
+	}
+	stored := metadata{Files: make(map[string]metadataEntry)}
+	for _, value := range values {
+		if value.err != nil || !inside(root, value.file) {
+			continue
+		}
+		expected := value.stat
+		if saved := inodeStates[inodeKey(value.stat)]; saved != nil {
+			expected = saved // Our own renames can change ctime, including on hard links.
+		}
+		current, err := os.Lstat(value.file)
+		if err != nil || !sameContents(expected, current) {
+			continue
+		}
+		name, err := filepath.Rel(root, value.file)
+		if err != nil {
+			return err
+		}
+		stored.Files[name] = metadataEntry{value.hash, current.Size(), current.ModTime().UnixNano(), changeTime(current).UnixNano()}
+	}
+	file, err := os.CreateTemp(root, metadataFilename+"-*")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(file.Name())
+	err = writeJSON(file, stored)
+	closeErr := file.Close()
+	if err != nil {
+		return err
+	}
+	if closeErr != nil {
+		return closeErr
+	}
+	return os.Rename(file.Name(), filepath.Join(root, metadataFilename))
 }
 
 type hashProgress struct {
@@ -530,19 +628,12 @@ func inodeKey(info os.FileInfo) string {
 	return fmt.Sprintf("%d:%d", stat.Dev, stat.Ino)
 }
 
-func unlinkFile(filename string) error {
-	if err := syscall.Unlink(filename); err != nil {
-		return &os.PathError{Op: "unlink", Path: filename, Err: err}
-	}
-	return nil
-}
-
-func moveWithoutOverwrite(original fingerprint, target string, checks *directoryChecks, inodeStates map[string]os.FileInfo) (err error) {
+func renameFile(original fingerprint, target string, checks *directoryChecks, inodeStates map[string]os.FileInfo) error {
 	source := original.file
 	if filepath.Dir(source) != filepath.Dir(target) {
 		return errors.New("destination must be in the source directory")
 	}
-	if err = checks.check(filepath.Dir(source)); err != nil {
+	if err := checks.check(filepath.Dir(source)); err != nil {
 		return err
 	}
 	inode := inodeKey(original.stat)
@@ -557,37 +648,12 @@ func moveWithoutOverwrite(original fingerprint, target string, checks *directory
 	if !before.Mode().IsRegular() || !sameContents(expected, before) {
 		return errors.New("file changed after fingerprinting")
 	}
-	if err = os.Link(source, target); err != nil {
+	if _, err := os.Lstat(target); err == nil {
+		return &os.LinkError{Op: "rename", Old: source, New: target, Err: os.ErrExist}
+	} else if !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
-	defer func() {
-		if err == nil || checks.check(filepath.Dir(source)) != nil {
-			return
-		}
-		// Roll back only our own extra link while the verified original exists.
-		left, leftErr := os.Lstat(source)
-		right, rightErr := os.Lstat(target)
-		if leftErr == nil && rightErr == nil && sameFile(before, left) && sameFile(before, right) {
-			_ = unlinkFile(target)
-		}
-	}()
-	if err = checks.check(filepath.Dir(source)); err != nil {
-		return err
-	}
-	currentSource, err := os.Lstat(source)
-	if err != nil {
-		return err
-	}
-	currentTarget, err := os.Lstat(target)
-	if err != nil {
-		return err
-	}
-	if !sameFile(before, currentSource) || !sameFile(before, currentTarget) ||
-		currentSource.Size() != before.Size() || !currentSource.ModTime().Equal(before.ModTime()) ||
-		!changeTime(currentSource).Equal(changeTime(currentTarget)) {
-		return errors.New("file changed while reserving the destination")
-	}
-	if err = unlinkFile(source); err != nil {
+	if err := os.Rename(source, target); err != nil {
 		return err
 	}
 	final, err := os.Lstat(target)
@@ -608,6 +674,8 @@ type report struct {
 	Apply       bool           `json:"apply"`
 	Roots       []string       `json:"roots"`
 	TotalFiles  int            `json:"totalFiles"`
+	CachedFiles int            `json:"cachedFiles"`
+	HashedFiles int            `json:"hashedFiles"`
 	Renamed     int            `json:"renamed"`
 	WouldRename int            `json:"wouldRename"`
 	Unchanged   int            `json:"unchanged"`
@@ -725,19 +793,44 @@ func run(args []string, out, stderr io.Writer) int {
 	}
 	collected := collectFiles(roots, excludes, checks)
 	failures = append(failures, collected.errors...)
+	var cacheRoots []string
+	for _, root := range roots {
+		if !excludes.matches(root) {
+			cacheRoots = append(cacheRoots, root)
+		}
+	}
+	cache := loadMetadata(cacheRoots)
+	fingerprints := make([]fingerprint, len(collected.files))
+	var pendingFiles []string
+	var pendingIndices []int
+	bytesToHash := collected.totalBytes
+	for index, filename := range collected.files {
+		if value, hit := fingerprintFromCache(filename, cache[filename], checks); hit {
+			fingerprints[index] = value
+			bytesToHash -= value.stat.Size()
+		} else {
+			pendingFiles = append(pendingFiles, filename)
+			pendingIndices = append(pendingIndices, index)
+		}
+	}
+	cachedFiles := len(collected.files) - len(pendingFiles)
 	progress := &hashProgress{}
 	stopProgress := func() {}
 	if !opts.json {
-		fmt.Fprintf(out, "HASHING: %d regular files.\n", len(collected.files))
-		stopProgress = startProgress(stderr, progress, len(collected.files), collected.totalBytes)
+		fmt.Fprintf(out, "CACHE: %d/%d files reused.\n", cachedFiles, len(collected.files))
+		fmt.Fprintf(out, "HASHING: %d regular files.\n", len(pendingFiles))
+		stopProgress = startProgress(stderr, progress, len(pendingFiles), bytesToHash)
 	}
-	fingerprints := fingerprintFiles(collected.files, opts.concurrency, checks, progress)
+	for index, value := range fingerprintFiles(pendingFiles, opts.concurrency, checks, progress) {
+		fingerprints[pendingIndices[index]] = value
+	}
 	stopProgress()
 	picker := newTargetPicker(collected.files)
 	inodeStates := make(map[string]os.FileInfo)
 	result := report{Apply: opts.apply, Roots: roots, TotalFiles: len(collected.files),
+		CachedFiles: cachedFiles, HashedFiles: len(pendingFiles),
 		Skipped: collected.skipped, Results: []renameResult{}, Errors: failures}
-	for _, value := range fingerprints {
+	for index, value := range fingerprints {
 		if value.err != nil {
 			result.Errors = append(result.Errors, fmt.Sprintf("%q: %v", value.file, value.err))
 			continue
@@ -749,7 +842,7 @@ func run(args []string, out, stderr io.Writer) int {
 		target, err := picker.pick(value.file, value.hash)
 		if opts.apply {
 			for err == nil {
-				err = moveWithoutOverwrite(value, target, checks, inodeStates)
+				err = renameFile(value, target, checks, inodeStates)
 				if !errors.Is(err, os.ErrExist) {
 					break
 				}
@@ -764,12 +857,18 @@ func run(args []string, out, stderr io.Writer) int {
 		if opts.apply {
 			status, action = "renamed", "RENAMED"
 			result.Renamed++
+			fingerprints[index].file = target
 		} else {
 			result.WouldRename++
 		}
 		result.Results = append(result.Results, renameResult{value.file, target, value.hash, status})
 		if !opts.json {
 			fmt.Fprintf(out, "%s: %q -> %q\n", action, value.file, target)
+		}
+	}
+	for _, root := range cacheRoots {
+		if err := saveMetadata(root, fingerprints, inodeStates, checks); err != nil {
+			result.Errors = append(result.Errors, fmt.Sprintf("%q: %v", filepath.Join(root, metadataFilename), err))
 		}
 	}
 	result.Failures = len(result.Errors)

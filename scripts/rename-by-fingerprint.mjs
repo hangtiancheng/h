@@ -4,29 +4,40 @@
  * Rename regular files recursively to <lowercase MD5><original extension>.
  * Preview by default; --apply performs the changes. Extension case is kept.
  * Existing names, duplicate contents, and MD5 collisions receive numeric
- * suffixes; no file is deduplicated or overwritten. Valid fingerprint names,
+ * suffixes; no file is deduplicated. Valid fingerprint names,
  * including numbered suffixes, are unchanged on subsequent runs.
  *
- * A hard link reserves each destination without replacing an existing entry.
- * The source is removed only after both names and the inspected file identity
- * have been verified. Unsupported filesystems are skipped without a destructive
- * fallback. An interrupted operation may leave both names pointing to the same
- * file. Avoid concurrent edits while renaming; portable Node.js cannot provide
- * an atomic, conditional unlink against an unrelated writer.
+ * Directly renames verified sources. Avoid concurrent edits or renames:
+ * checking a destination and renaming the source are separate operations.
+ * Each root's .meta.json caches MD5 values for unchanged files, including in
+ * preview mode. The cache format is shared with the Go version.
+ * Requires Node.js 22+; uses only built-in modules.
  *
  * Usage: node rename-by-fingerprint.mjs [options] [directory...]
  */
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { constants } from "node:fs";
-import { link, lstat, open, readdir, realpath, unlink } from "node:fs/promises";
+import {
+  lstat as fileStat,
+  open,
+  readdir,
+  realpath,
+  rename,
+  unlink,
+} from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { parseArgs } from "node:util";
 import { fileURLToPath } from "node:url";
 
-/** @typedef {import('node:fs').Stats} Stats */
+/** @typedef {import('node:fs').BigIntStats} Stats */
 /** @typedef {{file: string, hash: string, stat: Stats}} Fingerprint */
+/** @typedef {{file: string, value?: Fingerprint, error?: string}} FingerprintResult */
+/** @typedef {{md5: string, size: bigint, mtimeNs: bigint, ctimeNs: bigint}} MetadataEntry */
 const SCRIPT_PATH = fileURLToPath(import.meta.url);
+const METADATA_FILENAME = ".meta.json";
+/** @param {string} filename */
+const lstat = (filename) => fileStat(filename, { bigint: true });
 const DEFAULT_EXCLUDES = new Set([
   ".DS_Store",
   ".Spotlight-V100",
@@ -62,8 +73,8 @@ const sameFile = (first, second) =>
 const sameContents = (first, second) =>
   sameFile(first, second) &&
   first.size === second.size &&
-  first.mtimeMs === second.mtimeMs &&
-  first.ctimeMs === second.ctimeMs;
+  first.mtimeNs === second.mtimeNs &&
+  first.ctimeNs === second.ctimeNs;
 /** @param {string} parent @param {string} child */
 export function inside(parent, child) {
   const relative = path.relative(parent, child);
@@ -131,9 +142,12 @@ function printHelp() {
       `  --concurrency <n>       Fingerprint workers, 1 to 64 (default: 4).\n` +
       `  --json                  Write one JSON report.\n` +
       `  --help, -h              Display this help.\n\n` +
-      `Existing files and symbolic links are never overwritten. Duplicate hashes\n` +
-      `receive numbered suffixes. File contents and extension case are preserved.\n` +
-      `Close files before applying. Hard-link support is required for safe renames.\n` +
+      `Requires Node.js 22+. Each directory argument stores an MD5 cache in\n` +
+      `.meta.json, also in preview mode. Unchanged size, modification time and\n` +
+      `change time reuse cached MD5s. The cache is shared with the Go version.\n` +
+      `Existing destination names and duplicate hashes receive numbered suffixes.\n` +
+      `File contents and extension case are preserved. Renames do not need hard links.\n` +
+      `Close files before applying and avoid concurrent edits or renames.\n` +
       `Built-in exclusions: ${[...DEFAULT_EXCLUDES].join(", ")}\n` +
       `Exit codes: 0 completed, 1 file or directory errors, 2 invalid usage.\n`,
   );
@@ -163,6 +177,16 @@ export async function checkDirectories(directory, identities) {
   }
 }
 
+/** @param {string} filename @param {Set<string>} excludes */
+function excluded(filename, excludes) {
+  return (
+    excludes.has(pathKey(path.basename(filename))) ||
+    [...excludes].some(
+      (item) => path.isAbsolute(item) && inside(item, pathKey(filename)),
+    )
+  );
+}
+
 /** @param {string[]} roots @param {Set<string>} excludes @param {Map<string, Stats>} identities */
 export async function collectFiles(roots, excludes, identities) {
   const files = /** @type {string[]} */ ([]);
@@ -170,11 +194,6 @@ export async function collectFiles(roots, excludes, identities) {
   let skipped = 0;
   const ownStat = await lstat(SCRIPT_PATH);
   const normalizedExcludes = new Set([...excludes].map(pathKey));
-  const excluded = (/** @type {string} */ filename) =>
-    normalizedExcludes.has(pathKey(path.basename(filename))) ||
-    [...normalizedExcludes].some(
-      (item) => path.isAbsolute(item) && inside(item, pathKey(filename)),
-    );
   /** @param {string} directory */
   async function walk(directory) {
     try {
@@ -183,7 +202,12 @@ export async function collectFiles(roots, excludes, identities) {
       entries.sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
       for (const entry of entries) {
         const filename = path.join(directory, entry.name);
-        if (excluded(filename) || entry.isSymbolicLink()) {
+        if (
+          entry.name === METADATA_FILENAME ||
+          entry.name.startsWith(`${METADATA_FILENAME}-`)
+        )
+          continue;
+        if (excluded(filename, normalizedExcludes) || entry.isSymbolicLink()) {
           skipped++;
           continue;
         }
@@ -207,10 +231,133 @@ export async function collectFiles(roots, excludes, identities) {
     }
   }
   for (const root of roots) {
-    if (excluded(root)) skipped++;
+    if (excluded(root, normalizedExcludes)) skipped++;
     else await walk(root);
   }
   return { files: [...new Set(files)].sort(), errors, skipped };
+}
+
+/** Read integer metadata without rounding Go's nanosecond timestamps.
+ * @param {string[]} roots
+ * @returns {Promise<Map<string, MetadataEntry>>}
+ */
+export async function loadMetadata(roots) {
+  const entries = new Map();
+  for (const root of roots) {
+    let handle;
+    try {
+      handle = await open(
+        path.join(root, METADATA_FILENAME),
+        constants.O_RDONLY |
+          (constants.O_NOFOLLOW ?? 0) |
+          (constants.O_NONBLOCK ?? 0),
+      );
+      if (!(await handle.stat()).isFile()) continue;
+      const stored = JSON.parse(
+        await handle.readFile("utf8"),
+        (key, value, context) => {
+          if (
+            ["size", "mtimeNs", "ctimeNs"].includes(key) &&
+            typeof value === "number"
+          ) {
+            if (context?.source) return BigInt(context.source);
+            if (Number.isSafeInteger(value)) return BigInt(value);
+          }
+          return value;
+        },
+      );
+      if (
+        !stored?.files ||
+        typeof stored.files !== "object" ||
+        Array.isArray(stored.files)
+      )
+        continue;
+      for (const [name, entry] of Object.entries(stored.files)) {
+        const filename = path.resolve(root, name);
+        if (
+          name &&
+          !path.isAbsolute(name) &&
+          filename !== root &&
+          inside(root, filename)
+        )
+          entries.set(filename, entry);
+      }
+    } catch {
+      // Missing, unreadable or corrupt caches simply cause a fresh hash.
+    } finally {
+      await handle?.close();
+    }
+  }
+  return entries;
+}
+
+/** @param {string} file @param {MetadataEntry | undefined} entry
+ * @param {Map<string, Stats>} identities @returns {Promise<Fingerprint | null>}
+ */
+async function fingerprintFromCache(file, entry, identities) {
+  if (
+    !entry ||
+    typeof entry.md5 !== "string" ||
+    !/^[a-f0-9]{32}$/.test(entry.md5)
+  )
+    return null;
+  try {
+    await checkDirectories(path.dirname(file), identities);
+    const info = await lstat(file);
+    if (
+      info.isFile() &&
+      info.size === entry.size &&
+      info.mtimeNs === entry.mtimeNs &&
+      info.ctimeNs === entry.ctimeNs
+    )
+      return { file, hash: entry.md5, stat: info };
+  } catch {
+    // Normal hashing will report any file or directory errors.
+  }
+  return null;
+}
+
+/** @param {Stats} info */
+const inodeKey = (info) => `${info.dev}:${info.ino}`;
+
+/** Rebuild metadata from current files, dropping deleted and changed entries.
+ * @param {string} root @param {Fingerprint[]} values
+ * @param {Map<string, Stats>} inodeStates @param {Map<string, Stats>} identities
+ */
+async function saveMetadata(root, values, inodeStates, identities) {
+  await checkDirectories(root, identities);
+  const files = Object.create(null);
+  for (const value of values) {
+    if (!inside(root, value.file)) continue;
+    const expected = inodeStates.get(inodeKey(value.stat)) ?? value.stat;
+    const current = await lstat(value.file).catch(() => null);
+    if (!current || !sameContents(expected, current)) continue;
+    files[path.relative(root, value.file)] = {
+      md5: value.hash,
+      size: current.size,
+      mtimeNs: current.mtimeNs,
+      ctimeNs: current.ctimeNs,
+    };
+  }
+  const temporary = path.join(root, `${METADATA_FILENAME}-${randomUUID()}`);
+  const handle = await open(temporary, "wx", 0o600);
+  try {
+    try {
+      await handle.writeFile(
+        `${JSON.stringify(
+          { files },
+          (_key, value) =>
+            typeof value === "bigint" ? JSON.rawJSON(value.toString()) : value,
+          2,
+        )}\n`,
+      );
+    } finally {
+      await handle.close();
+    }
+    await rename(temporary, path.join(root, METADATA_FILENAME));
+  } finally {
+    await unlink(temporary).catch(() => {});
+  }
 }
 
 /** Stream through an open, non-symlink file and reject changes during hashing.
@@ -229,13 +376,13 @@ export async function fingerprint(file, identities) {
       (constants.O_NONBLOCK ?? 0),
   );
   try {
-    const before = await handle.stat();
+    const before = await handle.stat({ bigint: true });
     if (!before.isFile() || !sameContents(expected, before))
       throw new Error("File changed before hashing.");
     const hash = createHash("md5");
     for await (const chunk of handle.createReadStream({ autoClose: false }))
       hash.update(chunk);
-    const after = await handle.stat();
+    const after = await handle.stat({ bigint: true });
     await checkDirectories(path.dirname(file), identities);
     if (!sameContents(before, after) || !sameContents(after, await lstat(file)))
       throw new Error("File changed during hashing.");
@@ -286,11 +433,11 @@ export async function pickTarget(source, hash, occupied) {
   }
 }
 
-/** Reserve a destination without overwriting, then remove the verified source.
+/** Directly rename a verified source after checking for an existing destination.
  * @param {Fingerprint} original @param {string} target @param {Map<string, Stats>} identities
  * @param {Map<string, Stats>} inodeStates
  */
-export async function moveWithoutOverwrite(
+export async function renameFile(
   original,
   target,
   identities,
@@ -300,48 +447,20 @@ export async function moveWithoutOverwrite(
   if (path.dirname(source) !== path.dirname(target))
     throw new Error("Destination must be in the source directory.");
   await checkDirectories(path.dirname(source), identities);
-  const inode = `${original.stat.dev}:${original.stat.ino}`;
+  const inode = inodeKey(original.stat);
   const expected = inodeStates.get(inode) ?? original.stat;
   const before = await lstat(source);
   if (!before.isFile() || !sameContents(expected, before))
     throw new Error("File changed after fingerprinting.");
-  let linked = false;
-  try {
-    await link(source, target);
-    linked = true;
-    await checkDirectories(path.dirname(source), identities);
-    const [currentSource, currentTarget] = await Promise.all([
-      lstat(source),
-      lstat(target),
-    ]);
-    if (
-      !sameFile(before, currentSource) ||
-      !sameFile(before, currentTarget) ||
-      currentSource.size !== before.size ||
-      currentSource.mtimeMs !== before.mtimeMs ||
-      currentSource.ctimeMs !== currentTarget.ctimeMs
-    )
-      throw new Error("File changed while reserving the destination.");
-    await unlink(source);
-    inodeStates.set(inode, await lstat(target));
-  } catch (error) {
-    // Roll back only our own extra link while the original still exists.
-    if (linked) {
-      try {
-        await checkDirectories(path.dirname(source), identities);
-        const [left, right] = await Promise.all([
-          optionalStat(source),
-          optionalStat(target),
-        ]);
-        if (left && right && sameFile(before, left) && sameFile(before, right))
-          await unlink(target);
-      } catch {
-        /* Preserve both names when rollback cannot be verified. */
-      }
-    }
-    throw error;
-  }
+  if (await optionalStat(target))
+    throw Object.assign(new Error("Destination already exists."), {
+      code: "EEXIST",
+    });
+  await rename(source, target);
+  inodeStates.set(inode, await lstat(target));
 }
+
+export { renameFile as moveWithoutOverwrite };
 
 /** @param {string[]} [args] */
 export async function main(args = process.argv.slice(2)) {
@@ -412,19 +531,37 @@ export async function main(args = process.argv.slice(2)) {
     );
   const collected = await collectFiles(roots, excludes, identities);
   errors.push(...collected.errors);
-  if (!options.json)
-    process.stdout.write(`HASHING: ${collected.files.length} regular files.\n`);
+  const cacheRoots = roots.filter((root) => !excluded(root, excludes));
+  const cache = await loadMetadata(cacheRoots);
   const fingerprints = await mapPool(
     collected.files,
     options.concurrency,
     async (file) => {
-      try {
-        return { value: await fingerprint(file, identities) };
-      } catch (error) {
-        return { error: `${JSON.stringify(file)}: ${message(error)}` };
-      }
+      const value = await fingerprintFromCache(
+        file,
+        cache.get(file),
+        identities,
+      );
+      return /** @type {FingerprintResult} */ ({
+        file,
+        value: value ?? undefined,
+      });
     },
   );
+  const pending = fingerprints.filter((result) => !result.value);
+  const cachedFiles = fingerprints.length - pending.length;
+  if (!options.json)
+    process.stdout.write(
+      `CACHE: ${cachedFiles}/${collected.files.length} files reused.\n` +
+        `HASHING: ${pending.length} regular files.\n`,
+    );
+  await mapPool(pending, options.concurrency, async (result) => {
+    try {
+      result.value = await fingerprint(result.file, identities);
+    } catch (error) {
+      result.error = `${JSON.stringify(result.file)}: ${message(error)}`;
+    }
+  });
   const occupied = new Set(collected.files.map(pathKey));
   const inodeStates = new Map();
   const results = [];
@@ -440,13 +577,14 @@ export async function main(args = process.argv.slice(2)) {
       unchanged++;
       continue;
     }
+    const source = value.file;
     let target = "";
     try {
       target = await pickTarget(value.file, value.hash, occupied);
       if (options.apply) {
         for (;;) {
           try {
-            await moveWithoutOverwrite(value, target, identities, inodeStates);
+            await renameFile(value, target, identities, inodeStates);
             break;
           } catch (error) {
             if (!hasCode(error, "EEXIST")) throw error;
@@ -454,19 +592,32 @@ export async function main(args = process.argv.slice(2)) {
           }
         }
       }
+      if (options.apply) value.file = target;
       results.push({
-        source: value.file,
+        source,
         target,
         hash: value.hash,
         status: options.apply ? "renamed" : "would-rename",
       });
       if (!options.json)
         process.stdout.write(
-          `${options.apply ? "RENAMED" : "WOULD RENAME"}: ${JSON.stringify(value.file)} -> ${JSON.stringify(target)}\n`,
+          `${options.apply ? "RENAMED" : "WOULD RENAME"}: ${JSON.stringify(source)} -> ${JSON.stringify(target)}\n`,
         );
     } catch (error) {
       errors.push(
-        `${JSON.stringify(value.file)} -> ${JSON.stringify(target)}: ${message(error)}`,
+        `${JSON.stringify(source)} -> ${JSON.stringify(target)}: ${message(error)}`,
+      );
+    }
+  }
+  const values = fingerprints.flatMap((result) =>
+    result.value ? [result.value] : [],
+  );
+  for (const root of cacheRoots) {
+    try {
+      await saveMetadata(root, values, inodeStates, identities);
+    } catch (error) {
+      errors.push(
+        `${JSON.stringify(path.join(root, METADATA_FILENAME))}: ${message(error)}`,
       );
     }
   }
@@ -474,6 +625,8 @@ export async function main(args = process.argv.slice(2)) {
     apply: options.apply,
     roots,
     totalFiles: collected.files.length,
+    cachedFiles,
+    hashedFiles: pending.length,
     renamed: options.apply ? results.length : 0,
     wouldRename: options.apply ? 0 : results.length,
     unchanged,
