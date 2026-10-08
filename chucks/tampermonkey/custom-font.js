@@ -11,8 +11,8 @@
 
 (function () {
   "use strict";
-  const __font_sans = `"Geist Mono", Menlo, "Cascadia Code", "Yukino", "PingFang SC", "Microsoft YaHei", sans-serif`;
-  const __font_mono = `"Geist Mono", Menlo, "Cascadia Code", "Yukino", monospace`;
+  const __font_sans = `Yukino, "Maple Mono", Menlo, "Cascadia Code", "Sarasa Gothic SC", "PingFang SC", "Microsoft YaHei", sans-serif`;
+  const __font_mono = `Yukino, "Maple Mono", Menlo, "Cascadia Code", "Sarasa Gothic SC", "PingFang SC", "Microsoft YaHei", monospace`;
   const css = `
     html, body, body * {
       font-family: ${__font_sans} !important;

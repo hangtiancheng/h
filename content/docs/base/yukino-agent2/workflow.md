@@ -86,7 +86,7 @@ export function buildGraph(checkpointer?: BaseCheckpointSaver) {
 ```
 
 ```mermaid
-%%{init: {'themeVariables': {'fontFamily': 'Yukino, Geist Mono, Menlo, Cascadia Code, Sarasa Gothic SC, PingFang SC, Microsoft YaHei'}}}%%
+%%{init: {'themeVariables': {'fontFamily': 'Yukino, Maple Mono, Menlo, Cascadia Code, Sarasa Gothic SC, PingFang SC, Microsoft YaHei'}}}%%
 flowchart TD
   START([START]) --> resolve_reference["指代消解"]
   resolve_reference --> classify_intent{"意图识别 (9 意图 -> 5 出口)"}

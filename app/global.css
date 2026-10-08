@@ -5,11 +5,11 @@
 
 @theme {
   --font-sans:
-    "Geist Mono", "Maple Mono", Menlo, "Cascadia Code", "Sarasa Gothic SC",
-    "PingFang SC", "Microsoft YaHei", sans-serif;
+    'Yukino', 'Maple Mono', Menlo, 'Cascadia Code', 'Sarasa Gothic SC', 'PingFang SC',
+    'Microsoft YaHei', sans-serif;
   --font-mono:
-    "Geist Mono", "Maple Mono", Menlo, "Cascadia Code", "Sarasa Gothic SC",
-    "PingFang SC", "Microsoft YaHei", monospace;
+    'Yukino', 'Maple Mono', Menlo, 'Cascadia Code', 'Sarasa Gothic SC', 'PingFang SC',
+    'Microsoft YaHei', monospace;
 
   /* NVIDIA green brand palette, taken from public/favicon.svg */
   --color-brand: #76b900;
