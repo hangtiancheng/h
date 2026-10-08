@@ -22,6 +22,7 @@
     "build:chunk": "tsc -p tsconfig.build.json",
     "build:go": "go build ./...",
     "typecheck": "next typegen && tsc --noEmit",
+    "git:config": "git config user.name hangtiancheng && git config user.email '161043261@qq.com'",
     "git:commit": "git add -A && git commit -m \"feat: Introduce new features\"",
     "git:commit:skip": "git add -A && git commit -m \"feat: Introduce new features [skip ci]\"",
     "git:push": "pnpm git:commit && git push origin main",
@@ -29,7 +30,7 @@
   },
   "lint-staged": {
     "*.{json,jsonc,js,cjs,mjs,jsx,ts,cts,mts,tsx,html,vue,css,scss,md,mdx}": [
-      "pnpm format"
+      "sh -c 'pnpm format'"
     ]
   },
   "dependencies": {

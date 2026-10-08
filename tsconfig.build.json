@@ -5,6 +5,7 @@
     "experimentalDecorators": true,
     "noCheck": true,
     "noEmit": false,
+    "allowImportingTsExtensions": false,
     "outDir": "./dist",
     "rootDir": "./",
     "sourceMap": true

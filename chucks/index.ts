@@ -1,34 +1,25 @@
-function generateParenthesis(n: number): string[] {
-  const ans: string[] = [];
-  const dfs = (left: number, right: number, path: string) => {
-    if (right === n) {
-      ans.push(path);
-      return;
-    }
-    if (left < n) {
-      dfs(left + 1, right, path + "(");
-    }
-    if (right < left) {
-      dfs(left, right + 1, path + ")");
-    }
-  };
-  dfs(0, 0, "");
-  return ans;
-}
+export function solve(tasks: number[][], cooldown: number): number {
+  const maxStartTime = Math.max(...tasks.map((item) => item[0]));
 
-function isValid(s: string): boolean {
-  const stack: string[] = [];
-  for (const ch of s) {
-    if (ch === "(" || ch === "[" || ch === "{") {
-      stack.push(ch);
-      continue;
+  const dfs = (currentTime: number, done: Set<number>): number => {
+    if (currentTime > maxStartTime || done.size === tasks.length) {
+      return 0;
     }
-    if (stack.length > 0 && ch === stack[stack.length - 1]) {
-      stack.pop();
-      continue;
-    } else {
-      return false;
+
+    let ret = 0;
+    for (let i = 0; i < tasks.length; i++) {
+      if (done.has(i)) {
+        continue;
+      }
+      const [start, end, value] = tasks[i];
+      if (start >= currentTime) {
+        done.add(i);
+        ret = Math.max(ret, value + dfs(end + cooldown, done));
+        done.delete(i);
+      }
     }
-  }
-  return stack.length === 0;
+    return ret;
+  };
+
+  return dfs(0, new Set<number>());
 }
