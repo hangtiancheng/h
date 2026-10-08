@@ -326,8 +326,8 @@ func runGitStep(dir string, bypassAge bool, timeout time.Duration) (status strin
 		return "FAILED (not a git repository)", true, output
 	case strings.Contains(output, `Command "git:`), strings.Contains(low, "command not found"), strings.Contains(low, "missing script"):
 		return "FAILED (git:config/git:push script not defined)", true, output
-	case strings.Contains(low, "husky"), strings.Contains(low, "lint-staged"), strings.Contains(low, "commitlint"):
-		return "FAILED (rejected by husky/lint-staged/commitlint)", true, output
+	case strings.Contains(low, "husky"), strings.Contains(low, "lint-staged"):
+		return "FAILED (rejected by husky/lint-staged)", true, output
 	case strings.Contains(low, "no such remote"), strings.Contains(output, "'origin'"), strings.Contains(low, "no upstream"), strings.Contains(low, "couldn't find remote"), strings.Contains(low, "could not read from remote"):
 		return "FAILED (origin/remote problem)", true, output
 	default:
