@@ -2,7 +2,7 @@
   "name": "homepage",
   "version": "0.0.0",
   "private": true,
-  "packageManager": "pnpm@12.4.2",
+  "packageManager": "pnpm@12.10.1",
   "description": "homepage",
   "keywords": [
     "@yukino.js",
@@ -34,16 +34,16 @@
     ]
   },
   "dependencies": {
-    "@fumadocs/base-ui": "^16.15.15",
+    "@fumadocs/base-ui": "^16.16.2",
     "@paper-design/shaders-react": "^0.0.81",
     "class-variance-authority": "^0.7.1",
     "cn": "^0.3.3",
-    "fumadocs-core": "^16.15.15",
-    "fumadocs-mdx": "^15.4.5",
-    "lucide-react": "^1.48.0",
-    "marked": "^18.0.14",
-    "mermaid": "^12.0.0",
-    "next": "^16.3.6",
+    "fumadocs-core": "^16.16.2",
+    "fumadocs-mdx": "^15.4.6",
+    "lucide-react": "^1.52.0",
+    "marked": "^18.1.0",
+    "mermaid": "^12.1.0",
+    "next": "^16.4.0",
     "next-themes": "^0.4.6",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"
@@ -52,19 +52,19 @@
     "@eslint/js": "^10.0.1",
     "@tailwindcss/postcss": "^4.3.3",
     "@types/mdx": "^2.0.14",
-    "@types/node": "^24.19.0",
+    "@types/node": "^24.19.1",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
-    "eslint": "^10.11.0",
-    "globals": "^17.12.0",
+    "eslint": "^10.12.0",
+    "globals": "^17.13.0",
     "husky": "^9.1.7",
     "lint-staged": "^17.6.0",
-    "postcss": "^8.5.28",
+    "postcss": "^8.5.29",
     "prettier": "^3.9.9",
     "tailwindcss": "^4.3.3",
     "tailwindcss-animate": "^1.0.7",
-    "turbo": "^2.11.5",
+    "turbo": "^2.11.7",
     "typescript": "^6.0.3",
-    "typescript-eslint": "^8.71.0"
+    "typescript-eslint": "^8.71.1"
   }
 }
