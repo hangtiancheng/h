@@ -1,5 +1,4 @@
 allowBuilds:
   esbuild: true
+
 minimumReleaseAge: 0
-minimumReleaseAgeExclude:
-  - "@yuku-analyzer/binding-darwin-x64@0.10.2"
