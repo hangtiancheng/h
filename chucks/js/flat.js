@@ -4,22 +4,14 @@ Array.prototype.flat2 = function (depth = 1) {
   }
   if (depth > 0) {
     return this.reduce((acc, val) => {
-      // return acc.concat(Array.isArray(val) ? this.flat(depth - 1) : val)
       if (Array.isArray(val)) {
         return acc.concat(val.flat(depth - 1));
       } else {
         return acc.concat(val);
       }
-
-      // if (Array.isArray(val)) {
-      //   return [...acc, ...val.flat(depth - 1)];
-      // } else {
-      //   return [...acc, val];
-      // }
     }, []);
   } else {
-    // depth === 0
-    return this.slice(); // return [...this]
+    return this.slice();
   }
 };
 

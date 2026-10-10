@@ -21,6 +21,5 @@ function gcdRecursive(a: number, b: number): number {
 
 function lcmCustom(a: number, b: number): number {
   const ret = Math.floor((a * b) / gcdIterative(a, b));
-  // Not checking exact equality with built-in LCM here as JS lacks it in Math.
   return ret;
 }

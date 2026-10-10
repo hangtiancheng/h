@@ -22,24 +22,14 @@ type tweetItem struct {
 	tweet  tweet
 }
 
-// Len implements [heap.Interface].
 func (h *tweetHeap) Len() int {
 	return len(*h)
 }
 
-// Less implements [heap.Interface].
-// Less(i, j) 表示 i 是否排在 j 前面
-// 如果是最大堆 (堆顶的 Timestamp 最大) 则 Less 是 >
-// 如果是最小堆 (堆顶的 Timestamp 最小) 则 Less 是 <
 func (h *tweetHeap) Less(i int, j int) bool {
 	return (*h)[i].tweet.timestamp > (*h)[j].tweet.timestamp
 }
 
-// Pop implements [heap.Interface].
-// 调用 heap.Pop(h) 时
-// 标准库先交换堆顶元素和最后一个元素
-// 再将前 n-1 个元素重新建堆
-// 最后调用 h.Pop() 删除并返回最后一个元素
 func (h *tweetHeap) Pop() any {
 	hv := *h
 	n := len(hv)
@@ -48,12 +38,10 @@ func (h *tweetHeap) Pop() any {
 	return tail
 }
 
-// Push implements [heap.Interface].
 func (h *tweetHeap) Push(x any) {
 	*h = append(*h, x.(*tweetItem))
 }
 
-// Swap implements [heap.Interface].
 func (h *tweetHeap) Swap(i int, j int) {
 	(*h)[i], (*h)[j] = (*h)[j], (*h)[i]
 }
@@ -86,8 +74,6 @@ func (t *Twitter) PostTweet(userId int, tweetId int) {
 }
 
 func (t *Twitter) GetNewsFeed(userId int) []int {
-	// 0: len
-	// t.userIdToFollowees[userId]+1: cap
 	userIds := make([]int, 0, len(t.userIdToFollowees[userId])+1)
 	userIds = append(userIds, userId)
 	for followeeId := range t.userIdToFollowees[userId] {

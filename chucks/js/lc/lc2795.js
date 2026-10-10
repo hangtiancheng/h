@@ -1,7 +1,3 @@
-/**
- * @param {Array<Function>} functions
- * @return {Promise<Array>}
- */
 async function promiseAllSettled(functions) {
   const ans = Array.from({ length: functions.length });
   const promises = functions.map((fn, i) => {

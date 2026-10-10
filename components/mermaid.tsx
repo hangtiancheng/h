@@ -3,8 +3,6 @@
 import { useTheme } from "next-themes";
 import { useEffect, useRef, useState } from "react";
 
-// Mermaid is heavy and DOM-only: load it lazily on the client and share one
-// instance across every diagram on the page.
 type Mermaid = typeof import("mermaid").default;
 type RenderResult = Awaited<ReturnType<Mermaid["render"]>>;
 
@@ -17,7 +15,6 @@ function loadMermaid(): Promise<Mermaid> {
 let idCounter = 0;
 
 export interface MermaidProps {
-  /** raw mermaid diagram source, injected by `remarkMdxMermaid` */
   chart: string;
 }
 
@@ -33,8 +30,6 @@ export function Mermaid({ chart }: MermaidProps) {
   }
 
   useEffect(() => {
-    // Wait for next-themes to resolve so we render once with the right theme
-    // instead of flashing light -> dark.
     if (resolvedTheme === undefined) return;
 
     let cancelled = false;
@@ -48,7 +43,6 @@ export function Mermaid({ chart }: MermaidProps) {
         });
         const rendered = await m.render(
           idRef.current ?? "mermaid",
-          // unescape literal "\n" so direct <Mermaid chart="..." /> usage works too
           chart.replaceAll("\\n", "\n"),
         );
         if (cancelled) return;
@@ -65,7 +59,6 @@ export function Mermaid({ chart }: MermaidProps) {
     };
   }, [chart, resolvedTheme]);
 
-  // Parse/render failure: fall back to the raw source so content is never lost.
   if (error !== null) {
     return (
       <div className="not-prose my-4 rounded-lg border border-red-500/40 bg-red-500/5 p-4">
@@ -79,8 +72,6 @@ export function Mermaid({ chart }: MermaidProps) {
     );
   }
 
-  // Before the diagram is ready (SSR / lazy load), show the source as a
-  // placeholder to avoid an empty gap.
   if (result === null) {
     return (
       <pre className="not-prose my-4 overflow-x-auto rounded-lg border bg-fd-muted/40 p-4 text-xs">
@@ -93,10 +84,8 @@ export function Mermaid({ chart }: MermaidProps) {
     <div
       className="mermaid-diagram not-prose my-4 flex justify-center overflow-x-auto"
       ref={(container) => {
-        // attach click/interaction handlers after the svg is in the DOM
         if (container) result.bindFunctions?.(container);
       }}
-      // The SVG is produced locally by mermaid from our own MDX source.
       dangerouslySetInnerHTML={{ __html: result.svg }}
     />
   );

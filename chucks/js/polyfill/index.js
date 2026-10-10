@@ -10,8 +10,6 @@ if (!globalThis.requestAnimationFrame) {
       const now = Date.now();
       const nextCallDelay = Math.max(
         0,
-        // 间隔小于 1 帧, 等待剩余时间
-        // 间隔大于 1 帧, 立刻执行
         frameDuration - (now - latestCallTimestamp),
       );
       latestCallTimestamp = nextCallDelay + now;

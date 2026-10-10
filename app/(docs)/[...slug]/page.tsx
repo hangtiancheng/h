@@ -40,11 +40,10 @@ export default async function Page(props: PageProps<"/[...slug]">) {
       <DocsBody>
         <MDX
           components={getMDXComponents({
-            // this allows you to link to other pages with relative file paths
             a: createRelativeLink(source, page),
           })}
         />
-        {/* section landing pages list their child topics as cards */}
+
         {page.slugs.length === 1 ? <SectionCards url={page.url} /> : null}
       </DocsBody>
       {page.data.lastModified ? (
@@ -81,7 +80,6 @@ function firstPageUrl(folder: PageTree.Folder): string | undefined {
   return undefined;
 }
 
-/** Cards linking to every child topic of the given section folder. */
 function SectionCards({ url }: { url: string }) {
   const folder = findSectionFolder(source.getPageTree(), url);
   if (!folder) return null;
@@ -90,11 +88,9 @@ function SectionCards({ url }: { url: string }) {
     <Cards>
       {folder.children.map((item) => {
         if (item.type === "separator") return null;
-        // skip the index page itself
         if (item.type === "page" && item.url === url) return null;
 
         if (item.type === "folder") {
-          // folders without an index page link to their first page instead
           const href = item.index?.url ?? firstPageUrl(item);
           if (!href) return null;
 

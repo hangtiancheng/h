@@ -1,7 +1,3 @@
-/**
- * @param {Array} arr
- * @return {(string | number | boolean | null)[][]}
- */
 function jsonToMatrix(arr) {
   let paths = new Set();
   let ans = Array.from({ length: arr.length }, () => ({}));
@@ -26,7 +22,6 @@ function jsonToMatrix(arr) {
   arr.forEach((item, idx) => dfs("", item, idx));
   paths = Array.from(paths);
   paths.sort();
-  // console.log(ans)
   ans = ans.map((item) => {
     const keys = new Set(Object.keys(item));
     const newItem = new Array(paths.length);

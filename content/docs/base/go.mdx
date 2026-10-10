@@ -820,8 +820,6 @@ G 解锁时根据该值     0: 未饥饿          已被唤醒          0: 没�
 sema 信号量                             1: 已有 G 被唤醒
 ```
 
-{/* cSpell: words Semacquire Semrelease semtable semroot */}
-
 ```txt
 Lock (阻塞 goroutine)                UnLock (唤醒 goroutine)
         │                                      │
@@ -978,8 +976,6 @@ type entry struct {
 ```
 
 #### Go >=1.24: HashTrieMap 并发哈希字典树
-
-{/* TODO */}
 
 | 对比     | Go ≤ 1.23                                                     | Go ≥ 1.24              |
 | -------- | ------------------------------------------------------------- | ---------------------- |
@@ -1162,8 +1158,6 @@ Go 使用抢占式调度
 - 一个 Processor 的本地 goroutine 队列通常只有一个 Machine 在消费 -> 不需要加锁
 
 ### Processor 和 Machine 的创建时机
-
-{/* cSpell: words sched maxmcount newm newosproc mstart Flock LOCK_EX */}
 
 - Processor 创建时机: 调度器初始化时, 一次性创建 GOMAXPROCS 个 Processor 对象, 存储到全局数组中; 只有调用 `runtime.GOMAXPROCS(n)`,并且 n > 当前 Processor 数量时, 才会创建新的 Processor
 - Machine 创建时机: Machine 按需创建, 初始化时只有 m0 (Go 启动时创建的第一个 Machine), 以下情况会创建新的 Machine

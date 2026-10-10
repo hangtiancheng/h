@@ -34,8 +34,6 @@ const cases: Case[] = [
   },
   {
     name: "regression: task starting exactly at max start must not be pruned",
-    // After [0,0] finishes, currentTime is 0 + 5 = 5, which equals the max start
-    // of task [5,6]; the original `currentTime >= maxStartTime` guard skipped it.
     tasks: [
       [0, 0, 1],
       [5, 6, 100],
@@ -64,8 +62,6 @@ const cases: Case[] = [
   },
   {
     name: "cooldown forces a gap, dropping the greedy middle task",
-    // [1,2] and [2,3] are adjacent but the cooldown of 2 forbids the chain,
-    // so taking [1,2] + [3,5] (value 10) beats [2,3] alone (5).
     tasks: [
       [1, 2, 4],
       [3, 5, 6],

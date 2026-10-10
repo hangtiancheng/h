@@ -88,7 +88,6 @@ func TestPreviewApplyAndRepeat(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Positional roots can precede flags, and overlapping roots are deduplicated.
 	preview := runReport(t, root, filepath.Join(root, "nested"), "--exclude", "sensitive", "--concurrency=4")
 	if preview.TotalFiles != 7 || preview.WouldRename != 6 || preview.Unchanged != 1 || preview.Skipped != 4 || len(preview.Roots) != 1 {
 		t.Fatalf("unexpected preview: %+v", preview)
@@ -175,7 +174,7 @@ func TestMetadataCacheRehashesChangedFiles(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	writeFixture(t, source, "after!") // Same size, and restore mtime to exercise ctime invalidation.
+	writeFixture(t, source, "after!")
 	if err := os.Chtimes(source, time.Now(), before.ModTime()); err != nil {
 		t.Fatal(err)
 	}
@@ -259,7 +258,7 @@ func TestRenameRefusesChangedFileWithRestoredMtime(t *testing.T) {
 	writeFixture(t, source, "before")
 	checks := newDirectoryChecks()
 	value := checkedFingerprint(t, source, checks)
-	writeFixture(t, source, "after!") // Same length; inode and mtime alone are insufficient.
+	writeFixture(t, source, "after!")
 	if err := os.Chtimes(source, time.Now(), value.stat.ModTime()); err != nil {
 		t.Fatal(err)
 	}

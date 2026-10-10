@@ -1,8 +1,3 @@
-/**
- * @param {Array<number>} arr
- * @param {number} startIndex
- * @yields {number}
- */
 function* cycleGenerator(arr, startIndex) {
   let idx = startIndex;
   while (true) {

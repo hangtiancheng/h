@@ -8,17 +8,12 @@ import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 
-/* ------------------------------------------------------------------ *
- * Constants (mirror docs/mock.py)
- * ------------------------------------------------------------------ */
-
 const REPO_ROOT = path.dirname(
   path.dirname(fs.realpathSync(fileURLToPath(import.meta.url))),
 );
 const MAIN_PY = path.join(REPO_ROOT, "main.py");
 const DEFAULT_OUTPUT = path.join(REPO_ROOT, "logs");
 
-/** @type {readonly [string, string]} */
 const SETTINGS = ["tcp_only", "udp_burst"];
 const SWIFT_GAIN_MIN = 0.02;
 const SWIFT_GAIN_MAX = 0.06;
@@ -34,50 +29,32 @@ const UDP_PACKET_BYTES = 1052;
 const TCP_PORT = 5000;
 const UDP_PORT = 7000;
 
-/* ------------------------------------------------------------------ *
- * Python exception types
- * ------------------------------------------------------------------ */
-
-/** Mirrors Python's `ValueError`. */
 class ValueError extends Error {
-  /** @param {string} message */
   constructor(message) {
     super(message);
     this.name = "ValueError";
   }
 }
 
-/** Mirrors Python's `FileNotFoundError`. */
 class FileNotFoundError extends Error {
-  /** @param {string} message */
   constructor(message) {
     super(message);
     this.name = "FileNotFoundError";
   }
 }
 
-/** Mirrors Python's `statistics.StatisticsError`. */
 class StatisticsError extends Error {
-  /** @param {string} message */
   constructor(message) {
     super(message);
     this.name = "StatisticsError";
   }
 }
 
-/* ------------------------------------------------------------------ *
- * Exact floating point helpers (Python-compatible rounding/formatting)
- * ------------------------------------------------------------------ */
-
-/** Reused scratch buffer for decomposing doubles. */
 const FLOAT_VIEW = new DataView(new ArrayBuffer(8));
 
-/** @type {Map<number, bigint>} */
 const POW5_CACHE = new Map();
-/** @type {Map<number, bigint>} */
 const POW10_CACHE = new Map();
 
-/** @param {number} exponent @returns {bigint} */
 function pow5(exponent) {
   let cached = POW5_CACHE.get(exponent);
   if (cached === undefined) {
@@ -87,7 +64,6 @@ function pow5(exponent) {
   return cached;
 }
 
-/** @param {number} exponent @returns {bigint} */
 function pow10(exponent) {
   let cached = POW10_CACHE.get(exponent);
   if (cached === undefined) {
@@ -97,13 +73,6 @@ function pow10(exponent) {
   return cached;
 }
 
-/**
- * Decompose a finite double into its exact binary significand and exponent.
- *
- * @param {number} value A finite double.
- * @returns {{negative: boolean, significand: bigint, exponent: number}}
- *   `value === (negative ? -1 : 1) * Number(significand) * 2 ** exponent`.
- */
 function binaryParts(value) {
   FLOAT_VIEW.setFloat64(0, value);
   const bits = FLOAT_VIEW.getBigUint64(0);
@@ -120,13 +89,6 @@ function binaryParts(value) {
   };
 }
 
-/**
- * Exact decimal expansion of a finite double.
- *
- * @param {number} value A finite double.
- * @returns {{negative: boolean, digits: bigint, scale: number}}
- *   `value === (negative ? -1 : 1) * digits * 10 ** -scale` exactly.
- */
 function exactDecimal(value) {
   const { negative, significand, exponent } = binaryParts(value);
   if (significand === 0n) return { negative, digits: 0n, scale: 0 };
@@ -137,13 +99,6 @@ function exactDecimal(value) {
   return { negative, digits: significand * pow5(scale), scale };
 }
 
-/**
- * Round `digits / 10 ** shift` to the nearest integer, ties to even.
- *
- * @param {bigint} digits Non-negative magnitude.
- * @param {number} shift
- * @returns {bigint}
- */
 function roundHalfEvenDiv(digits, shift) {
   if (shift === 0) return digits;
   const divisor = pow10(shift);
@@ -156,14 +111,6 @@ function roundHalfEvenDiv(digits, shift) {
   return quotient;
 }
 
-/**
- * Convert an exact decimal (`digits * 10 ** -scale`) to the nearest double.
- * Relies on ECMAScript's correctly-rounded decimal-to-number conversion.
- *
- * @param {bigint} digits Non-negative magnitude.
- * @param {number} scale
- * @returns {number}
- */
 function decimalToDouble(digits, scale) {
   const text = digits.toString();
   if (scale === 0) return Number(text);
@@ -178,12 +125,6 @@ function decimalToDouble(digits, scale) {
   return Number(`${text}e${-scale}`);
 }
 
-/**
- * Python `round(float)` — nearest integer, ties to even.
- *
- * @param {number} value
- * @returns {number} An integer-valued double.
- */
 function pyRound(value) {
   if (Number.isNaN(value))
     throw new ValueError("cannot convert float NaN to integer");
@@ -194,13 +135,6 @@ function pyRound(value) {
   return Number(negative ? -magnitude : magnitude);
 }
 
-/**
- * Python `round(float, ndigits)` — correctly rounded to `ndigits` decimals.
- *
- * @param {number} value
- * @param {number} ndigits
- * @returns {number}
- */
 function pyRoundN(value, ndigits) {
   if (!Number.isFinite(value)) return value;
   const { negative, digits, scale } = exactDecimal(value);
@@ -216,13 +150,6 @@ function pyRoundN(value, ndigits) {
   return negative ? -result : result;
 }
 
-/**
- * Python `f"{value:.{precision}f}"`.
- *
- * @param {number} value
- * @param {number} precision
- * @returns {string}
- */
 function formatFixed(value, precision) {
   if (Number.isNaN(value)) return "nan";
   if (value === Infinity) return "inf";
@@ -238,13 +165,6 @@ function formatFixed(value, precision) {
   return `${negative ? "-" : ""}${text}`;
 }
 
-/**
- * Python `f"{value:.{precision}g}"`.
- *
- * @param {number} value
- * @param {number} precision
- * @returns {string}
- */
 function formatGeneral(value, precision) {
   if (Number.isNaN(value)) return "nan";
   if (value === Infinity) return "inf";
@@ -282,25 +202,10 @@ function formatGeneral(value, precision) {
   return `${sign}${result}`;
 }
 
-/**
- * Python `f"{value:.{precision}%}"`.
- *
- * @param {number} value
- * @param {number} precision
- * @returns {string}
- */
 function formatPercent(value, precision) {
   return `${formatFixed(value * 100, precision)}%`;
 }
 
-/**
- * Python `repr(float)` — shortest round-trip representation, with Python's
- * exponent thresholds (scientific when the exponent is `< -4` or `>= 16`) and
- * a trailing `.0` for integral values.
- *
- * @param {number} value
- * @returns {string}
- */
 function pyFloatRepr(value) {
   if (Number.isNaN(value)) return "NaN";
   if (value === Infinity) return "Infinity";
@@ -337,27 +242,14 @@ function pyFloatRepr(value) {
   return `${sign}0.${"0".repeat(-exponent - 1)}${stripped}`;
 }
 
-/**
- * Python `str(int)` for an integer-valued double.
- *
- * @param {number} value
- * @returns {string}
- */
 function intToString(value) {
   if (!Number.isInteger(value)) throw new TypeError(`not an integer: ${value}`);
   return BigInt(value).toString();
 }
 
-/**
- * Python `math.fsum` — exact sum of doubles, correctly rounded.
- *
- * @param {Iterable<number>} values
- * @returns {number}
- */
 function fsum(values) {
   let positiveInfinity = false;
   let negativeInfinity = false;
-  /** @type {{significand: bigint, exponent: number}[]} */
   const parts = [];
   let minExponent = Infinity;
   for (const value of values) {
@@ -389,14 +281,6 @@ function fsum(values) {
   return bigBinToDouble(total, minExponent);
 }
 
-/**
- * Convert an exact binary rational (`significand * 2 ** exponent`) to the
- * nearest double, rounding ties to even.
- *
- * @param {bigint} significand Signed magnitude.
- * @param {number} exponent
- * @returns {number}
- */
 function bigBinToDouble(significand, exponent) {
   if (significand === 0n) return 0;
   const negative = significand < 0n;
@@ -440,7 +324,6 @@ function bigBinToDouble(significand, exponent) {
   return negative ? -result : result;
 }
 
-/** @param {bigint} value Positive value. @returns {number} Bit length. */
 function bitLength(value) {
   let bits = 0;
   let cursor = value;
@@ -455,12 +338,6 @@ function bitLength(value) {
   return bits;
 }
 
-/**
- * Python `statistics.fmean` — `fsum(data) / len(data)`.
- *
- * @param {Iterable<number>} values
- * @returns {number}
- */
 function fmean(values) {
   const data = [...values];
   if (data.length === 0)
@@ -468,12 +345,6 @@ function fmean(values) {
   return fsum(data) / data.length;
 }
 
-/**
- * Python `statistics.median`.
- *
- * @param {Iterable<number>} values
- * @returns {number}
- */
 function median(values) {
   const data = [...values].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
   const n = data.length;
@@ -483,15 +354,6 @@ function median(values) {
   return (data[i - 1] + data[i]) / 2;
 }
 
-/**
- * Python `math.isclose(a, b, rel_tol=..., abs_tol=...)`.
- *
- * @param {number} a
- * @param {number} b
- * @param {number} relTol
- * @param {number} absTol
- * @returns {boolean}
- */
 function isClose(a, b, relTol, absTol) {
   return (
     Math.abs(a - b) <=
@@ -499,28 +361,10 @@ function isClose(a, b, relTol, absTol) {
   );
 }
 
-/**
- * Python `clamp` helper: `max(lower, min(upper, value))`.
- *
- * @param {number} value
- * @param {number} lower
- * @param {number} upper
- * @returns {number}
- */
 function clamp(value, lower, upper) {
   return Math.max(lower, Math.min(upper, value));
 }
 
-/* ------------------------------------------------------------------ *
- * Python `repr` helpers (used in error messages)
- * ------------------------------------------------------------------ */
-
-/**
- * Python `repr(str)`.
- *
- * @param {string} value
- * @returns {string}
- */
 function pyStrRepr(value) {
   const useDouble = value.includes("'") && !value.includes('"');
   const quote = useDouble ? '"' : "'";
@@ -538,33 +382,15 @@ function pyStrRepr(value) {
   return `${quote}${out}${quote}`;
 }
 
-/**
- * Python list `repr`: `[a, b]`.
- *
- * @param {unknown[]} items
- * @returns {string}
- */
 function pyListRepr(items) {
   return `[${items.map((item) => pyRepr(item)).join(", ")}]`;
 }
 
-/**
- * Python tuple `repr`: `(a, b)` / `(a,)`.
- *
- * @param {unknown[]} items
- * @returns {string}
- */
 function pyTupleRepr(items) {
   if (items.length === 1) return `(${pyRepr(items[0])},)`;
   return `(${items.map((item) => pyRepr(item)).join(", ")})`;
 }
 
-/**
- * Python dict `repr`: `{'k': v}`.
- *
- * @param {Map<unknown, unknown>} mapping
- * @returns {string}
- */
 function pyDictRepr(mapping) {
   const entries = [...mapping.entries()].map(
     ([key, value]) => `${pyRepr(key)}: ${pyRepr(value)}`,
@@ -572,12 +398,6 @@ function pyDictRepr(mapping) {
   return `{${entries.join(", ")}}`;
 }
 
-/**
- * Python `repr()` for the scalar/container subset used in diagnostics.
- *
- * @param {unknown} value
- * @returns {string}
- */
 function pyRepr(value) {
   if (typeof value === "string") return pyStrRepr(value);
   if (typeof value === "bigint") return value.toString();
@@ -590,16 +410,6 @@ function pyRepr(value) {
   return String(value);
 }
 
-/* ------------------------------------------------------------------ *
- * Python `int()` / `float()` parsing
- * ------------------------------------------------------------------ */
-
-/**
- * Python `int(text)` (base 10).
- *
- * @param {string} text
- * @returns {bigint}
- */
 function pyParseInt(text) {
   const match = /^\s*([+-]?)(\d(?:_?\d)*)\s*$/.exec(text);
   if (!match)
@@ -610,12 +420,6 @@ function pyParseInt(text) {
   return match[1] === "-" ? -magnitude : magnitude;
 }
 
-/**
- * Python `float(text)`.
- *
- * @param {string} text
- * @returns {number}
- */
 function pyParseFloat(text) {
   const trimmed = text.trim().replace(/_/g, "");
   const lowered = trimmed.toLowerCase();
@@ -637,12 +441,6 @@ function pyParseFloat(text) {
   return Number(trimmed);
 }
 
-/**
- * Coerce a parsed Python literal to a float (for `DEFAULT_DURATION`).
- *
- * @param {unknown} value
- * @returns {number}
- */
 function literalToFloat(value) {
   if (typeof value === "bigint") return Number(value);
   if (typeof value === "number") return value;
@@ -653,12 +451,6 @@ function literalToFloat(value) {
   );
 }
 
-/**
- * Coerce a parsed Python literal to an int (for `DEFAULT_N_LEAF`).
- *
- * @param {unknown} value
- * @returns {number}
- */
 function literalToInt(value) {
   if (typeof value === "bigint") return Number(value);
   if (typeof value === "boolean") return value ? 1 : 0;
@@ -667,10 +459,6 @@ function literalToInt(value) {
   throw new ValueError(`int() argument must be a number, not ${pyRepr(value)}`);
 }
 
-/* ------------------------------------------------------------------ *
- * CPython `random.Random` — Mersenne Twister (MT19937)
- * ------------------------------------------------------------------ */
-
 const MT_N = 624;
 const MT_M = 397;
 const MT_MATRIX_A = 0x9908b0df;
@@ -678,38 +466,21 @@ const MT_UPPER_MASK = 0x80000000;
 const MT_LOWER_MASK = 0x7fffffff;
 const TWO_PI = 2.0 * Math.PI;
 
-/**
- * Bit-exact port of CPython's `random.Random` (MT19937 + `init_by_array`).
- * The seed is expanded to little-endian uint32 words of its absolute value,
- * matching `Modules/_randommodule.c`.
- */
 class Random {
-  /** @param {bigint} seed */
   constructor(seed) {
-    /** @type {Uint32Array} */
     this.state = new Uint32Array(MT_N + 1);
-    /** @type {number | null} */
     this.gaussNext = null;
     this.seed(seed);
   }
 
-  /** @param {bigint} value */
   seed(value) {
     this.gaussNext = null;
     this.initByArray(Random.seedKey(value));
   }
 
-  /**
-   * CPython's int-to-key expansion: little-endian uint32 words of `abs(seed)`,
-   * at least one word.
-   *
-   * @param {bigint} value
-   * @returns {number[]}
-   */
   static seedKey(value) {
     let magnitude = value < 0n ? -value : value;
     if (magnitude === 0n) return [0];
-    /** @type {number[]} */
     const words = [];
     while (magnitude > 0n) {
       words.push(Number(magnitude & 0xffffffffn));
@@ -718,7 +489,6 @@ class Random {
     return words;
   }
 
-  /** @param {number} s */
   initGenrand(s) {
     const mt = this.state;
     mt[0] = s >>> 0;
@@ -729,7 +499,6 @@ class Random {
     mt[MT_N] = MT_N;
   }
 
-  /** @param {number[]} key */
   initByArray(key) {
     const mt = this.state;
     const keyLength = key.length;
@@ -762,14 +531,12 @@ class Random {
     mt[0] = 0x80000000;
   }
 
-  /** @returns {number} A uniform double in `[0, 1)` (CPython `_random`). */
   random() {
     const a = this.uint32() >>> 5;
     const b = this.uint32() >>> 6;
     return (a * 67108864.0 + b) * (1.0 / 9007199254740992.0);
   }
 
-  /** @returns {number} The next raw 32-bit word. */
   uint32() {
     const mt = this.state;
     if (mt[MT_N] >= MT_N) {
@@ -798,24 +565,10 @@ class Random {
     return y;
   }
 
-  /**
-   * Python `random.uniform(a, b)`.
-   *
-   * @param {number} a
-   * @param {number} b
-   * @returns {number}
-   */
   uniform(a, b) {
     return a + (b - a) * this.random();
   }
 
-  /**
-   * Python `random.gauss(mu, sigma)` (Box-Muller with a cached spare).
-   *
-   * @param {number} mu
-   * @param {number} sigma
-   * @returns {number}
-   */
   gauss(mu, sigma) {
     let z = this.gaussNext;
     this.gaussNext = null;
@@ -829,14 +582,6 @@ class Random {
   }
 }
 
-/**
- * Python `stable_seed`: SHA-256 of the NUL-joined parts, first 8 bytes as a
- * big-endian integer.
- *
- * @param {bigint} masterSeed
- * @param {...(string | number | bigint)} parts
- * @returns {bigint}
- */
 function stableSeed(masterSeed, ...parts) {
   const material = [
     String(masterSeed),
@@ -846,32 +591,16 @@ function stableSeed(masterSeed, ...parts) {
   return digest.readBigUInt64BE(0);
 }
 
-/**
- * Python `secrets.randbits(63)`.
- *
- * @returns {bigint}
- */
 function randomBits63() {
   return randomBytes(8).readBigUInt64BE() >> 1n;
 }
 
-/* ------------------------------------------------------------------ *
- * Python literal parsing (subset of `ast.literal_eval`)
- * ------------------------------------------------------------------ */
-
-/**
- * Recursive-descent parser for the Python literal subset used by the
- * configuration constants in `main.py` (strings, numbers, booleans, `None`,
- * lists, tuples, dicts and sets).
- */
 class PythonLiteralParser {
-  /** @param {string} source @param {number} offset */
   constructor(source, offset) {
     this.source = source;
     this.pos = offset;
   }
 
-  /** @param {boolean} allowNewlines */
   skipTrivia(allowNewlines) {
     for (;;) {
       const ch = this.source[this.pos];
@@ -900,20 +629,10 @@ class PythonLiteralParser {
     }
   }
 
-  /**
-   * @param {string} message
-   * @returns {never}
-   */
   fail(message) {
     throw new ValueError(`malformed literal at offset ${this.pos}: ${message}`);
   }
 
-  /**
-   * Parse a value, then any trailing comma-separated values (forming a tuple).
-   *
-   * @param {boolean} allowNewlines
-   * @returns {unknown}
-   */
   parseValue(allowNewlines) {
     this.skipTrivia(allowNewlines);
     const first = this.parseAtom();
@@ -938,7 +657,6 @@ class PythonLiteralParser {
     return items;
   }
 
-  /** @returns {unknown} */
   parseAtom() {
     this.skipTrivia(false);
     const ch = this.source[this.pos];
@@ -958,7 +676,6 @@ class PythonLiteralParser {
     return this.parseName();
   }
 
-  /** @returns {string} */
   parseString() {
     let result = "";
     for (;;) {
@@ -971,7 +688,6 @@ class PythonLiteralParser {
     return result;
   }
 
-  /** @returns {string} */
   parseSingleString() {
     const quote = this.source[this.pos];
     const triple =
@@ -1003,9 +719,8 @@ class PythonLiteralParser {
     }
   }
 
-  /** @returns {string} */
   parseEscape() {
-    this.pos++; // consume backslash
+    this.pos++;
     const ch = this.source[this.pos];
     this.pos++;
     switch (ch) {
@@ -1063,10 +778,8 @@ class PythonLiteralParser {
     }
   }
 
-  /** @returns {unknown[]} */
   parseList() {
-    this.pos++; // consume '['
-    /** @type {unknown[]} */
+    this.pos++;
     const items = [];
     for (;;) {
       this.skipTrivia(true);
@@ -1089,9 +802,8 @@ class PythonLiteralParser {
     }
   }
 
-  /** @returns {unknown} */
   parseTuple() {
-    this.pos++; // consume '('
+    this.pos++;
     this.skipTrivia(true);
     if (this.source[this.pos] === ")") {
       this.pos++;
@@ -1127,9 +839,8 @@ class PythonLiteralParser {
     this.fail("expected ',' or ')' in tuple");
   }
 
-  /** @returns {Map<unknown, unknown> | Set<unknown>} */
   parseDictOrSet() {
-    this.pos++; // consume '{'
+    this.pos++;
     this.skipTrivia(true);
     if (this.source[this.pos] === "}") {
       this.pos++;
@@ -1139,7 +850,6 @@ class PythonLiteralParser {
     this.skipTrivia(true);
     if (this.source[this.pos] === ":") {
       this.pos++;
-      /** @type {Map<unknown, unknown>} */
       const mapping = new Map();
       mapping.set(first, this.parseAtom());
       for (;;) {
@@ -1166,7 +876,6 @@ class PythonLiteralParser {
         this.fail("expected ',' or '}' in dict");
       }
     }
-    /** @type {Set<unknown>} */
     const set = new Set();
     set.add(first);
     for (;;) {
@@ -1190,7 +899,6 @@ class PythonLiteralParser {
     }
   }
 
-  /** @returns {bigint | number} */
   parseNumber() {
     const start = this.pos;
     while (this.pos < this.source.length) {
@@ -1217,7 +925,6 @@ class PythonLiteralParser {
     this.fail(`invalid number ${pyStrRepr(token)}`);
   }
 
-  /** @returns {unknown} */
   parseName() {
     const start = this.pos;
     while (
@@ -1233,21 +940,12 @@ class PythonLiteralParser {
   }
 }
 
-/**
- * Python `load_literal_assignments`: read top-level literal assignments from a
- * Python source file.
- *
- * @param {string} filePath
- * @param {Set<string>} names
- * @returns {Map<string, unknown>}
- */
 function loadLiteralAssignments(filePath, names) {
-  /** @type {string} */
   let source;
   try {
     source = fs.readFileSync(filePath, "utf8");
   } catch (error) {
-    const code = /** @type {NodeJS.ErrnoException} */ (error).code;
+    const code = error.code;
     if (code === "ENOENT") {
       throw new FileNotFoundError(
         `[Errno 2] No such file or directory: ${pyStrRepr(filePath)}`,
@@ -1255,7 +953,6 @@ function loadLiteralAssignments(filePath, names) {
     }
     throw error;
   }
-  /** @type {Map<string, unknown>} */
   const values = new Map();
   const lines = source.split("\n");
   let offset = 0;
@@ -1278,7 +975,6 @@ function loadLiteralAssignments(filePath, names) {
     }
     offset += line.length + 1;
   }
-  /** @type {string[]} */
   const missing = [...names].filter((name) => !values.has(name)).sort();
   if (missing.length > 0) {
     throw new ValueError(
@@ -1288,31 +984,7 @@ function loadLiteralAssignments(filePath, names) {
   return values;
 }
 
-/* ------------------------------------------------------------------ *
- * Domain model (mirrors the dataclasses in docs/mock.py)
- * ------------------------------------------------------------------ */
-
-/**
- * @typedef {object} ValidationSummary
- * @property {bigint} records
- * @property {bigint} scenario_protocol_groups
- * @property {number[]} swift_throughput_gain_pct
- * @property {number[]} swift_delay_ratio
- * @property {number[]} swift_fairness_delta
- * @property {number[]} goodput_mbps
- * @property {number[]} delay_ms
- * @property {number[]} jain
- */
-
-/** One network scenario row from `main.py`'s `SCENARIOS`. */
 class Scenario {
-  /**
-   * @param {string} name
-   * @param {string} accessRate
-   * @param {string} bottleneckRate
-   * @param {string} accessDelay
-   * @param {string} bottleneckDelay
-   */
   constructor(name, accessRate, bottleneckRate, accessDelay, bottleneckDelay) {
     this.name = name;
     this.accessRate = accessRate;
@@ -1321,17 +993,14 @@ class Scenario {
     this.bottleneckDelay = bottleneckDelay;
   }
 
-  /** @returns {number} */
   get accessMbps() {
     return parseRateMbps(this.accessRate);
   }
 
-  /** @returns {number} */
   get bottleneckMbps() {
     return parseRateMbps(this.bottleneckRate);
   }
 
-  /** @returns {number} */
   get baseOwdMs() {
     return (
       2 * parseDelayMs(this.accessDelay) + parseDelayMs(this.bottleneckDelay)
@@ -1339,31 +1008,7 @@ class Scenario {
   }
 }
 
-/** A simulated packet flow (ns-3 FlowMonitor statistics). */
 class Flow {
-  /**
-   * @param {object} init
-   * @param {number} init.flowId
-   * @param {string} init.sourceAddress
-   * @param {string} init.destinationAddress
-   * @param {number} init.protocol
-   * @param {number} init.sourcePort
-   * @param {number} init.destinationPort
-   * @param {number} init.packetBytes
-   * @param {number} init.timeFirstTxNs
-   * @param {number} init.timeFirstRxNs
-   * @param {number} init.timeLastTxNs
-   * @param {number} init.timeLastRxNs
-   * @param {number} init.delaySumNs
-   * @param {number} init.jitterSumNs
-   * @param {number} init.lastDelayNs
-   * @param {number} init.txBytes
-   * @param {number} init.rxBytes
-   * @param {number} init.txPackets
-   * @param {number} init.rxPackets
-   * @param {number} init.lostPackets
-   * @param {number} init.timesForwarded
-   */
   constructor(init) {
     this.flowId = init.flowId;
     this.sourceAddress = init.sourceAddress;
@@ -1387,39 +1032,27 @@ class Flow {
     this.timesForwarded = init.timesForwarded;
   }
 
-  /** @returns {number} */
   get durationS() {
     return (this.timeLastRxNs - this.timeFirstTxNs) / 1e9;
   }
 
-  /** @returns {number} */
   get goodputMbps() {
     if (this.durationS <= 0) return 0.0;
     return (this.rxBytes * 8) / this.durationS / 1e6;
   }
 
-  /** @returns {number} */
   get delayMs() {
     if (this.rxPackets <= 0) return 0.0;
     return this.delaySumNs / this.rxPackets / 1e6;
   }
 
-  /** @returns {number} */
   get jitterMs() {
     if (this.rxPackets <= 1) return 0.0;
     return this.jitterSumNs / (this.rxPackets - 1) / 1e6;
   }
 }
 
-/** One generated (setting, scenario, protocol) result bundle. */
 class Record {
-  /**
-   * @param {string} setting
-   * @param {Scenario} scenario
-   * @param {string} protocol
-   * @param {bigint} seed
-   * @param {Flow[]} flows
-   */
   constructor(setting, scenario, protocol, seed, flows) {
     this.setting = setting;
     this.scenario = scenario;
@@ -1428,7 +1061,6 @@ class Record {
     this.flows = flows;
   }
 
-  /** @returns {Flow[]} */
   get forwardFlows() {
     return this.flows.filter(
       (flow) =>
@@ -1438,36 +1070,30 @@ class Record {
     );
   }
 
-  /** @returns {Flow[]} */
   get udpFlows() {
     return this.flows.filter((flow) => flow.protocol === 17);
   }
 
-  /** @returns {number} */
   get goodputMbps() {
     let total = 0;
     for (const flow of this.forwardFlows) total += flow.goodputMbps;
     return total;
   }
 
-  /** @returns {number} */
   get udpGoodputMbps() {
     let total = 0;
     for (const flow of this.udpFlows) total += flow.goodputMbps;
     return total;
   }
 
-  /** @returns {number} */
   get delayMs() {
     return fmean(this.forwardFlows.map((flow) => flow.delayMs));
   }
 
-  /** @returns {number} */
   get jitterMs() {
     return fmean(this.forwardFlows.map((flow) => flow.jitterMs));
   }
 
-  /** @returns {number} */
   get lossPct() {
     let txPackets = 0;
     let lostPackets = 0;
@@ -1478,35 +1104,19 @@ class Record {
     return txPackets ? (100 * lostPackets) / txPackets : 0.0;
   }
 
-  /** @returns {number} */
   get jain() {
     return jainIndex(this.forwardFlows.map((flow) => flow.goodputMbps));
   }
 
-  /** @returns {string} */
   get artifactDirectory() {
     return this.setting === "tcp_only" ? "comparison" : "comparison-udp";
   }
 
-  /** @returns {string} */
   get stem() {
     return `${this.scenario.name}_${this.protocol}`;
   }
 }
 
-/**
- * @typedef {object} ProjectConfig
- * @property {Scenario[]} scenarios
- * @property {string[]} protocols
- * @property {number} durationS
- * @property {number} nFlows
- */
-
-/* ------------------------------------------------------------------ *
- * Domain helpers
- * ------------------------------------------------------------------ */
-
-/** @type {ReadonlyArray<readonly [string, number]>} */
 const RATE_SUFFIXES = [
   ["Gbps", 1000.0],
   ["Mbps", 1.0],
@@ -1514,7 +1124,6 @@ const RATE_SUFFIXES = [
   ["bps", 1e-6],
 ];
 
-/** @type {ReadonlyArray<readonly [string, number]>} */
 const DELAY_SUFFIXES = [
   ["ns", 1e-6],
   ["us", 1e-3],
@@ -1522,10 +1131,6 @@ const DELAY_SUFFIXES = [
   ["s", 1000.0],
 ];
 
-/**
- * @param {string} value
- * @returns {number}
- */
 function parseRateMbps(value) {
   for (const [suffix, multiplier] of RATE_SUFFIXES) {
     if (value.endsWith(suffix))
@@ -1534,10 +1139,6 @@ function parseRateMbps(value) {
   throw new ValueError(`Unsupported data rate: ${value}`);
 }
 
-/**
- * @param {string} value
- * @returns {number}
- */
 function parseDelayMs(value) {
   for (const [suffix, multiplier] of DELAY_SUFFIXES) {
     if (value.endsWith(suffix))
@@ -1546,11 +1147,6 @@ function parseDelayMs(value) {
   throw new ValueError(`Unsupported delay: ${value}`);
 }
 
-/**
- * @param {Scenario} scenario
- * @param {number} packetBytes
- * @returns {number}
- */
 function minimumPathDelayMs(scenario, packetBytes) {
   const packetBits = packetBytes * 8;
   let serializationMs = (packetBits / (scenario.accessMbps * 1000)) * 2;
@@ -1558,7 +1154,6 @@ function minimumPathDelayMs(scenario, packetBytes) {
   return scenario.baseOwdMs + serializationMs;
 }
 
-/** @returns {ProjectConfig} */
 function loadProjectConfig() {
   const values = loadLiteralAssignments(
     MAIN_PY,
@@ -1580,19 +1175,11 @@ function loadProjectConfig() {
     ) {
       throw new ValueError(`Invalid SCENARIOS row: ${pyRepr(row)}`);
     }
-    return new Scenario(
-      /** @type {string} */ (row[0]),
-      /** @type {string} */ (row[1]),
-      /** @type {string} */ (row[2]),
-      /** @type {string} */ (row[3]),
-      /** @type {string} */ (row[4]),
-    );
+    return new Scenario(row[0], row[1], row[2], row[3], row[4]);
   });
   const protocolValue = values.get("DEFAULT_PROTOCOLS");
   const protocols =
-    protocolValue instanceof Set
-      ? [...protocolValue]
-      : [.../** @type {unknown[]} */ (protocolValue)];
+    protocolValue instanceof Set ? [...protocolValue] : [...protocolValue];
   const scenarioNames = scenarios.map((scenario) => scenario.name);
   if (new Set(scenarioNames).size !== scenarioNames.length) {
     throw new ValueError("Duplicate scenario names in main.py");
@@ -1628,12 +1215,6 @@ function loadProjectConfig() {
   };
 }
 
-/**
- * Jain's fairness index.
- *
- * @param {Iterable<number>} values
- * @returns {number}
- */
 function jainIndex(values) {
   const samples = [...values];
   let total = 0;
@@ -1645,12 +1226,6 @@ function jainIndex(values) {
     : 0.0;
 }
 
-/**
- * @param {Random} rng
- * @param {number} sigma
- * @param {number} [minimumJain]
- * @returns {number[]}
- */
 function normalizedWeights(rng, sigma, minimumJain = 0.0) {
   let best = [1 / 3, 1 / 3, 1 / 3];
   for (let attempt = 0; attempt < 100; attempt++) {
@@ -1667,10 +1242,6 @@ function normalizedWeights(rng, sigma, minimumJain = 0.0) {
   return best;
 }
 
-/**
- * @param {Scenario} scenario
- * @returns {{difficulty: number, highRtt: number, edgeNetwork: boolean}}
- */
 function scenarioDifficulty(scenario) {
   const highRtt = clamp(
     Math.log1p(scenario.baseOwdMs) / Math.log1p(320.0),
@@ -1695,24 +1266,6 @@ function scenarioDifficulty(scenario) {
   return { difficulty, highRtt, edgeNetwork };
 }
 
-/**
- * @param {object} init
- * @param {number} init.flowId
- * @param {string} init.sourceAddress
- * @param {string} init.destinationAddress
- * @param {number} init.protocol
- * @param {number} init.sourcePort
- * @param {number} init.destinationPort
- * @param {number} init.packetBytes
- * @param {number} init.goodputMbps
- * @param {number} init.lossPct
- * @param {number} init.delayMs
- * @param {number} init.jitterMs
- * @param {number} init.firstTxS
- * @param {number} init.stopS
- * @param {number} init.timesForwardedMultiplier
- * @returns {Flow}
- */
 function packetFlow(init) {
   const durationS = init.stopS - init.firstTxS;
   const targetRxBytes = (init.goodputMbps * 1e6 * durationS) / 8;
@@ -1750,22 +1303,6 @@ function packetFlow(init) {
   });
 }
 
-/**
- * @param {object} init
- * @param {string} init.setting
- * @param {Scenario} init.scenario
- * @param {string} init.protocol
- * @param {bigint} init.seed
- * @param {number} init.durationS
- * @param {number} init.targetGoodputMbps
- * @param {number} init.targetDelayMs
- * @param {number} init.targetJitterMs
- * @param {number} init.targetLossPct
- * @param {number[]} init.weights
- * @param {number} init.udpGoodputMbps
- * @param {Random} init.rng
- * @returns {Record}
- */
 function buildRecord(init) {
   const { rng, scenario } = init;
   const stopS = init.durationS + 0.1;
@@ -1781,10 +1318,8 @@ function buildRecord(init) {
     clamp(rng.gauss(1.0, 0.05), 0.8, 1.2),
   ];
   const jitterScale = 3 / (jitterRaw[0] + jitterRaw[1] + jitterRaw[2]);
-  /** @type {Flow[]} */
   const flows = [];
   for (let index = 0; index < 3; index++) {
-    // sim.cc staggers BulkSend starts at start_time*(i+1) = 0.1/0.2/0.3 s
     const firstTxS = 0.1 * (index + 1);
     const dataFlow = packetFlow({
       flowId: 2 * index + 1,
@@ -1852,13 +1387,7 @@ function buildRecord(init) {
   return new Record(init.setting, scenario, init.protocol, init.seed, flows);
 }
 
-/**
- * @param {ProjectConfig} config
- * @param {bigint} seed
- * @returns {Record[]}
- */
 function generateRecords(config, seed) {
-  /** @type {Record[]} */
   const records = [];
   const baselines = config.protocols.filter(
     (protocol) => protocol !== "TcpSwift",
@@ -1877,7 +1406,6 @@ function generateRecords(config, seed) {
       const availableTcp = scenario.bottleneckMbps * 0.985 - udpGoodput;
       let commonEfficiency = 0.8 + 0.08 * (1.0 - difficulty);
       commonEfficiency += commonRng.gauss(0.0, 0.018);
-      /** @type {Map<string, Record>} */
       const baselineRecords = new Map();
       for (const protocol of baselines) {
         const rng = new Random(
@@ -1988,7 +1516,6 @@ function generateRecords(config, seed) {
       const fallbackRng = new Random(
         stableSeed(seed, setting, scenario.name, "TcpSwift", "fairness"),
       );
-      /** @type {Record | null} */
       let swiftRecord = null;
       for (const [weights, recordRng] of [
         [swiftWeights, swiftRng],
@@ -2004,9 +1531,9 @@ function generateRecords(config, seed) {
           targetDelayMs: targetDelay,
           targetJitterMs: targetJitter,
           targetLossPct: targetLoss,
-          weights: /** @type {number[]} */ (weights),
+          weights: weights,
           udpGoodputMbps: udpGoodput,
-          rng: /** @type {Random} */ (recordRng),
+          rng: recordRng,
         });
         if (candidate.jain >= minimumFairness) {
           swiftRecord = candidate;
@@ -2018,7 +1545,6 @@ function generateRecords(config, seed) {
           `Unable to satisfy Swift fairness for ${setting}/${scenario.name}`,
         );
       }
-      /** @type {Map<string, Record>} */
       const byProtocol = new Map(baselineRecords);
       byProtocol.set("TcpSwift", swiftRecord);
       for (const protocol of config.protocols) {
@@ -2032,11 +1558,6 @@ function generateRecords(config, seed) {
   return records;
 }
 
-/**
- * @param {Record[]} records
- * @param {ProjectConfig} config
- * @returns {ValidationSummary}
- */
 function validateRecords(records, config) {
   const expected =
     config.scenarios.length * config.protocols.length * SETTINGS.length;
@@ -2045,7 +1566,6 @@ function validateRecords(records, config) {
       `Expected ${expected} records, generated ${records.length}`,
     );
   }
-  /** @type {Map<string, {key: [string, string], protocols: Map<string, Record>}>} */
   const grouped = new Map();
   for (const record of records) {
     const groupKey = `${record.setting}\u0000${record.scenario.name}`;
@@ -2102,11 +1622,8 @@ function validateRecords(records, config) {
       );
     }
   }
-  /** @type {number[]} */
   const gains = [];
-  /** @type {number[]} */
   const delayRatios = [];
-  /** @type {number[]} */
   const fairnessDeltas = [];
   const expectedProtocols = new Set(config.protocols);
   for (const group of grouped.values()) {
@@ -2119,7 +1636,7 @@ function validateRecords(records, config) {
         `Incomplete protocol group ${pyTupleRepr(group.key)}: ${pyListRepr([...protocolSet].sort())}`,
       );
     }
-    const swift = /** @type {Record} */ (group.protocols.get("TcpSwift"));
+    const swift = group.protocols.get("TcpSwift");
     const baseline = [...group.protocols.entries()]
       .filter(([protocol]) => protocol !== "TcpSwift")
       .map(([, record]) => record);
@@ -2183,24 +1700,6 @@ function validateRecords(records, config) {
   };
 }
 
-/* ------------------------------------------------------------------ *
- * XML layer (ElementTree-compatible build/indent/serialize/parse)
- * ------------------------------------------------------------------ */
-
-/**
- * @typedef {object} XmlElement
- * @property {string} tag
- * @property {[string, string][]} attrib
- * @property {string | null} text
- * @property {string | null} tail
- * @property {XmlElement[]} children
- */
-
-/**
- * @param {string} tag
- * @param {{ [key: string]: string }} [attrib]
- * @returns {XmlElement}
- */
 function xmlElement(tag, attrib = {}) {
   return {
     tag,
@@ -2211,29 +1710,17 @@ function xmlElement(tag, attrib = {}) {
   };
 }
 
-/**
- * @param {XmlElement} parent
- * @param {string} tag
- * @param {{ [key: string]: string }} [attrib]
- * @returns {XmlElement}
- */
 function xmlSubElement(parent, tag, attrib = {}) {
   const child = xmlElement(tag, attrib);
   parent.children.push(child);
   return child;
 }
 
-/**
- * @param {XmlElement} element
- * @param {string} key
- * @returns {string | undefined}
- */
 function xmlGet(element, key) {
   for (const [name, value] of element.attrib) if (name === key) return value;
   return undefined;
 }
 
-/** @param {string} text @returns {string} */
 function escapeCdata(text) {
   return text
     .replace(/&/g, "&amp;")
@@ -2241,7 +1728,6 @@ function escapeCdata(text) {
     .replace(/>/g, "&gt;");
 }
 
-/** @param {string} text @returns {string} */
 function escapeAttrib(text) {
   return text
     .replace(/&/g, "&amp;")
@@ -2253,21 +1739,9 @@ function escapeAttrib(text) {
     .replace(/\t/g, "&#09;");
 }
 
-/**
- * Python `ET.indent(tree, space="  ")`.
- *
- * @param {XmlElement} tree
- * @param {string} [space]
- * @param {number} [level]
- */
 function xmlIndent(tree, space = "  ", level = 0) {
   if (tree.children.length === 0) return;
-  /** @type {string[]} */
   const indentations = [`\n${space.repeat(level)}`];
-  /**
-   * @param {XmlElement} element
-   * @param {number} currentLevel
-   */
   const indentChildren = (element, currentLevel) => {
     const childLevel = currentLevel + 1;
     let childIndentation = indentations[childLevel];
@@ -2281,22 +1755,13 @@ function xmlIndent(tree, space = "  ", level = 0) {
       if (!child.tail || !child.tail.trim()) child.tail = childIndentation;
     }
     const last = element.children[element.children.length - 1];
-    if (!(/** @type {string} */ (last.tail).trim()))
-      last.tail = indentations[currentLevel];
+    if (!last.tail.trim()) last.tail = indentations[currentLevel];
   };
   indentChildren(tree, 0);
 }
 
-/**
- * Python `ET.tostring(element, encoding="unicode")`.
- *
- * @param {XmlElement} element
- * @returns {string}
- */
 function xmlToString(element) {
-  /** @type {string[]} */
   const parts = [];
-  /** @param {XmlElement} node */
   const serialize = (node) => {
     parts.push(`<${node.tag}`);
     for (const [key, value] of node.attrib)
@@ -2315,34 +1780,27 @@ function xmlToString(element) {
   return parts.join("");
 }
 
-/**
- * Minimal well-formed XML parser (sufficient for documents this module emits).
- *
- * @param {string} text
- * @returns {XmlElement}
- */
 function xmlFromString(text) {
   let pos = 0;
   const skipSpace = () => {
     while (pos < text.length && /\s/.test(text[pos])) pos++;
   };
-  const decode = (/** @type {string} */ value) =>
+  const decode = (value) =>
     value.replace(/&(#x?[0-9a-fA-F]+|[a-zA-Z]+);/g, (match, body) => {
       if (body === "amp") return "&";
       if (body === "lt") return "<";
       if (body === "gt") return ">";
       if (body === "quot") return '"';
       if (body === "apos") return "'";
-      const raw = /** @type {string} */ (body);
+      const raw = body;
       if (raw.startsWith("#x") || raw.startsWith("#X"))
         return String.fromCodePoint(Number.parseInt(raw.slice(2), 16));
       if (raw.startsWith("#"))
         return String.fromCodePoint(Number.parseInt(raw.slice(1), 10));
       return match;
     });
-  /** @returns {XmlElement} */
   const parseElement = () => {
-    pos++; // consume '<'
+    pos++;
     const nameMatch = /^[^\s/>]+/.exec(text.slice(pos));
     if (!nameMatch) throw new ValueError("malformed XML element");
     const tag = nameMatch[0];
@@ -2351,7 +1809,7 @@ function xmlFromString(text) {
     for (;;) {
       skipSpace();
       if (text[pos] === "/") {
-        pos += 2; // consume '/>'
+        pos += 2;
         return element;
       }
       if (text[pos] === ">") {
@@ -2419,14 +1877,7 @@ function xmlFromString(text) {
   return parseElement();
 }
 
-/**
- * Collect every descendant of `element` in document (pre-)order.
- *
- * @param {XmlElement} element
- * @returns {XmlElement[]}
- */
 function xmlDescendants(element) {
-  /** @type {XmlElement[]} */
   const result = [];
   for (const child of element.children) {
     result.push(child);
@@ -2435,14 +1886,6 @@ function xmlDescendants(element) {
   return result;
 }
 
-/**
- * A small subset of ElementTree's `findall`, covering the two patterns used
- * here: `./A/B` and `.//A/B`.
- *
- * @param {XmlElement} element
- * @param {string} pattern
- * @returns {XmlElement[]}
- */
 function xmlFindAll(element, pattern) {
   const descendant = pattern.startsWith(".//");
   const rest = descendant
@@ -2454,7 +1897,6 @@ function xmlFindAll(element, pattern) {
   let current = [element];
   for (let i = 0; i < steps.length; i++) {
     const name = steps[i];
-    /** @type {XmlElement[]} */
     const next = [];
     for (const node of current) {
       const scope =
@@ -2466,14 +1908,6 @@ function xmlFindAll(element, pattern) {
   return current;
 }
 
-/* ------------------------------------------------------------------ *
- * Renderers
- * ------------------------------------------------------------------ */
-
-/**
- * @param {Flow} flow
- * @returns {{ [key: string]: string }}
- */
 function flowAttributes(flow) {
   return {
     flowId: intToString(flow.flowId),
@@ -2493,10 +1927,6 @@ function flowAttributes(flow) {
   };
 }
 
-/**
- * @param {Record} record
- * @returns {string}
- */
 function renderFlowmonitor(record) {
   const root = xmlElement("FlowMonitor");
   const metadata = xmlSubElement(root, "Metadata");
@@ -2581,12 +2011,7 @@ function renderFlowmonitor(record) {
   return `<?xml version="1.0" ?>\n${xmlToString(root)}\n`;
 }
 
-/**
- * @param {Record} record
- * @returns {string}
- */
 function renderNs3Log(record) {
-  /** @type {string[]} */
   const lines = [
     "Ns3Env parameters:",
     `--Tcp version: ns3::${record.protocol}`,
@@ -2621,35 +2046,16 @@ function renderNs3Log(record) {
   return `${lines.join("\n")}\n`;
 }
 
-/**
- * @param {Record} record
- * @returns {string}
- */
 function renderAgentLog(record) {
   return [`Scenario: ${record.scenario.name}`, ""].join("\n");
 }
 
-/**
- * Quote a single CSV field using Python's `csv` QUOTE_MINIMAL rules.
- *
- * @param {string} field
- * @returns {string}
- */
 function csvField(field) {
   if (/[",\r\n]/.test(field)) return `"${field.replace(/"/g, '""')}"`;
   return field;
 }
 
-/**
- * Python `csv.DictWriter(...).writeheader()` + `writerows(rows)` with the
- * default `excel` dialect (`,` delimiter, `\r\n` terminator, minimal quoting).
- *
- * @param {string[]} fieldnames
- * @param {Array<{ [key: string]: unknown }>} rows
- * @returns {string}
- */
 function csvText(fieldnames, rows) {
-  /** @type {string[]} */
   const lines = [fieldnames.map(csvField).join(",")];
   for (const row of rows) {
     lines.push(
@@ -2658,9 +2064,7 @@ function csvText(fieldnames, rows) {
           const value = Object.hasOwn(row, name) ? row[name] : "";
           if (value === null || value === undefined) return "";
           return csvField(
-            typeof value === "string"
-              ? value
-              : intToString(/** @type {number} */ (value)),
+            typeof value === "string" ? value : intToString(value),
           );
         })
         .join(","),
@@ -2669,15 +2073,9 @@ function csvText(fieldnames, rows) {
   return `${lines.join("\r\n")}\r\n`;
 }
 
-/**
- * Python `datetime.now(timezone.utc).isoformat()`.
- *
- * @returns {string}
- */
 function utcIsoformat() {
   const now = new Date();
-  const pad = (/** @type {number} */ value, /** @type {number} */ width = 2) =>
-    String(value).padStart(width, "0");
+  const pad = (value, width = 2) => String(value).padStart(width, "0");
   const date = `${now.getUTCFullYear()}-${pad(now.getUTCMonth() + 1)}-${pad(now.getUTCDate())}`;
   const time = `${pad(now.getUTCHours())}:${pad(now.getUTCMinutes())}:${pad(now.getUTCSeconds())}`;
   const microseconds = now.getUTCMilliseconds() * 1000;
@@ -2685,13 +2083,6 @@ function utcIsoformat() {
   return `${date}T${time}${fraction}+00:00`;
 }
 
-/**
- * Python `json.dumps(value, ensure_ascii=False, indent=2)`.
- *
- * @param {unknown} value
- * @param {number} [indentLevel]
- * @returns {string}
- */
 function jsonDumps(value, indentLevel = 0) {
   const indent = "  ".repeat(indentLevel);
   const childIndent = "  ".repeat(indentLevel + 1);
@@ -2707,9 +2098,7 @@ function jsonDumps(value, indentLevel = 0) {
     );
     return `[\n${items.join(",\n")}\n${indent}]`;
   }
-  const entries = Object.entries(
-    /** @type {{ [key: string]: unknown }} */ (value),
-  );
+  const entries = Object.entries(value);
   if (entries.length === 0) return "{}";
   const items = entries.map(
     ([key, item]) =>
@@ -2718,7 +2107,6 @@ function jsonDumps(value, indentLevel = 0) {
   return `{\n${items.join(",\n")}\n${indent}}`;
 }
 
-/** @param {string} value @returns {string} */
 function jsonString(value) {
   let out = '"';
   for (const ch of value) {
@@ -2736,20 +2124,10 @@ function jsonString(value) {
   return `${out}"`;
 }
 
-/**
- * @param {Record[]} records
- * @param {ProjectConfig} config
- * @param {bigint} seed
- * @param {ValidationSummary} summary
- * @returns {Map<string, string>}
- */
 function buildArtifacts(records, config, seed, summary) {
   void seed;
-  /** @type {Map<string, string>} */
   const artifacts = new Map();
-  /** @type {Map<string, Array<{ [key: string]: unknown }>>} */
   const summaryRows = new Map(SETTINGS.map((setting) => [setting, []]));
-  /** @type {Array<{ [key: string]: unknown }>} */
   const kpiRows = [];
   for (const record of records) {
     const base = `${record.artifactDirectory}/${record.stem}`;
@@ -2757,10 +2135,7 @@ function buildArtifacts(records, config, seed, summary) {
     artifacts.set(`${base}_ns3.log`, renderNs3Log(record));
     if (record.protocol === "TcpSwift")
       artifacts.set(`${base}_agent.log`, renderAgentLog(record));
-    /** @type {Array<{ [key: string]: unknown }>} */
-    const settingRows = /** @type {Array<{ [key: string]: unknown }>} */ (
-      summaryRows.get(record.setting)
-    );
+    const settingRows = summaryRows.get(record.setting);
     settingRows.push({
       Scenario: record.scenario.name,
       Protocol: record.protocol,
@@ -2798,21 +2173,11 @@ function buildArtifacts(records, config, seed, summary) {
   ];
   artifacts.set(
     "plots/summary.csv",
-    csvText(
-      summaryFields,
-      /** @type {Array<{ [key: string]: unknown }>} */ (
-        summaryRows.get("tcp_only")
-      ),
-    ),
+    csvText(summaryFields, summaryRows.get("tcp_only")),
   );
   artifacts.set(
     "plots-udp/summary.csv",
-    csvText(
-      summaryFields,
-      /** @type {Array<{ [key: string]: unknown }>} */ (
-        summaryRows.get("udp_burst")
-      ),
-    ),
+    csvText(summaryFields, summaryRows.get("udp_burst")),
   );
   const kpiFields = [
     "Setting",
@@ -2834,7 +2199,7 @@ function buildArtifacts(records, config, seed, summary) {
   artifacts.set("summary/kpi_forward.csv", csvText(kpiFields, kpiRows));
   const sortedPaths = [...artifacts.keys()].sort();
   const inventory = sortedPaths.map((artifactPath) => {
-    const content = /** @type {string} */ (artifacts.get(artifactPath));
+    const content = artifacts.get(artifactPath);
     return {
       path: artifactPath,
       bytes: BigInt(Buffer.byteLength(content, "utf8")),
@@ -2879,16 +2244,6 @@ function buildArtifacts(records, config, seed, summary) {
   return artifacts;
 }
 
-/* ------------------------------------------------------------------ *
- * Artifact validation (parse the emitted XML back and compare KPIs)
- * ------------------------------------------------------------------ */
-
-/**
- * Python `parse_ns`.
- *
- * @param {string | undefined} value
- * @returns {number}
- */
 function parseNs(value) {
   let text = value || "0ns";
   while (text.startsWith("+") || text.endsWith("+")) {
@@ -2899,15 +2254,8 @@ function parseNs(value) {
   return pyParseFloat(text);
 }
 
-/**
- * Recompute the forward KPIs from a FlowMonitor XML document.
- *
- * @param {string} content
- * @returns {{goodput: number, delay: number, jitter: number, loss: number, jain: number, udp_goodput: number}}
- */
 function flowmonitorKpi(content) {
   const root = xmlFromString(content);
-  /** @type {Map<number, XmlElement>} */
   const classifiers = new Map();
   for (const element of xmlFindAll(root, ".//Ipv4FlowClassifier/Flow")) {
     classifiers.set(
@@ -2915,11 +2263,8 @@ function flowmonitorKpi(content) {
       element,
     );
   }
-  /** @type {number[]} */
   const goodputs = [];
-  /** @type {number[]} */
   const delays = [];
-  /** @type {number[]} */
   const jitters = [];
   let txPackets = 0;
   let lostPackets = 0;
@@ -2967,12 +2312,6 @@ function flowmonitorKpi(content) {
   };
 }
 
-/**
- * @param {Map<string, string>} artifacts
- * @param {Record[]} records
- * @param {ProjectConfig} config
- * @returns {{flowmonitor: bigint, ns3_log: bigint, agent_log: bigint, csv: bigint}}
- */
 function validateArtifacts(artifacts, records, config) {
   const expectedRecords =
     config.scenarios.length * config.protocols.length * SETTINGS.length;
@@ -2981,14 +2320,12 @@ function validateArtifacts(artifacts, records, config) {
   const ns3Paths = paths.filter((p) => p.endsWith("_ns3.log"));
   const agentPaths = paths.filter((p) => p.endsWith("_agent.log"));
   const csvPaths = paths.filter((p) => p.endsWith(".csv"));
-  /** @type {Map<string, number>} */
   const expectedCounts = new Map([
     ["flowmonitor", expectedRecords],
     ["ns3_log", expectedRecords],
     ["agent_log", config.scenarios.length * SETTINGS.length],
     ["csv", 3],
   ]);
-  /** @type {Map<string, number>} */
   const actualCounts = new Map([
     ["flowmonitor", flowmonitorPaths.length],
     ["ns3_log", ns3Paths.length],
@@ -3004,7 +2341,6 @@ function validateArtifacts(artifacts, records, config) {
       `Artifact counts differ: ${pyDictRepr(actualCounts)} != ${pyDictRepr(expectedCounts)}`,
     );
   }
-  /** @type {Map<string, Record>} */
   const recordByPath = new Map();
   for (const record of records) {
     recordByPath.set(
@@ -3013,10 +2349,9 @@ function validateArtifacts(artifacts, records, config) {
     );
   }
   for (const artifactPath of flowmonitorPaths) {
-    const content = /** @type {string} */ (artifacts.get(artifactPath));
+    const content = artifacts.get(artifactPath);
     const parsed = flowmonitorKpi(content);
-    const record = /** @type {Record} */ (recordByPath.get(artifactPath));
-    /** @type {{ [key: string]: number }} */
+    const record = recordByPath.get(artifactPath);
     const expected = {
       goodput: record.goodputMbps,
       delay: record.delayMs,
@@ -3026,7 +2361,7 @@ function validateArtifacts(artifacts, records, config) {
       udp_goodput: record.udpGoodputMbps,
     };
     for (const [metric, value] of Object.entries(expected)) {
-      const parsedValue = parsed[/** @type {keyof typeof parsed} */ (metric)];
+      const parsedValue = parsed[metric];
       if (!isClose(parsedValue, value, 1e-10, 1e-10)) {
         throw new ValueError(
           `XML ${artifactPath} changed ${metric}: ${pyFloatRepr(parsedValue)} != ${pyFloatRepr(value)}`,
@@ -3042,16 +2377,6 @@ function validateArtifacts(artifacts, records, config) {
   };
 }
 
-/* ------------------------------------------------------------------ *
- * Filesystem publish layer
- * ------------------------------------------------------------------ */
-
-/**
- * Python `expanduser` (POSIX, `~` and `~/...` only).
- *
- * @param {string} target
- * @returns {string}
- */
 function expandUser(target) {
   if (!target.startsWith("~")) return target;
   const separatorIndex = target.indexOf("/", 1);
@@ -3062,21 +2387,11 @@ function expandUser(target) {
     const rest = target.slice(1);
     return `${trimmed}${rest}` || "/";
   }
-  // ~user/... cannot be resolved without a passwd database; Python returns the
-  // path unchanged when the user is unknown, so do the same.
   return target;
 }
 
-/**
- * Python `Path.resolve()` (non-strict): resolve symlinks for the longest
- * existing prefix and keep the remaining components.
- *
- * @param {string} target
- * @returns {string}
- */
 function resolvePath(target) {
   const absolute = path.resolve(target);
-  /** @type {string[]} */
   const missing = [];
   let current = absolute;
   for (;;) {
@@ -3084,7 +2399,7 @@ function resolvePath(target) {
     try {
       real = fs.realpathSync(current);
     } catch (error) {
-      const code = /** @type {NodeJS.ErrnoException} */ (error).code;
+      const code = error.code;
       if (code !== "ENOENT") throw error;
       const parent = path.dirname(current);
       if (parent === current) throw error;
@@ -3096,40 +2411,29 @@ function resolvePath(target) {
   }
 }
 
-/** @param {string} target @returns {boolean} */
 function pathExists(target) {
   return fs.existsSync(target);
 }
 
-/** @param {string} target @returns {boolean} */
 function isSymlink(target) {
   const stats = fs.lstatSync(target, { throwIfNoEntry: false });
   return stats ? stats.isSymbolicLink() : false;
 }
 
-/** @param {string} target @returns {boolean} */
 function isDirectory(target) {
   const stats = fs.statSync(target, { throwIfNoEntry: false });
   return stats ? stats.isDirectory() : false;
 }
 
-/** @param {string} target @returns {boolean} */
 function isFile(target) {
   const stats = fs.statSync(target, { throwIfNoEntry: false });
   return stats ? stats.isFile() : false;
 }
 
-/** @param {string} target @returns {boolean} */
 function directoryIsEmpty(target) {
   return fs.readdirSync(target).length === 0;
 }
 
-/**
- * Python `validated_relative_path`.
- *
- * @param {string} value
- * @returns {string} A normalized relative path.
- */
 function validatedRelativePath(value) {
   const parts = value.split("/").filter((part) => part !== "");
   const isAbsolute = value.startsWith("/") || /^[A-Za-z]:[\\/]/.test(value);
@@ -3144,12 +2448,6 @@ function validatedRelativePath(value) {
   return value;
 }
 
-/**
- * Python `validate_output_path`.
- *
- * @param {string} output
- * @returns {string} The resolved output directory.
- */
 function validateOutputPath(output) {
   const expanded = expandUser(output);
   if (isSymlink(expanded))
@@ -3160,19 +2458,9 @@ function validateOutputPath(output) {
   return resolved;
 }
 
-/**
- * Recursively list every entry under `root` (files and directories), raising on
- * symlinks, mirroring `Path.rglob("*")` + the symlink guard.
- *
- * @param {string} root
- * @returns {{files: string[], sawSymlink: string | null}}
- */
 function walkBundle(root) {
-  /** @type {string[]} */
   const files = [];
-  /** @type {string | null} */
   let sawSymlink = null;
-  /** @param {string} dir */
   const visit = (dir) => {
     for (const entry of fs.readdirSync(dir)) {
       const full = path.join(dir, entry);
@@ -3189,11 +2477,6 @@ function walkBundle(root) {
   return { files, sawSymlink };
 }
 
-/**
- * Python `validate_existing_output`.
- *
- * @param {string} output
- */
 function validateExistingOutput(output) {
   if (!pathExists(output)) return;
   if (!isDirectory(output))
@@ -3202,7 +2485,6 @@ function validateExistingOutput(output) {
   const manifestPath = path.join(output, "manifest.json");
   if (!isFile(manifestPath))
     throw new ValueError(`Non-empty output is not generator-owned: ${output}`);
-  /** @type {unknown} */
   let manifest;
   try {
     manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
@@ -3211,17 +2493,16 @@ function validateExistingOutput(output) {
   }
   const inventory =
     manifest && typeof manifest === "object" && !Array.isArray(manifest)
-      ? /** @type {{ [key: string]: unknown }} */ (manifest).files
+      ? manifest.files
       : undefined;
   if (!Array.isArray(inventory))
     throw new ValueError(`Output manifest lacks a file inventory: ${output}`);
-  /** @type {Map<string, {bytes: number, sha256: string}>} */
   const expected = new Map();
   for (const item of inventory) {
     if (!item || typeof item !== "object" || Array.isArray(item)) {
       throw new ValueError(`Invalid manifest inventory entry in ${output}`);
     }
-    const entry = /** @type {{ [key: string]: unknown }} */ (item);
+    const entry = item;
     const relative = validatedRelativePath(String(entry.path ?? ""));
     if (relative === "manifest.json" || expected.has(relative)) {
       throw new ValueError(`Invalid or duplicate inventory path: ${relative}`);
@@ -3264,13 +2545,6 @@ function validateExistingOutput(output) {
   }
 }
 
-/**
- * Python `publish_artifacts`: stage into a temp directory, then atomically swap
- * it into place, keeping a backup for rollback on failure.
- *
- * @param {string} output
- * @param {Map<string, string>} artifacts
- */
 function publishArtifacts(output, artifacts) {
   validateExistingOutput(output);
   fs.mkdirSync(path.dirname(output), { recursive: true });
@@ -3278,7 +2552,6 @@ function publishArtifacts(output, artifacts) {
     path.join(path.dirname(output), `.${path.basename(output)}.stage-`),
   );
   const stageRoot = resolvePath(stage);
-  /** @type {string | null} */
   let backup = null;
   let installed = false;
   try {
@@ -3321,18 +2594,12 @@ function publishArtifacts(output, artifacts) {
       fs.rmSync(backup, { recursive: true, force: true });
     } catch (error) {
       process.stderr.write(
-        `Warning: unable to remove backup ${backup}: ${/** @type {Error} */ (error).message}\n`,
+        `Warning: unable to remove backup ${backup}: ${error.message}\n`,
       );
     }
   }
 }
 
-/**
- * Python `display_path`.
- *
- * @param {string} target
- * @returns {string}
- */
 function displayPath(target) {
   if (target === REPO_ROOT) return ".";
   if (target.startsWith(REPO_ROOT + path.sep)) {
@@ -3341,21 +2608,9 @@ function displayPath(target) {
   return "<custom-output>";
 }
 
-/* ------------------------------------------------------------------ *
- * CLI (argparse-compatible subset)
- * ------------------------------------------------------------------ */
-
 const PROG = path.basename(process.argv[1] ?? "mock.mjs");
 const USAGE = `usage: ${PROG} [-h] [--apply] [--seed SEED] [--output OUTPUT]`;
 
-/**
- * @typedef {object} CliArgs
- * @property {boolean} apply
- * @property {bigint | null} seed
- * @property {string} output
- */
-
-/** @returns {string} */
 function formatHelp() {
   const rows = [
     ["-h, --help", "show this help message and exit"],
@@ -3369,32 +2624,18 @@ function formatHelp() {
   return `${lines.join("\n")}\n`;
 }
 
-/**
- * @param {string} message
- * @returns {never}
- */
 function parserError(message) {
   process.stderr.write(`${USAGE}\n${PROG}: error: ${message}\n`);
   process.exit(2);
 }
 
-/**
- * Parse `process.argv`-style arguments, mirroring the argparse behaviour used by
- * `docs/mock.py` (long options, `--opt=value`, unambiguous prefixes, `-h`).
- *
- * @param {string[]} argv
- * @returns {CliArgs}
- */
 function parseArgs(argv) {
-  /** @type {ReadonlyArray<{flags: string[], dest: "apply" | "seed" | "output", takesValue: boolean}>} */
   const options = [
     { flags: ["--apply"], dest: "apply", takesValue: false },
     { flags: ["--seed"], dest: "seed", takesValue: true },
     { flags: ["--output"], dest: "output", takesValue: true },
   ];
-  /** @type {CliArgs} */
   const result = { apply: false, seed: null, output: DEFAULT_OUTPUT };
-  /** @type {string[]} */
   const unrecognized = [];
   let seenHelp = false;
   let positionalsOnly = false;
@@ -3413,7 +2654,6 @@ function parseArgs(argv) {
       continue;
     }
     let name = arg;
-    /** @type {string | undefined} */
     let explicit;
     if (arg.startsWith("--")) {
       const equals = arg.indexOf("=");
@@ -3474,11 +2714,6 @@ function parseArgs(argv) {
   return result;
 }
 
-/* ------------------------------------------------------------------ *
- * Entry point
- * ------------------------------------------------------------------ */
-
-/** @returns {number} */
 function main() {
   const args = parseArgs(process.argv.slice(2));
   const seed = args.seed !== null ? args.seed : randomBits63();
@@ -3488,7 +2723,6 @@ function main() {
   const validation = validateRecords(records, config);
   const artifacts = buildArtifacts(records, config, seed, validation);
   const artifactCounts = validateArtifacts(artifacts, records, config);
-  /** @type {{ [key: string]: unknown }} */
   const report = {
     mode: args.apply ? "apply" : "dry-run",
     output: displayPath(output),
@@ -3502,7 +2736,6 @@ function main() {
     publishArtifacts(output, artifacts);
     report.written = BigInt(artifacts.size);
   } else {
-    /** @type {string[]} */
     const command = [
       process.execPath,
       "docs/mock.mjs",
@@ -3519,12 +2752,6 @@ function main() {
   return 0;
 }
 
-/**
- * Python `shlex.quote`.
- *
- * @param {string} part
- * @returns {string}
- */
 function shlexQuote(part) {
   if (/^[A-Za-z0-9_@%+=:,./-]+$/.test(part) && part !== "") return part;
   const escapedQuote = "'" + '"' + "'" + '"' + "'";

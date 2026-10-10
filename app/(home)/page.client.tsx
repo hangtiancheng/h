@@ -4,7 +4,6 @@ import { type RefObject, useEffect, useRef, useState } from "react";
 import { useTheme } from "next-themes";
 import dynamic from "next/dynamic";
 
-// WebGL shaders are browser-only, so they must never be server-rendered
 const GrainGradient = dynamic(
   () => import("@paper-design/shaders-react").then((mod) => mod.GrainGradient),
   { ssr: false },
@@ -15,10 +14,6 @@ const Dithering = dynamic(
   { ssr: false },
 );
 
-/**
- * Animated hero background: a grainy NVIDIA-green gradient plus a dithered sphere,
- * mirroring the fumadocs.dev landing page.
- */
 export function Hero() {
   const { resolvedTheme } = useTheme();
   const ref = useRef<HTMLDivElement | null>(null);
@@ -26,8 +21,6 @@ export function Hero() {
   const [showShaders, setShowShaders] = useState(false);
 
   useEffect(() => {
-    // apply some delay, otherwise on slower devices it errors with uniform
-    // images not being fully loaded (same workaround as fumadocs.dev)
     const timer = setTimeout(() => {
       setShowShaders(true);
     }, 400);
@@ -49,7 +42,6 @@ export function Hero() {
           softness={1}
           intensity={0.9}
           noise={0.5}
-          // pause the animation while the hero is off-screen
           speed={visible ? 1 : 0}
           shape="corners"
           minPixelRatio={1}
@@ -82,12 +74,10 @@ const observerTargets = new WeakMap<
   (entry: IntersectionObserverEntry) => void
 >();
 
-/** Tracks whether the element is currently visible in the viewport. */
 export function useIsVisible(ref: RefObject<HTMLElement | null>) {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    // a single shared observer for all targets, as in fumadocs.dev
     observer ??= new IntersectionObserver((entries) => {
       for (const entry of entries) {
         observerTargets.get(entry.target)?.(entry);

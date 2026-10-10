@@ -8,11 +8,8 @@ const docs = defineDocs({
   dir: "content/docs",
   docs: {
     schema: pageSchema,
-    // expose the last modified date (from git) on `page.data.lastModified`
     lastModified: true,
     postprocess: {
-      // exposes the processed Markdown via `page.data.getText("processed")`,
-      // required by the llms.txt routes
       includeProcessedMarkdown: true,
     },
   },
@@ -21,11 +18,9 @@ const docs = defineDocs({
   },
 });
 
-// See https://fumadocs.dev/docs/headless/source-api for more info
 export const source = loader({
   baseUrl: docsRoute,
   source: docs.toFumadocsSource(),
-  // resolve `icon` names in meta.json to lucide-react components
   plugins: [lucideIconsPlugin()],
 });
 

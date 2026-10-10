@@ -46,11 +46,6 @@ function throttle2(fn, delay = 500) {
   };
 }
 
-/**
- * @param {Function} fn
- * @param {number} t
- * @return {Function}
- */
 function throttle3(fn, t) {
   let nextCallTime = 0;
   let timer = null;

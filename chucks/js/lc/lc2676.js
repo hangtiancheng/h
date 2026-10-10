@@ -1,8 +1,3 @@
-/**
- * @param {Function} fn
- * @param {number} t
- * @return {Function}
- */
 function throttle(fn, t) {
   let nextCallTime = 0;
   let timer = null;

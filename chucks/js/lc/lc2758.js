@@ -1,6 +1,3 @@
-/**
- * @return {string}
- */
 Date.prototype.nextDay = function () {
   const date = new Date(this);
   date.setDate(this.getDate() + 1);

@@ -31,10 +31,7 @@ export const linkItems: LinkItemType[] = [
   },
 ];
 
-export const logo = (
-  // favicon URLs are not resolved against basePath, so carry /h manually
-  <img src="/h/favicon.svg" alt="" width={24} height={24} />
-);
+export const logo = <img src="/h/favicon.svg" alt="" width={24} height={24} />;
 
 export function baseOptions(): BaseLayoutProps {
   return {

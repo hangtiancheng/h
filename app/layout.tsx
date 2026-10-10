@@ -12,13 +12,11 @@ export const metadata: Metadata = {
   },
   description: "knowledge base covering agent, frontend, and backend.",
   icons: {
-    // favicon URLs are not resolved against basePath, so carry /h manually
     icon: "/h/favicon.svg",
   },
 };
 
 export const viewport: Viewport = {
-  // match the neutral.css page backgrounds (light 96% / dark 7%)
   themeColor: [
     { media: "(prefers-color-scheme: dark)", color: "#121212" },
     { media: "(prefers-color-scheme: light)", color: "#f5f5f5" },

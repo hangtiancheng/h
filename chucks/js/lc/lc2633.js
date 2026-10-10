@@ -1,14 +1,8 @@
-/**
- * @param {null | boolean | number | string | Array | Object} obj
- * @return {string}
- */
 function jsonStringify(obj) {
   if (typeof obj === "string") {
     return `"${obj}"`;
   }
   if (typeof obj !== "object" || obj === null) {
-    // String(null) => 'null'
-    // new String(null) => [String: 'null']
     return String(obj);
   }
   if (Array.isArray(obj)) {

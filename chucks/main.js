@@ -1,27 +1,13 @@
-/**
- * @param {string} s
- * @param {string} target
- * @return {string}
- */
 var lexGreaterPermutation = function (s, target) {
   let ans = "";
   const n = s.length;
   const used = Array.from({ length: n }, () => false);
 
-  /**
-   *
-   * @param {string} a
-   * @param {string} b
-   */
   const prefixCompare = (a, b) => {
     const len = Math.min(a.length, b.length);
     return a.slice(0, len).localeCompare(b.slice(0, len));
   };
 
-  /**
-   *
-   * @param {string} item
-   */
   const dfs = (item) => {
     if (prefixCompare(item, ans) > 0) {
       return;
@@ -51,11 +37,6 @@ var lexGreaterPermutation = function (s, target) {
   return ans;
 };
 
-/**
- *
- * @param {unknown} a
- * @returns {string | NaN}
- */
 const maybeNumber = (a) => {
   if (typeof a === "number") {
     return !Number.isNaN(a) ? String(a) : NaN;
@@ -74,12 +55,6 @@ const maybeNumber = (a) => {
   return NaN;
 };
 
-/**
- *
- * @param {string} a
- * @param {string} b
- * @returns {string}
- */
 function multiple(a, b) {
   a = a.replace(/^0+/, "") || "0";
   b = b.replace(/^0+/, "") || "0";

@@ -122,7 +122,7 @@ function expandIncludes(content, baseDir, seen, depth, projectRoot) {
 
 1. 无限递归: AGENTS.md 引用 CLAUDE.md, CLAUDE.md 引用 AGENTS.md, 导致无限递归; 使用 `depth` 参数限制最大递归深度
 2. 重复 inline 同一个文件: 维护 `seen` 集合, 记录已 inline 的绝对路径, 遇到已 inline 的绝对路径直接跳过
-3. 路径越界: `@` 引用的路径必须在项目目录或 `~/.yukino` 内, 越界的路径会被替换为注释 `<!-- @include skipped: path outside project -->`
+3. 路径越界: `@` 引用的路径必须在项目目录或 `~/.yukino` 内, 越界的路径会被替换为注释 ``
 
 ## 会话持久化
 

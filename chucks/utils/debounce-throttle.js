@@ -1,10 +1,4 @@
 /* eslint-disable @typescript-eslint/no-this-alias */
-/**
- *
- * @param {(...args: unknown[]) => unknown} fn
- * @param {number} delay
- * @returns {(...args: unknown[]) => unknown}
- */
 function debounce(fn, delay = 500) {
   let timer = null;
   return function (...args) {
@@ -20,12 +14,6 @@ function debounce(fn, delay = 500) {
   };
 }
 
-/**
- *
- * @param {(...args: unknown[]) => unknown} fn
- * @param {number} delay
- * @returns {(...args: unknown[]) => unknown}
- */
 function throttle(fn, delay = 500) {
   let lastTime = 0;
 
@@ -43,12 +31,6 @@ function throttle(fn, delay = 500) {
   };
 }
 
-/**
- *
- * @param {(...args: unknown[]) => unknown} fn
- * @param {number} delay
- * @returns {(...args: unknown[]) => unknown}
- */
 function throttle2(fn, delay = 500) {
   let timer = null;
 

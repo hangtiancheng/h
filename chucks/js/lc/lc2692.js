@@ -14,28 +14,28 @@ function makeImmutable(obj) {
 
 const isObject = (val) => typeof val === "object" && val !== null;
 
-const /** @type {ProxyHandler} */ propHandler = {
-    get(target, p) {
-      const val = Reflect.get(target, p);
-      if (!isObject(val)) {
-        return val;
-      }
-      return proxify(val);
-    },
-    set(target, p) {
-      if (Array.isArray(target)) {
-        throw `Error Modifying Index: ${p}`;
-      } else {
-        throw `Error Modifying: ${p}`;
-      }
-    },
-  };
-const /** @type {ProxyHandler} */ methodHandler = {
-    apply(target) {
-      console.log(target);
-      throw `Error Calling Method: ${target.name}`;
-    },
-  };
+const propHandler = {
+  get(target, p) {
+    const val = Reflect.get(target, p);
+    if (!isObject(val)) {
+      return val;
+    }
+    return proxify(val);
+  },
+  set(target, p) {
+    if (Array.isArray(target)) {
+      throw `Error Modifying Index: ${p}`;
+    } else {
+      throw `Error Modifying: ${p}`;
+    }
+  },
+};
+const methodHandler = {
+  apply(target) {
+    console.log(target);
+    throw `Error Calling Method: ${target.name}`;
+  },
+};
 
 function proxify(obj) {
   if (Array.isArray(obj)) {

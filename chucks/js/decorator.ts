@@ -1,9 +1,8 @@
 /* eslint-disable */
 (() => {
   const ClassDecoratorInst: ClassDecorator = (target) => {
-    // target: 类, 类是构造函数的语法糖
-    console.log(target.name); // Sugar
-    console.log(typeof target); // function
+    console.log(target.name);
+    console.log(typeof target);
     target.prototype.name = "NewSugar";
   };
 
@@ -11,13 +10,11 @@
   class Sugar {}
 
   const sugar: any = new Sugar();
-  console.log(sugar.name); // NewSugar
+  console.log(sugar.name);
 })();
 
 (() => {
   const PropDecoratorInst: PropertyDecorator = (target, propKey) => {
-    // target: 原型对象
-    // propKey: 属性名
     console.log(target, propKey);
   };
 
@@ -35,16 +32,16 @@
   }
 
   const sugar = new Sugar();
-  console.log(sugar.name); // sugarInst
-  console.log(sugar.add(1, 2)); // 3
-  console.log(sugar.sub(1, 2)); // -1
+  console.log(sugar.name);
+  console.log(sugar.add(1, 2));
+  console.log(sugar.sub(1, 2));
 })();
 
 (() => {
   const MethodDecoratorInst: MethodDecorator = (
-    target, // 原型对象
-    propKey, // 属性名, 即方法名
-    propDescriptor, // 属性描述对象
+    target,
+    propKey,
+    propDescriptor,
   ) => {
     console.log(target, propKey, propDescriptor);
   };
@@ -68,16 +65,16 @@
   }
 
   const sugar = new Sugar();
-  console.log(sugar.name); // sugarInst
+  console.log(sugar.name);
   sugar.name = "newSugarInst";
-  console.log(sugar.name); // newSugarInst
+  console.log(sugar.name);
 })();
 
 (() => {
   const ParamDecoratorInst: ParameterDecorator = (
-    target, // 原型对象
-    propKey, // 属性名, 即方法名
-    paramIndex, // 参数索引
+    target,
+    propKey,
+    paramIndex,
   ) => {
     console.log(target, propKey, paramIndex);
   };
@@ -99,9 +96,9 @@
   }
 
   const sugar = new Sugar();
-  console.log(sugar.name); // sugarInst
+  console.log(sugar.name);
   sugar.name = "newSugarInst";
-  console.log(sugar.name); // newSugarInst
+  console.log(sugar.name);
 })();
 
 const Get: (config: { url: string }) => MethodDecorator = ({ url }) => {

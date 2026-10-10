@@ -9,7 +9,6 @@ const RESUME_URL = "https://hangtiancheng.github.io/r/";
 
 export default function Resume() {
   return (
-    // Fill the viewport below the sticky h-14 (3.5rem) navigation header.
     <iframe
       id="resume"
       src={RESUME_URL}

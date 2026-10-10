@@ -5,13 +5,12 @@
 
 @theme {
   --font-sans:
-    'Yukino', 'Maple Mono', Menlo, 'Cascadia Code', 'Sarasa Gothic SC', 'PingFang SC',
-    'Microsoft YaHei', sans-serif;
+    "Yukino", "Maple Mono", Menlo, "Cascadia Code", "Sarasa Gothic SC",
+    "PingFang SC", "Microsoft YaHei", sans-serif;
   --font-mono:
-    'Yukino', 'Maple Mono', Menlo, 'Cascadia Code', 'Sarasa Gothic SC', 'PingFang SC',
-    'Microsoft YaHei', monospace;
+    "Yukino", "Maple Mono", Menlo, "Cascadia Code", "Sarasa Gothic SC",
+    "PingFang SC", "Microsoft YaHei", monospace;
 
-  /* NVIDIA green brand palette, taken from public/favicon.svg */
   --color-brand: #76b900;
   --color-brand-foreground: #0a0f00;
   --color-brand-200: #8fd400;
@@ -25,7 +24,6 @@
   --color-landing-foreground: #c5e86a;
 }
 
-/* NVIDIA green primary, unified across all docs sections */
 :root {
   --color-fd-primary: #76b900;
   --color-fd-primary-foreground: #0a0f00;
@@ -42,7 +40,6 @@ html {
   scrollbar-gutter: stable;
 }
 
-/* The resume page prints without the site navigation header */
 @media print {
   body:has(#resume) #nd-nav {
     display: none;
@@ -54,7 +51,6 @@ html > body[data-scroll-locked] {
   --removed-body-scroll-bar-size: 0px !important;
 }
 
-/* keep mermaid diagrams inside their container and scale with the column */
 .mermaid-diagram svg {
   max-width: 100%;
   height: auto;

@@ -1,17 +1,3 @@
-// Rename regular files recursively to <lowercase MD5><original extension>.
-// Requires Go 1.25+ on macOS or Linux; uses only the standard library.
-//
-// Usage:
-//
-//	go run rename_by_fingerprint.go [options] [directory...]
-//	go build -o rename-by-fingerprint rename_by_fingerprint.go
-//
-// Preview is the default. --apply directly renames verified sources and uses
-// numbered suffixes for existing destinations, without deduplicating files.
-// Each root's .meta.json caches MD5 values for files whose metadata is unchanged,
-// including in preview mode.
-// Close files before applying and avoid concurrent edits or renames: checking
-// a destination and renaming the source are separate operations.
 package main
 
 import (
@@ -153,8 +139,6 @@ func sameFile(first, second os.FileInfo) bool {
 	return first != nil && second != nil && os.SameFile(first, second) && first.Mode() == second.Mode()
 }
 
-// The Unix ctime field is named Ctimespec on macOS and Ctim on Linux.
-// Comparing it also detects edits that restore the original size and mtime.
 func changeTime(info os.FileInfo) time.Time {
 	stat := reflect.Indirect(reflect.ValueOf(info.Sys()))
 	for _, name := range []string{"Ctimespec", "Ctim"} {
@@ -363,7 +347,7 @@ func loadMetadata(roots []string) map[string]metadataEntry {
 	for _, root := range roots {
 		file, err := os.OpenFile(filepath.Join(root, metadataFilename), os.O_RDONLY|syscall.O_NOFOLLOW|syscall.O_NONBLOCK, 0)
 		if err != nil {
-			continue // Missing or unreadable caches simply cause a fresh hash.
+			continue
 		}
 		var stored metadata
 		err = json.NewDecoder(file).Decode(&stored)
@@ -409,7 +393,7 @@ func saveMetadata(root string, values []fingerprint, inodeStates map[string]os.F
 		}
 		expected := value.stat
 		if saved := inodeStates[inodeKey(value.stat)]; saved != nil {
-			expected = saved // Our own renames can change ctime, including on hard links.
+			expected = saved
 		}
 		current, err := os.Lstat(value.file)
 		if err != nil || !sameContents(expected, current) {
@@ -467,7 +451,6 @@ func fingerprintFile(filename string, checks *directoryChecks, buffer []byte, pr
 		value.err = errors.New("only regular files can be fingerprinted")
 		return
 	}
-	// O_NONBLOCK also avoids hanging if a file is replaced with a FIFO.
 	file, err := os.OpenFile(filename, os.O_RDONLY|syscall.O_NOFOLLOW|syscall.O_NONBLOCK, 0)
 	if err != nil {
 		value.err = err
@@ -558,7 +541,6 @@ func startProgress(out io.Writer, progress *hashProgress, totalFiles int, totalB
 	return func() { close(stop); <-stopped }
 }
 
-// Match Node's extname for dotfiles and preserve the extension's case.
 func extension(filename string) string {
 	base := filepath.Base(filename)
 	index := strings.LastIndexByte(base, '.')
@@ -601,7 +583,6 @@ func newTargetPicker(files []string) *targetPicker {
 func (picker *targetPicker) pick(source, hash string) (string, error) {
 	ext := extension(source)
 	key := pathKey(filepath.Join(filepath.Dir(source), hash+ext))
-	// Remember the next suffix so a group of duplicates takes linear work.
 	for suffix := picker.next[key]; ; suffix++ {
 		name := hash
 		if suffix != 0 {

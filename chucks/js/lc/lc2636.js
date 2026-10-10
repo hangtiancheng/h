@@ -1,8 +1,3 @@
-/**
- * @param {Function[]} funcs
- * @param {number} n
- * @return {Promise<any>}
- */
 function promisePool(funcs, n) {
   const mapFn = (f) =>
     async function (...args) {
@@ -16,36 +11,19 @@ function promisePool(funcs, n) {
   return Promise.all(workQueue.map((f) => f()));
 }
 
-/**
- * @param {Function[]} funcs
- * @param {number} n
- * @return {Promise<any>}
- */
 function promisePool2(funcs, n) {
   const resArr = [];
-  const iter /** ArrayIterator<[number, Function]> */ = funcs.entries();
+  const iter = funcs.entries();
   const work = async (iter) => {
     for (const [idx, task] of iter) {
       const res = await task();
       resArr[idx] = res;
     }
-
-    // let item;
-    // while (!(item = iter.next()).done) {
-    //   const [idx, task] = item.value;
-    //   const res = await task();
-    //   resArr[idx] = res;
-    // }
   };
   const workers = new Array(n).fill(iter).map(work);
   return Promise.all(workers).then(() => resArr);
 }
 
-/**
- * @param {Function[]} funcs
- * @param {number} n
- * @return {Promise<any>}
- */
 function promisePool3(funcs, n) {
   const resArr = [];
   let idx = 0;
@@ -59,11 +37,6 @@ function promisePool3(funcs, n) {
   return Promise.all(workers).then(() => resArr);
 }
 
-/**
- * @param {Function[]} funcs
- * @param {number} n
- * @return {Promise<any>}
- */
 async function promisePool4(funcs, n) {
   const workQueue = new Set();
   const resArr = [];

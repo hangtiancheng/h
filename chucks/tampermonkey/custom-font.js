@@ -1,14 +1,3 @@
-// ==UserScript==
-// @name         Custom font
-// @namespace    http://github.com/hangtiancheng/h
-// @version      0.0.1
-// @description  Custom font
-// @author       Yukino
-// @match        *://*/*
-// @icon         https://raw.githubusercontent.com/hangtiancheng/h/main/public/favicon.ico
-// @grant        none
-// ==/UserScript==
-
 (function () {
   "use strict";
   const __font_sans = `Yukino, "Maple Mono", Menlo, "Cascadia Code", "Sarasa Gothic SC", "PingFang SC", "Microsoft YaHei", sans-serif`;

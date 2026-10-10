@@ -1,15 +1,3 @@
-// ==UserScript==
-// @name         Anti copy
-// @namespace    http://github.com/hangtiancheng/h
-// @version      0.0.1
-// @author       Yukino
-// @description  Anti copy
-// @match        https://xiaolincoding.com/*
-// @grant        none
-// @icon         https://raw.githubusercontent.com/hangtiancheng/h/main/public/favicon.ico
-// @run-at       document-start
-// ==/UserScript==
-
 (function () {
   "use strict";
 
@@ -25,5 +13,4 @@
   ["copy", "cut", "keydown", "contextmenu", "selectstart"].forEach((evt) => {
     document.addEventListener(evt, (e) => e.stopImmediatePropagation(), true);
   });
-  // document.designMode = "on";
 })();

@@ -35,7 +35,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
         with:
-          # full history so the lastModified plugin can read real commit dates
           fetch-depth: 0
       - name: Setup pnpm
         uses: pnpm/action-setup@v4

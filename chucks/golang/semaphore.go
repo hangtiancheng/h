@@ -1,7 +1,5 @@
 //go:build semaphore
 
-// go run -tags semaphore .
-// go build -tags semaphore -o semaphore
 package main
 
 import (
@@ -14,7 +12,7 @@ import (
 )
 
 func main() {
-	sem := semaphore.NewWeighted(3) // 最多 3 个并发
+	sem := semaphore.NewWeighted(3)
 	var wg sync.WaitGroup
 	for i := range 10 {
 		wg.Add(1)

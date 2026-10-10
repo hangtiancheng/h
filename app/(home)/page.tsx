@@ -59,7 +59,6 @@ export default function Home() {
   const pages = source.getPages();
 
   return (
-    // HomeLayout already renders the <main> landmark, so use a plain div here
     <div className="text-landing-foreground pt-4 pb-6 md:pb-12">
       <div className="relative flex min-h-130 h-[70vh] max-h-190 border rounded-2xl overflow-hidden mx-auto w-full max-w-300 bg-origin-border">
         <Hero />

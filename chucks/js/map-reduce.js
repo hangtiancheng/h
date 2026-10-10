@@ -17,9 +17,7 @@ Array.prototype.map3 = function (callback) {
     return;
   }
   return this.reduce((ans, curVal, curIdx, arr) => {
-    // if (curIdx in arr) {
     ans[curIdx] = callback.call(this, curVal, curIdx, arr);
-    // }
     return ans;
   }, []);
 };

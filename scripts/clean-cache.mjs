@@ -1,12 +1,5 @@
 #!/usr/bin/env node
 // @ts-check
-/**
- * Clear rebuildable user caches on macOS and Linux.
- * Preview by default; use --apply to delete and --json for structured output.
- * Unavailable paths and deletion errors are skipped. Cache roots, symlinks,
- * JetBrains local history, and pnpm virtual-store links are preserved.
- * System caches, application settings, and temporary directories are untouched.
- */
 import { execFile } from "node:child_process";
 import { constants } from "node:fs";
 import {
@@ -22,10 +15,8 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-/** @param {unknown} error */
 const message = (error) =>
   error instanceof Error ? error.message : String(error);
-/** @param {string} parent @param {string} child */
 export function inside(parent, child) {
   const relative = path.relative(parent, child);
   return (
@@ -35,17 +26,12 @@ export function inside(parent, child) {
       !path.isAbsolute(relative))
   );
 }
-/** @param {unknown} error @param {string} code */
 const hasCode = (error, code) =>
   error !== null &&
   typeof error === "object" &&
   "code" in error &&
   error.code === code;
 
-/** Read cache configuration without a shell or cleanup side effects.
- * @param {string} command @param {string[]} args @param {string} home
- * @returns {Promise<string>}
- */
 function query(command, args, home) {
   return new Promise((resolve) => {
     try {
@@ -72,7 +58,6 @@ function query(command, args, home) {
   });
 }
 
-/** @param {string[]} args */
 export function optionsFrom(args) {
   for (const argument of args) {
     if (
@@ -92,9 +77,6 @@ export function optionsFrom(args) {
   };
 }
 
-/** Verify cache scope and reject symlinked ancestors before accessing contents.
- * @param {string} home @param {string} filename
- */
 export async function checkPath(home, filename) {
   if (filename === home || !inside(home, filename))
     throw new Error("Path is outside the cache cleanup scope.");
@@ -109,14 +91,10 @@ export async function checkPath(home, filename) {
   return lstat(filename);
 }
 
-/** Discover cache directories, including configured package-manager locations.
- * @param {string} home @param {string} [platform]
- */
 export async function cachePaths(home, platform = process.platform) {
   const mac = platform === "darwin";
-  const join = (/** @type {string} */ name) => path.join(home, name);
+  const join = (name) => path.join(home, name);
   const candidates = new Set();
-  /** @param {string} filename */
   function add(filename) {
     if (
       path.isAbsolute(filename) &&
@@ -125,12 +103,10 @@ export async function cachePaths(home, platform = process.platform) {
     )
       candidates.add(path.normalize(filename));
   }
-  /** @param {string} filename */
   function addConfigured(filename) {
     if (/(?:^|\/)(?:[^/]*cache[^/]*|store|mod)(?:\/|$)/i.test(filename))
       add(filename);
   }
-  /** @param {string} directory */
   async function directories(directory) {
     try {
       await checkPath(home, directory);
@@ -145,7 +121,6 @@ export async function cachePaths(home, platform = process.platform) {
     query("go", ["env", "-json", "GOCACHE", "GOMODCACHE"], home),
     query("brew", ["--cache"], home),
   ]);
-  // npm's top-level directory also contains logs; select cache contents only.
   for (const directory of new Set([join(".npm"), npm]))
     if (path.isAbsolute(directory)) {
       add(path.join(directory, "_cacache"));
@@ -157,9 +132,7 @@ export async function cachePaths(home, platform = process.platform) {
     const config = JSON.parse(go);
     for (const key of ["GOCACHE", "GOMODCACHE"])
       if (typeof config[key] === "string") addConfigured(config[key]);
-  } catch {
-    /* Known cache locations remain available when Go is missing. */
-  }
+  } catch {}
   for (const relative of [
     "Library/pnpm/store",
     ".local/share/pnpm/store",
@@ -195,7 +168,6 @@ export async function cachePaths(home, platform = process.platform) {
     for (const entry of await directories(root))
       add(path.join(root, entry.name));
 
-  // Select cache folders beside application data, never entire profiles.
   const cacheName =
     /^(?:Caches?|CachedData|CachedExtensionVSIXs|Code Cache|GPUCache|ShaderCache|GrShaderCache|Dawn\w*Cache|GraphiteDawnCache)$/i;
   const support = join(mac ? "Library/Application Support" : ".config");
@@ -261,15 +233,12 @@ export async function cachePaths(home, platform = process.platform) {
             add(path.join(directory, child.name));
     }
   }
-  /** @type {string[]} */
   const existing = [];
   for (const filename of [...candidates].sort()) {
     try {
       await lstat(filename);
       existing.push(filename);
-    } catch {
-      /* Missing or inaccessible caches are skipped. */
-    }
+    } catch {}
   }
   return existing.filter(
     (filename) =>
@@ -279,9 +248,6 @@ export async function cachePaths(home, platform = process.platform) {
   );
 }
 
-/** Delete what can be deleted; keep unavailable entries and continue.
- * @param {string} home @param {string} target @param {boolean} apply
- */
 export async function cleanPath(home, target, apply) {
   const result = {
     path: target,
@@ -289,14 +255,13 @@ export async function cleanPath(home, target, apply) {
     removedFiles: 0,
     removedDirectories: 0,
     skipped: 0,
-    errors: /** @type {string[]} */ ([]),
+    errors: [],
   };
   const homeInfo = await lstat(home);
   const pnpm = /(?:^|\/)(?:pnpm|\.pnpm-store)(?:\/|$)/.test(target);
   const goModules =
     /(?:^|\/)pkg\/mod(?:\/|$)/.test(target) ||
     target === process.env.GOMODCACHE;
-  /** @param {string} filename @param {boolean} [keepRoot] */
   async function remove(filename, keepRoot = false) {
     let originalMode;
     let originalIdentity;
@@ -399,7 +364,6 @@ export async function cleanPath(home, target, apply) {
   return result;
 }
 
-/** @param {string} home */
 async function freeSpace(home) {
   try {
     const info = await statfs(home);
@@ -408,7 +372,6 @@ async function freeSpace(home) {
     return null;
   }
 }
-/** @param {string[]} [args] */
 export async function main(args = process.argv.slice(2)) {
   const options = optionsFrom(args);
   if (options.help) {

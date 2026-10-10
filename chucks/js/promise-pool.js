@@ -1,9 +1,3 @@
-/**
- *
- * @param {(() => Promise))[]} functions
- * @param {number} n
- * @returns
- */
 export function promisePool(functions, n) {
   return new Promise((resolve) => {
     if (functions.length === 0) {
@@ -48,12 +42,6 @@ export function promisePool(functions, n) {
   });
 }
 
-/**
- *
- * @param {(() => Promise))[]} functions
- * @param {number} n
- * @returns
- */
 export function promisePool2(functions, n) {
   const tasks = functions.map((f, i) => [f, i]);
   const ans = Array.from({ length: functions.length });

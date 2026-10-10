@@ -4,7 +4,6 @@ import { remarkMdxMermaid } from "fumadocs-core/mdx-plugins/remark-mdx-mermaid";
 
 export default defineConfig({
   mdxOptions: {
-    // turn ```mermaid fences into <Mermaid chart="..." /> (rendered client-side)
     remarkPlugins: [remarkMdxMermaid],
     rehypeCodeOptions: {
       ...rehypeCodeDefaultOptions,

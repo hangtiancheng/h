@@ -1,9 +1,4 @@
 const isObject = (obj) => typeof obj === "object" && obj !== null;
-/**
- * @param {Object | Array} obj1
- * @param {Object | Array} obj2
- * @return {Object | Array}
- */
 function objDiff(obj1, obj2) {
   const dfs = (obj1, obj2, diff = {}) => {
     if (!isObject(obj1) || !isObject(obj2)) {

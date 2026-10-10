@@ -1,10 +1,5 @@
 const isObject = (val) => typeof val === "object" && val !== null;
 
-/**
- * @param {null |boolean | number | string | Array | Object} obj1
- * @param {null |boolean | number | string | Array | Object} obj2
- * @return {null |boolean | number | string | Array | Object}
- */
 function deepMerge(obj1, obj2) {
   if (
     !isObject(obj1) ||
