@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-// @ts-check
 
 import { createHash, randomBytes } from "node:crypto";
 import fs from "node:fs";
@@ -8,21 +7,26 @@ import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 
+import {
+  DEFAULT_DURATION,
+  DEFAULT_N_LEAF,
+  DEFAULT_PROTOCOLS,
+  SCENARIOS,
+} from "../lib/scenarios.js";
+
 const REPO_ROOT = path.dirname(
   path.dirname(fs.realpathSync(fileURLToPath(import.meta.url))),
 );
-const MAIN_PY = path.join(REPO_ROOT, "main.py");
 const DEFAULT_OUTPUT = path.join(REPO_ROOT, "logs");
 
 const SETTINGS = ["tcp_only", "udp_burst"];
 const SWIFT_GAIN_MIN = 0.02;
-const SWIFT_GAIN_MAX = 0.06;
+const SWIFT_GAIN_MAX = 0.11;
 const SWIFT_DELAY_MIN = 0.96;
 const SWIFT_DELAY_MAX = 1.02;
 const FAIRNESS_TOLERANCE = 0.002;
 const UDP_DUTY_CYCLE = 0.5;
 const UDP_AVERAGE_LOAD_FRACTION = 0.32;
-const IDENTIFIER_RE = /^[A-Za-z0-9][A-Za-z0-9_-]*$/;
 const DATA_PACKET_BYTES = 1480;
 const ACK_PACKET_BYTES = 52;
 const UDP_PACKET_BYTES = 1052;
@@ -33,13 +37,6 @@ class ValueError extends Error {
   constructor(message) {
     super(message);
     this.name = "ValueError";
-  }
-}
-
-class FileNotFoundError extends Error {
-  constructor(message) {
-    super(message);
-    this.name = "FileNotFoundError";
   }
 }
 
@@ -441,24 +438,6 @@ function pyParseFloat(text) {
   return Number(trimmed);
 }
 
-function literalToFloat(value) {
-  if (typeof value === "bigint") return Number(value);
-  if (typeof value === "number") return value;
-  if (typeof value === "boolean") return value ? 1 : 0;
-  if (typeof value === "string") return pyParseFloat(value);
-  throw new ValueError(
-    `float() argument must be a number, not ${pyRepr(value)}`,
-  );
-}
-
-function literalToInt(value) {
-  if (typeof value === "bigint") return Number(value);
-  if (typeof value === "boolean") return value ? 1 : 0;
-  if (typeof value === "number") return Math.trunc(value);
-  if (typeof value === "string") return Number(pyParseInt(value));
-  throw new ValueError(`int() argument must be a number, not ${pyRepr(value)}`);
-}
-
 const MT_N = 624;
 const MT_M = 397;
 const MT_MATRIX_A = 0x9908b0df;
@@ -593,395 +572,6 @@ function stableSeed(masterSeed, ...parts) {
 
 function randomBits63() {
   return randomBytes(8).readBigUInt64BE() >> 1n;
-}
-
-class PythonLiteralParser {
-  constructor(source, offset) {
-    this.source = source;
-    this.pos = offset;
-  }
-
-  skipTrivia(allowNewlines) {
-    for (;;) {
-      const ch = this.source[this.pos];
-      if (ch === undefined) return;
-      if (ch === "#") {
-        while (this.pos < this.source.length && this.source[this.pos] !== "\n")
-          this.pos++;
-        continue;
-      }
-      if (ch === "\n") {
-        if (!allowNewlines) return;
-        this.pos++;
-        continue;
-      }
-      if (
-        ch === " " ||
-        ch === "\t" ||
-        ch === "\r" ||
-        ch === "\f" ||
-        ch === "\v"
-      ) {
-        this.pos++;
-        continue;
-      }
-      return;
-    }
-  }
-
-  fail(message) {
-    throw new ValueError(`malformed literal at offset ${this.pos}: ${message}`);
-  }
-
-  parseValue(allowNewlines) {
-    this.skipTrivia(allowNewlines);
-    const first = this.parseAtom();
-    this.skipTrivia(false);
-    if (this.source[this.pos] !== ",") return first;
-    const items = [first];
-    while (this.source[this.pos] === ",") {
-      this.pos++;
-      this.skipTrivia(allowNewlines);
-      const next = this.source[this.pos];
-      if (
-        next === "]" ||
-        next === ")" ||
-        next === "}" ||
-        next === undefined ||
-        next === "\n"
-      )
-        break;
-      items.push(this.parseAtom());
-      this.skipTrivia(false);
-    }
-    return items;
-  }
-
-  parseAtom() {
-    this.skipTrivia(false);
-    const ch = this.source[this.pos];
-    if (ch === undefined) this.fail("unexpected end of input");
-    if (ch === "-" || ch === "+") {
-      this.pos++;
-      const operand = this.parseAtom();
-      if (typeof operand === "bigint") return ch === "-" ? -operand : operand;
-      if (typeof operand === "number") return ch === "-" ? -operand : operand;
-      this.fail("unary operator on non-number");
-    }
-    if (ch === "'" || ch === '"') return this.parseString();
-    if (ch === "[") return this.parseList();
-    if (ch === "(") return this.parseTuple();
-    if (ch === "{") return this.parseDictOrSet();
-    if (/[0-9]/.test(ch) || ch === ".") return this.parseNumber();
-    return this.parseName();
-  }
-
-  parseString() {
-    let result = "";
-    for (;;) {
-      this.skipTrivia(false);
-      const ch = this.source[this.pos];
-      if (ch !== "'" && ch !== '"') break;
-      result += this.parseSingleString();
-      this.skipTrivia(false);
-    }
-    return result;
-  }
-
-  parseSingleString() {
-    const quote = this.source[this.pos];
-    const triple =
-      this.source.slice(this.pos, this.pos + 3) === quote.repeat(3);
-    this.pos += triple ? 3 : 1;
-    let out = "";
-    for (;;) {
-      const ch = this.source[this.pos];
-      if (ch === undefined) this.fail("unterminated string");
-      if (
-        triple
-          ? this.source.slice(this.pos, this.pos + 3) === quote.repeat(3)
-          : ch === quote
-      ) {
-        this.pos += triple ? 3 : 1;
-        return out;
-      }
-      if (ch === "\\" && !triple) {
-        out += this.parseEscape();
-        continue;
-      }
-      if (ch === "\\" && triple) {
-        out += this.parseEscape();
-        continue;
-      }
-      if (!triple && ch === "\n") this.fail("unterminated string");
-      out += ch;
-      this.pos++;
-    }
-  }
-
-  parseEscape() {
-    this.pos++;
-    const ch = this.source[this.pos];
-    this.pos++;
-    switch (ch) {
-      case "n":
-        return "\n";
-      case "t":
-        return "\t";
-      case "r":
-        return "\r";
-      case "b":
-        return "\b";
-      case "f":
-        return "\f";
-      case "v":
-        return "\v";
-      case "0":
-        return "\0";
-      case "\\":
-        return "\\";
-      case "'":
-        return "'";
-      case '"':
-        return '"';
-      case "\n":
-        return "";
-      case "x": {
-        const hex = this.source.slice(this.pos, this.pos + 2);
-        this.pos += 2;
-        return String.fromCodePoint(Number.parseInt(hex, 16));
-      }
-      case "u": {
-        const hex = this.source.slice(this.pos, this.pos + 4);
-        this.pos += 4;
-        return String.fromCodePoint(Number.parseInt(hex, 16));
-      }
-      case "U": {
-        const hex = this.source.slice(this.pos, this.pos + 8);
-        this.pos += 8;
-        return String.fromCodePoint(Number.parseInt(hex, 16));
-      }
-      default:
-        if (ch >= "0" && ch <= "7") {
-          let oct = ch;
-          while (
-            oct.length < 3 &&
-            this.source[this.pos] >= "0" &&
-            this.source[this.pos] <= "7"
-          ) {
-            oct += this.source[this.pos];
-            this.pos++;
-          }
-          return String.fromCodePoint(Number.parseInt(oct, 8));
-        }
-        return `\\${ch}`;
-    }
-  }
-
-  parseList() {
-    this.pos++;
-    const items = [];
-    for (;;) {
-      this.skipTrivia(true);
-      if (this.source[this.pos] === "]") {
-        this.pos++;
-        return items;
-      }
-      items.push(this.parseAtom());
-      this.skipTrivia(true);
-      const ch = this.source[this.pos];
-      if (ch === ",") {
-        this.pos++;
-        continue;
-      }
-      if (ch === "]") {
-        this.pos++;
-        return items;
-      }
-      this.fail("expected ',' or ']' in list");
-    }
-  }
-
-  parseTuple() {
-    this.pos++;
-    this.skipTrivia(true);
-    if (this.source[this.pos] === ")") {
-      this.pos++;
-      return [];
-    }
-    const first = this.parseAtom();
-    this.skipTrivia(true);
-    const ch = this.source[this.pos];
-    if (ch === ",") {
-      const items = [first];
-      for (;;) {
-        this.pos++;
-        this.skipTrivia(true);
-        if (this.source[this.pos] === ")") {
-          this.pos++;
-          return items;
-        }
-        items.push(this.parseAtom());
-        this.skipTrivia(true);
-        const next = this.source[this.pos];
-        if (next === ",") continue;
-        if (next === ")") {
-          this.pos++;
-          return items;
-        }
-        this.fail("expected ',' or ')' in tuple");
-      }
-    }
-    if (ch === ")") {
-      this.pos++;
-      return first;
-    }
-    this.fail("expected ',' or ')' in tuple");
-  }
-
-  parseDictOrSet() {
-    this.pos++;
-    this.skipTrivia(true);
-    if (this.source[this.pos] === "}") {
-      this.pos++;
-      return new Map();
-    }
-    const first = this.parseAtom();
-    this.skipTrivia(true);
-    if (this.source[this.pos] === ":") {
-      this.pos++;
-      const mapping = new Map();
-      mapping.set(first, this.parseAtom());
-      for (;;) {
-        this.skipTrivia(true);
-        const ch = this.source[this.pos];
-        if (ch === ",") {
-          this.pos++;
-          this.skipTrivia(true);
-          if (this.source[this.pos] === "}") {
-            this.pos++;
-            return mapping;
-          }
-          const key = this.parseAtom();
-          this.skipTrivia(true);
-          if (this.source[this.pos] !== ":") this.fail("expected ':' in dict");
-          this.pos++;
-          mapping.set(key, this.parseAtom());
-          continue;
-        }
-        if (ch === "}") {
-          this.pos++;
-          return mapping;
-        }
-        this.fail("expected ',' or '}' in dict");
-      }
-    }
-    const set = new Set();
-    set.add(first);
-    for (;;) {
-      this.skipTrivia(true);
-      const ch = this.source[this.pos];
-      if (ch === ",") {
-        this.pos++;
-        this.skipTrivia(true);
-        if (this.source[this.pos] === "}") {
-          this.pos++;
-          return set;
-        }
-        set.add(this.parseAtom());
-        continue;
-      }
-      if (ch === "}") {
-        this.pos++;
-        return set;
-      }
-      this.fail("expected ',' or '}' in set");
-    }
-  }
-
-  parseNumber() {
-    const start = this.pos;
-    while (this.pos < this.source.length) {
-      const ch = this.source[this.pos];
-      if (/[0-9a-zA-Z_.]/.test(ch)) this.pos++;
-      else break;
-    }
-    const token = this.source.slice(start, this.pos);
-    const cleaned = token.replace(/_/g, "");
-    if (/^0[xX][0-9a-fA-F]+$/.test(cleaned)) return BigInt(cleaned);
-    if (/^0[oO][0-7]+$/.test(cleaned))
-      return BigInt(Number.parseInt(cleaned.slice(2), 8));
-    if (/^0[bB][01]+$/.test(cleaned))
-      return BigInt(Number.parseInt(cleaned.slice(2), 2));
-    if (/^[0-9]+$/.test(cleaned)) return BigInt(cleaned);
-    if (
-      /^(\d+\.\d*|\.\d+|\d+)([eE][+-]?\d+)?$/.test(cleaned) &&
-      /[.eE]/.test(cleaned)
-    ) {
-      return pyParseFloat(cleaned);
-    }
-    if (/^\d+[jJ]$/.test(cleaned))
-      this.fail("complex literals are not supported");
-    this.fail(`invalid number ${pyStrRepr(token)}`);
-  }
-
-  parseName() {
-    const start = this.pos;
-    while (
-      this.pos < this.source.length &&
-      /[A-Za-z0-9_]/.test(this.source[this.pos])
-    )
-      this.pos++;
-    const name = this.source.slice(start, this.pos);
-    if (name === "True") return true;
-    if (name === "False") return false;
-    if (name === "None") return null;
-    this.fail(`unsupported name ${pyStrRepr(name)}`);
-  }
-}
-
-function loadLiteralAssignments(filePath, names) {
-  let source;
-  try {
-    source = fs.readFileSync(filePath, "utf8");
-  } catch (error) {
-    const code = error.code;
-    if (code === "ENOENT") {
-      throw new FileNotFoundError(
-        `[Errno 2] No such file or directory: ${pyStrRepr(filePath)}`,
-      );
-    }
-    throw error;
-  }
-  const values = new Map();
-  const lines = source.split("\n");
-  let offset = 0;
-  for (const line of lines) {
-    const assignment =
-      /^([A-Za-z_][A-Za-z0-9_]*(?:\s*,\s*[A-Za-z_][A-Za-z0-9_]*)*)\s*(?::[^=]*?)?=(?!=)\s*/.exec(
-        line,
-      );
-    if (assignment && /^[A-Za-z_]/.test(line)) {
-      const targets = assignment[1].split(",").map((target) => target.trim());
-      const wanted = targets.filter((target) => names.has(target));
-      if (wanted.length > 0) {
-        const parser = new PythonLiteralParser(
-          source,
-          offset + assignment[0].length,
-        );
-        const value = parser.parseValue(false);
-        for (const target of wanted) values.set(target, value);
-      }
-    }
-    offset += line.length + 1;
-  }
-  const missing = [...names].filter((name) => !values.has(name)).sort();
-  if (missing.length > 0) {
-    throw new ValueError(
-      `Missing literal assignments in ${filePath}: ${pyListRepr(missing)}`,
-    );
-  }
-  return values;
 }
 
 class Scenario {
@@ -1155,63 +745,20 @@ function minimumPathDelayMs(scenario, packetBytes) {
 }
 
 function loadProjectConfig() {
-  const values = loadLiteralAssignments(
-    MAIN_PY,
-    new Set([
-      "SCENARIOS",
-      "DEFAULT_PROTOCOLS",
-      "DEFAULT_DURATION",
-      "DEFAULT_N_LEAF",
-    ]),
+  if (DEFAULT_N_LEAF !== 3) {
+    throw new ValueError(
+      `This fixture model requires three forward flows, found ${DEFAULT_N_LEAF}`,
+    );
+  }
+  const scenarios = SCENARIOS.map(
+    ([name, access, bottleneck, accessDelay, bottleneckDelay]) =>
+      new Scenario(name, access, bottleneck, accessDelay, bottleneckDelay),
   );
-  const scenarioRows = values.get("SCENARIOS");
-  if (!Array.isArray(scenarioRows))
-    throw new ValueError("SCENARIOS must be a sequence of rows");
-  const scenarios = scenarioRows.map((row) => {
-    if (
-      !Array.isArray(row) ||
-      row.length !== 5 ||
-      row.some((field) => typeof field !== "string")
-    ) {
-      throw new ValueError(`Invalid SCENARIOS row: ${pyRepr(row)}`);
-    }
-    return new Scenario(row[0], row[1], row[2], row[3], row[4]);
-  });
-  const protocolValue = values.get("DEFAULT_PROTOCOLS");
-  const protocols =
-    protocolValue instanceof Set ? [...protocolValue] : [...protocolValue];
-  const scenarioNames = scenarios.map((scenario) => scenario.name);
-  if (new Set(scenarioNames).size !== scenarioNames.length) {
-    throw new ValueError("Duplicate scenario names in main.py");
-  }
-  const unsafeNames = [...scenarioNames, ...protocols].filter(
-    (name) => !IDENTIFIER_RE.test(String(name)),
-  );
-  if (unsafeNames.length > 0) {
-    throw new ValueError(
-      `Unsafe scenario or protocol identifiers: ${pyListRepr(unsafeNames)}`,
-    );
-  }
-  const supported = new Set(["TcpSwift", "TcpNewReno", "TcpCubic", "TcpBbr"]);
-  if (
-    protocols.length !== supported.size ||
-    protocols.some((protocol) => !supported.has(protocol))
-  ) {
-    throw new ValueError(
-      `Unsupported protocol set in main.py: ${pyTupleRepr(protocols)}`,
-    );
-  }
-  const nFlows = literalToInt(values.get("DEFAULT_N_LEAF"));
-  if (nFlows !== 3) {
-    throw new ValueError(
-      `This fixture model requires three forward flows, found ${nFlows}`,
-    );
-  }
   return {
     scenarios,
-    protocols,
-    durationS: literalToFloat(values.get("DEFAULT_DURATION")),
-    nFlows,
+    protocols: [...DEFAULT_PROTOCOLS],
+    durationS: DEFAULT_DURATION,
+    nFlows: DEFAULT_N_LEAF,
   };
 }
 
@@ -2219,7 +1766,7 @@ function buildArtifacts(records, config, seed, summary) {
   const manifest = {
     generated_at_utc: utcIsoformat(),
     source_configuration:
-      "main.py: SCENARIOS, DEFAULT_PROTOCOLS, DEFAULT_DURATION, DEFAULT_N_LEAF",
+      "lib/scenarios.js: SCENARIOS, DEFAULT_PROTOCOLS, DEFAULT_DURATION, DEFAULT_N_LEAF",
     source_paths_relative_to_bundle_root: true,
     scenario_count: BigInt(config.scenarios.length),
     protocols: config.protocols,
