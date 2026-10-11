@@ -1,38 +1,3 @@
-// remove-comments.go — single-file Go tool that strips comments from source code.
-//
-// Usage:
-//
-//	go run remove-comments.go                      # process the current directory
-//	go run remove-comments.go /path/to/git/repo    # process a directory (absolute or relative)
-//	go run remove-comments.go a.go ./src b.tsx     # several files / directories
-//	go run remove-comments.go -diff .              # preview the diff without writing
-//
-// Note: `go run` treats any argument ending in ".go" as a source file to
-// compile, so a target whose name ends in ".go" (e.g. a repo directory named
-// yukino.go) must be passed after a "--" separator or with a trailing slash:
-//
-//	go run remove-comments.go -dry -- yukino.go
-//	go run remove-comments.go -dry yukino.go/
-//
-// Rules:
-//   - If the target directory is inside a git repository, only git-tracked files are
-//     processed (git ls-files --cached); otherwise all files are processed recursively
-//     (built-in exclusions apply: node_modules, dist, *.min.*, lock files, ...).
-//   - Files are modified in place by default; preview first with -dry or -diff.
-//   - Functional comments (shebangs, //go:build, eslint-disable, /*! ... */, CSS @license,
-//     PowerShell help blocks, HTML conditional comments, ...) are kept by default;
-//     pass -directives=false to remove them as well.
-//
-// Supported languages (by extension or file name):
-//
-//	Go; JS/JSX/TS/TSX (js, jsx, ts, tsx, mjs, cjs, mts, cts); CSS/SCSS/Sass/Less;
-//	Markdown/MDX; HTML/XML/SVG/Vue/Svelte; C/C++ (c, h, cc, cxx, cpp, c++, hpp, ...);
-//	Java, Kotlin, C#, Swift, Dart, Scala, PHP, Rust, Zig, Solidity, Proto, Prisma, JSONC;
-//	Sh/Bash/Zsh/Fish/..., PowerShell; Dockerfile, Makefile, CMake;
-//	Python, Ruby, Perl, R, Elixir, Julia, Nim, Crystal, CoffeeScript;
-//	YAML, TOML, INI, .env, .properties, ignore files; SQL, Lua, Haskell, OCaml,
-//	Lisp/Clojure/Scheme, Erlang, Batch, Nix, Terraform, GraphQL;
-//	Twig/Nunjucks/Jinja, Handlebars/Mustache, EJS, ERB, JSP/ASP, Razor, Blade.
 package main
 
 import (
@@ -51,10 +16,6 @@ import (
 	"sync"
 	"unicode/utf8"
 )
-
-// ---------------------------------------------------------------------------
-// flags
-// ---------------------------------------------------------------------------
 
 var (
 	flagDry              = flag.Bool("dry", false, "report files that would change without writing them")
@@ -106,10 +67,6 @@ passed after "--" or with a trailing slash:
 `)
 }
 
-// ---------------------------------------------------------------------------
-// main
-// ---------------------------------------------------------------------------
-
 func main() {
 	flag.Usage = usage
 	flag.Parse()
@@ -145,10 +102,6 @@ func main() {
 	os.Exit(report(results, mode, len(files)))
 }
 
-// ---------------------------------------------------------------------------
-// keeper — decides whether an individual comment must be preserved
-// ---------------------------------------------------------------------------
-
 type keeper struct {
 	directives  bool
 	keepLicense bool
@@ -178,14 +131,10 @@ var (
 	dockerDirectiveRe = regexp.MustCompile(`(?i)^(syntax|escape|check)\s*=`)
 )
 
-// keep reports whether a comment must be preserved. marker is the opening
-// delimiter ("//", "/*", "#", "<!--", ...), body is the comment text without
-// delimiters, and firstLine tells whether it starts at byte 0 of the file.
 func (k *keeper) keep(lang, marker, body string, firstLine bool) bool {
 	if k == nil {
 		return false
 	}
-	// shebangs are never removed
 	if firstLine && body != "" && body[0] == '!' && strings.HasPrefix(marker, "#") {
 		return true
 	}
@@ -203,21 +152,18 @@ func (k *keeper) keep(lang, marker, body string, firstLine bool) bool {
 	if !k.directives {
 		return false
 	}
-	// /*! ... */ legal notices
 	if strings.HasPrefix(marker, "/*") && strings.HasPrefix(body, "!") {
 		return true
 	}
 	if strings.HasPrefix(marker, "/*") && (strings.HasPrefix(t, "@license") || strings.HasPrefix(t, "@preserve")) {
 		return true
 	}
-	// Haskell pragma: {-# LANGUAGE ... #-}
 	if lang == "haskell" && strings.HasPrefix(strings.TrimSpace(body), "#") {
 		return true
 	}
 	return isDirective(lang, t)
 }
 
-// Functional comment prefixes shared by most languages.
 var genericDirectives = []string{
 	"nolint", "noqa", "nosec", "type: ignore", "type:ignore",
 	"prettier-ignore", "prettier-ignore-start", "prettier-ignore-end",
@@ -260,7 +206,6 @@ func isDirective(lang, t string) bool {
 				return true
 			}
 		}
-		// C code / directives inside cgo preamble comments
 		for _, p := range []string{"#cgo", "#include", "#define", "#ifdef", "#ifndef", "#endif", "#if ", "#else", "#elif", "#pragma", "#error", "#warning", "#undef", "#import"} {
 			if strings.HasPrefix(t, p) {
 				return true
@@ -273,7 +218,6 @@ func isDirective(lang, t string) bool {
 			}
 		}
 	case "js", "ts", "css":
-		// TypeScript triple-slash references: /// <reference path="..." />
 		if strings.HasPrefix(t, "/ <reference") || strings.HasPrefix(t, "//") || strings.HasPrefix(t, "<reference") {
 			return true
 		}
@@ -300,20 +244,16 @@ func isDirective(lang, t string) bool {
 		if strings.HasPrefix(low, "[if ") || strings.HasPrefix(low, "[elif ") || strings.HasPrefix(low, "[else") || strings.HasPrefix(low, "[endif") {
 			return true
 		}
-		if strings.HasPrefix(t, "#") { // SSI: <!--#include virtual="..." -->
+		if strings.HasPrefix(t, "#") {
 			return true
 		}
 	case "yaml":
-		if strings.HasPrefix(low, "!") { // tags such as !Ref / !Sub
+		if strings.HasPrefix(low, "!") {
 			return true
 		}
 	}
 	return false
 }
-
-// ---------------------------------------------------------------------------
-// file collection
-// ---------------------------------------------------------------------------
 
 var defaultSkipDirs = map[string]bool{
 	".git": true, ".hg": true, ".svn": true,
@@ -343,7 +283,6 @@ var defaultSkipFiles = []string{
 	"*.pdf", "*.png", "*.jpg", "*.jpeg", "*.gif", "*.ico", "*.webp", "*.woff", "*.woff2",
 }
 
-// isDefaultSkipped reports whether a file name matches the built-in exclusions.
 func isDefaultSkipped(name string) bool {
 	low := strings.ToLower(name)
 	for _, p := range defaultSkipFiles {
@@ -354,8 +293,6 @@ func isDefaultSkipped(name string) bool {
 	return false
 }
 
-// hasSkippedDir reports whether any directory component of a slash-separated
-// relative path matches the built-in directory exclusions.
 func hasSkippedDir(slashPath string) bool {
 	if *flagNoDefaultExclude {
 		return false
@@ -421,7 +358,6 @@ func collectFiles(args []string) ([]string, string, error) {
 	return out, mode, nil
 }
 
-// gitTracked returns the absolute paths of the git-tracked files below dir.
 func gitTracked(dir string) ([]string, bool) {
 	if _, err := exec.LookPath("git"); err != nil {
 		return nil, false
@@ -446,12 +382,12 @@ func gitTracked(dir string) ([]string, bool) {
 		}
 		relp := string(p)
 		if hasSkippedDir(relp) {
-			continue // vendored / generated trees that happen to be committed
+			continue
 		}
 		full := filepath.Join(dir, filepath.FromSlash(relp))
 		st, err := os.Stat(full)
 		if err != nil || !st.Mode().IsRegular() {
-			continue // deleted, submodule or symlink
+			continue
 		}
 		res = append(res, full)
 	}
@@ -479,13 +415,9 @@ func walkAll(dir string) []string {
 	return res
 }
 
-// ---------------------------------------------------------------------------
-// processing
-// ---------------------------------------------------------------------------
-
 type result struct {
 	path    string
-	status  string // "changed" | "same" | "skipped" | "error"
+	status  string
 	reason  string
 	removed int
 	diff    string
@@ -636,10 +568,6 @@ func isBinary(data []byte) bool {
 	return bytes.IndexByte(data[:n], 0) >= 0
 }
 
-// ---------------------------------------------------------------------------
-// filters
-// ---------------------------------------------------------------------------
-
 var extAllowList []string
 
 func extAllowed(path string) bool {
@@ -672,7 +600,6 @@ func excluded(path string) bool {
 			return true
 		}
 		if strings.Contains(gl, "/") {
-			// allow "vendor/*" to match at any depth
 			if ok, _ := filepath.Match("**/"+gl, p); ok {
 				return true
 			}
@@ -706,10 +633,6 @@ func initFilters() {
 		}
 	}
 }
-
-// ---------------------------------------------------------------------------
-// report
-// ---------------------------------------------------------------------------
 
 func report(results []result, mode string, total int) int {
 	var changed, same, skipped, failed, removed int
@@ -768,10 +691,6 @@ func rel(p string) string {
 	return p
 }
 
-// ---------------------------------------------------------------------------
-// blank-line squeezing
-// ---------------------------------------------------------------------------
-
 func squeezeBlanks(src []byte) []byte {
 	if !bytes.Contains(src, []byte("\n\n")) {
 		return src
@@ -803,10 +722,6 @@ func squeezeBlanks(src []byte) []byte {
 	return out
 }
 
-// ---------------------------------------------------------------------------
-// unified diff
-// ---------------------------------------------------------------------------
-
 func splitLines(b []byte) []string {
 	var lines []string
 	start := 0
@@ -823,13 +738,12 @@ func splitLines(b []byte) []string {
 }
 
 type diffLine struct {
-	op   byte // ' ' | '-' | '+'
+	op   byte
 	text string
 }
 
 func unifiedDiff(path string, a, b []byte) string {
 	al, bl := splitLines(a), splitLines(b)
-	// trim the common prefix / suffix to shrink the LCS table
 	pre := 0
 	for pre < len(al) && pre < len(bl) && al[pre] == bl[pre] {
 		pre++
@@ -984,13 +898,9 @@ func lcsOps(a, b []string) []byte {
 	return ops
 }
 
-// ---------------------------------------------------------------------------
-// output buffer
-// ---------------------------------------------------------------------------
-
 type outBuf struct {
 	b         []byte
-	lineStart int // start offset of the current output line
+	lineStart int
 }
 
 func newOut(capacity int) *outBuf {
@@ -1029,7 +939,6 @@ func (o *outBuf) lastByte() byte {
 	return o.b[len(o.b)-1]
 }
 
-// trimTrailingSpace removes trailing spaces/tabs of the current output line.
 func (o *outBuf) trimTrailingSpace() {
 	for len(o.b) > o.lineStart {
 		c := o.b[len(o.b)-1]
@@ -1041,7 +950,6 @@ func (o *outBuf) trimTrailingSpace() {
 	}
 }
 
-// lineBlank reports whether the current output line only holds whitespace.
 func (o *outBuf) lineBlank() bool {
 	for i := o.lineStart; i < len(o.b); i++ {
 		switch o.b[i] {
@@ -1092,7 +1000,6 @@ func isSpaceByte(c byte) bool {
 	return false
 }
 
-// restOfLineBlank reports whether [i,limit) only holds blanks up to a newline.
 func restOfLineBlank(src []byte, i, limit int) bool {
 	for ; i < limit; i++ {
 		switch src[i] {
@@ -1106,7 +1013,6 @@ func restOfLineBlank(src []byte, i, limit int) bool {
 	return true
 }
 
-// atLineStartWS reports whether everything before i on its line is whitespace.
 func atLineStartWS(src []byte, i int) bool {
 	for j := i - 1; j >= 0; j-- {
 		switch src[j] {
@@ -1120,33 +1026,25 @@ func atLineStartWS(src []byte, i int) bool {
 	return true
 }
 
-// needSpace tells whether removing an inline chunk requires inserting a space
-// so that the two sides do not merge into a new token.
 func needSpace(before, after byte) bool {
 	return before != 0 && after != 0 && isWordByte(before) && isWordByte(after)
 }
 
-// cutLineComment removes a line comment whose body ends at end (exclusive).
-// If the comment occupied a full line, the line itself is dropped.
 func cutLineComment(o *outBuf, src []byte, end, limit int) int {
 	o.trimTrailingSpace()
 	if o.lineBlank() {
-		// whole-line comment: drop the line including its newline
 		o.reset(o.lineStart)
 		if end < limit && src[end] == '\n' {
 			end++
 		}
 		return end
 	}
-	// trailing comment: do not swallow the '\r' of a CRLF terminator
 	if end > 0 && src[end-1] == '\r' {
 		end--
 	}
 	return end
 }
 
-// cutBlockComment removes a block comment [.., end). Whole-line comments drop
-// their line; inline comments may insert a space to keep tokens apart.
 func cutBlockComment(o *outBuf, src []byte, end, limit int) int {
 	if o.lineBlank() && restOfLineBlank(src, end, limit) {
 		o.reset(o.lineStart)
@@ -1171,43 +1069,39 @@ func cutBlockComment(o *outBuf, src []byte, end, limit int) int {
 	return end
 }
 
-// ---------------------------------------------------------------------------
-// C-like scanner: Go / JS / TS / JSX / TSX / C / C++ / Java / CSS / SCSS / ...
-// ---------------------------------------------------------------------------
-
 type quoteSpec struct {
 	delim       byte
-	escBS       bool // backslash escapes
-	escDouble   bool // doubled delimiter escapes ('' "")
-	escBacktick bool // PowerShell backtick escapes
-	raw         bool // no escaping at all (Go backticks)
-	multiLine   bool // may span lines
-	template    bool // JS template literal: ${ } re-enters code mode
-	triple      bool // triple-quoted (python, toml, swift, dart, ...)
-	luaLong     bool // Lua long string [[ ... ]] / [=[ ... ]=]
-	interpBS    bool // Swift-style \( ... ) interpolation
+	escBS       bool
+	escDouble   bool
+	escBacktick bool
+	raw         bool
+	multiLine   bool
+	template    bool
+	triple      bool
+	luaLong     bool
+	interpBS    bool
 }
 
 type clikeCfg struct {
 	lang               string
-	line               []string    // line comment markers
-	block              [][2]string // block comment delimiters
+	line               []string // line comment markers
+	block              [][2]string
 	quotes             []quoteSpec
-	regex              bool     // JS regex literals
-	jsx                bool     // JSX/TSX
-	cppRaw             bool     // C++ R"delim(...)delim"
-	rustRaw            bool     // Rust r#"..."#
-	nestedBlock        bool     // block comments may nest (Rust, Swift, Kotlin, ...)
-	hashInterp         bool     // SCSS/Less #{ ... } interpolation
-	urlSpecial         bool     // protect url(...) contents (SCSS/Less/Sass)
-	heredoc            bool     // shell-style <<EOF heredocs
-	heredocStripSpaces bool     // <<- terminator may use spaces (HCL)
-	luaBlock           bool     // Lua long comments --[=*[ ... ]=*]
-	hereStrings        bool     // PowerShell @"..."@ / @'...'@
-	perlPOD            bool     // Perl =pod ... =cut blocks
-	rawPrefixes        []string // prefixes turning the next quote raw (python r, C# @, dart r)
-	lineWordStart      bool     // line marker only valid at the start of a word (shell, yaml, ...)
-	lineStartOnly      bool     // line marker only valid on its own line (docker)
+	regex              bool
+	jsx                bool
+	cppRaw             bool
+	rustRaw            bool
+	nestedBlock        bool
+	hashInterp         bool
+	urlSpecial         bool
+	heredoc            bool
+	heredocStripSpaces bool
+	luaBlock           bool
+	hereStrings        bool
+	perlPOD            bool
+	rawPrefixes        []string
+	lineWordStart      bool // line marker only valid at the start of a word (shell, yaml, ...)
+	lineStartOnly      bool // line marker only valid on its own line (docker)
 }
 
 type clikeScanner struct {
@@ -1230,12 +1124,10 @@ func (s *clikeScanner) scanCode(i, limit int) int {
 	return i
 }
 
-// stepCode consumes one token at i and returns the next position.
 func (s *clikeScanner) stepCode(i, limit int) int {
 	src := s.src
 	c := src[i]
 
-	// 1) block comments (checked first so ### in CoffeeScript wins over #)
 	if s.cfg.luaBlock && c == '-' && i+1 < limit && src[i+1] == '-' {
 		if n, ok := s.scanLuaBlock(i, limit); ok {
 			return n
@@ -1255,8 +1147,6 @@ func (s *clikeScanner) stepCode(i, limit int) int {
 		return cutBlockComment(s.o, src, end, limit)
 	}
 
-	// 2) string / character literals (checked before line markers so that a
-	//    '#' or '//' inside a string never starts a comment)
 	if q, ok := s.quoteAt(i, limit); ok {
 		if n, ok2 := s.scanString(i, limit, q); ok2 {
 			return n
@@ -1265,7 +1155,6 @@ func (s *clikeScanner) stepCode(i, limit int) int {
 		return i + 1
 	}
 
-	// 3) line comments
 	if m := s.lineMarkerAt(i, limit); m != "" {
 		j := i + len(m)
 		e := j
@@ -1284,7 +1173,6 @@ func (s *clikeScanner) stepCode(i, limit int) int {
 		return cutLineComment(s.o, src, e, limit)
 	}
 
-	// 4) C++ / Rust raw strings
 	if s.cfg.cppRaw && (c == 'R' || c == 'u' || c == 'U' || c == 'L') {
 		if n, ok := s.tryCppRaw(i, limit); ok {
 			return n
@@ -1296,35 +1184,30 @@ func (s *clikeScanner) stepCode(i, limit int) int {
 		}
 	}
 
-	// 5) PowerShell here-strings
 	if s.cfg.hereStrings && c == '@' {
 		if n, ok := s.scanHereString(i, limit); ok {
 			return n
 		}
 	}
 
-	// 6) shell-style heredocs
 	if s.cfg.heredoc && c == '<' && i+1 < limit && src[i+1] == '<' {
 		if n, ok := s.scanHeredoc(i, limit); ok {
 			return n
 		}
 	}
 
-	// 7) SCSS/Less url(...)
 	if s.cfg.urlSpecial && (c == 'u' || c == 'U') {
 		if n, ok := s.tryURL(i, limit); ok {
 			return n
 		}
 	}
 
-	// 8) Perl POD blocks
 	if s.cfg.perlPOD && src[i] == '=' && (i == 0 || src[i-1] == '\n') && i+1 < limit && isAlphaByte(src[i+1]) {
 		if n, ok := s.scanPOD(i, limit); ok {
 			return n
 		}
 	}
 
-	// 9) SCSS/Less interpolation #{ ... }
 	if s.cfg.hashInterp && c == '#' && i+1 < limit && src[i+1] == '{' {
 		s.o.writeByte('#')
 		if n, ok := s.scanBraceExpr(i+1, limit); ok {
@@ -1333,14 +1216,12 @@ func (s *clikeScanner) stepCode(i, limit int) int {
 		return i + 1
 	}
 
-	// 10) JS regex literals
 	if s.cfg.regex && c == '/' && s.regexAllowed() {
 		if n, ok := s.scanRegex(i, limit); ok {
 			return n
 		}
 	}
 
-	// 11) JSX
 	if s.cfg.jsx && c == '<' && s.jsxAllowed() {
 		if n, ok := s.scanJSX(i, limit); ok {
 			return n
@@ -1376,7 +1257,6 @@ func (s *clikeScanner) blockMarkerAt(i, limit int) (string, string) {
 	return "", ""
 }
 
-// findBlockEnd returns the end of a block comment (after the closing marker).
 func findBlockEnd(src []byte, from int, close string, nested bool, limit int) (int, bool) {
 	depth := 1
 	open := ""
@@ -1432,9 +1312,8 @@ func (s *clikeScanner) quoteAt(i, limit int) (quoteSpec, bool) {
 			continue
 		}
 		if q.luaLong {
-			return q, true // validated inside scanString
+			return q, true
 		}
-		// raw-string prefixes (python r"...", C# @"...", dart r'...')
 		for _, p := range s.cfg.rawPrefixes {
 			pl := len(p)
 			if i-pl >= 0 && string(src[i-pl:i]) == p {
@@ -1451,9 +1330,6 @@ func (s *clikeScanner) quoteAt(i, limit int) (quoteSpec, bool) {
 	return quoteSpec{}, false
 }
 
-// scanString copies a string literal verbatim into the output. On failure it
-// rolls the output back and returns false so the caller can treat the
-// delimiter as an ordinary character.
 func (s *clikeScanner) scanString(start, limit int, q quoteSpec) (int, bool) {
 	src := s.src
 	d := q.delim
@@ -1490,7 +1366,6 @@ func (s *clikeScanner) scanString(start, limit int, q quoteSpec) (int, bool) {
 	}
 	for i < limit {
 		c := src[i]
-		// Swift-style interpolation \( ... )
 		if q.interpBS && c == '\\' && i+1 < limit && src[i+1] == '(' {
 			s.o.write(src[i : i+2])
 			n, ok := s.scanParenExpr(i+1, limit)
@@ -1573,7 +1448,6 @@ func (s *clikeScanner) scanString(start, limit int, q quoteSpec) (int, bool) {
 	return start, false
 }
 
-// scanBraceExpr scans { ... } as code (comments inside are stripped). src[i] == '{'.
 func (s *clikeScanner) scanBraceExpr(i, limit int) (int, bool) {
 	mark := len(s.o.b)
 	s.o.writeByte('{')
@@ -1602,7 +1476,6 @@ func (s *clikeScanner) scanBraceExpr(i, limit int) (int, bool) {
 	return 0, false
 }
 
-// scanParenExpr scans ( ... ) as code. src[i] == '('.
 func (s *clikeScanner) scanParenExpr(i, limit int) (int, bool) {
 	mark := len(s.o.b)
 	s.o.writeByte('(')
@@ -1683,7 +1556,7 @@ func (s *clikeScanner) regexAllowed() bool {
 		return false
 	case '+', '-':
 		if i > 0 && s.o.b[i-1] == c {
-			return false // ++ / --
+			return false
 		}
 		return true
 	}
@@ -1776,9 +1649,6 @@ func (s *clikeScanner) tryRustRaw(i, limit int) (int, bool) {
 	return end, true
 }
 
-// scanHereString handles PowerShell here-strings: @"..."@ and @'...'@.
-// The opening @ must not be glued to a word and only whitespace may follow
-// the quote on that line; the terminator sits at the start of its own line.
 func (s *clikeScanner) scanHereString(i, limit int) (int, bool) {
 	src := s.src
 	if i+1 >= limit || (src[i+1] != '"' && src[i+1] != '\'') {
@@ -1807,8 +1677,6 @@ func (s *clikeScanner) scanHereString(i, limit int) (int, bool) {
 	return end, true
 }
 
-// scanLuaBlock handles Lua long comments --[=*[ ... ]=*] at any level.
-// A malformed long bracket falls back to the plain -- line comment.
 func (s *clikeScanner) scanLuaBlock(i, limit int) (int, bool) {
 	src := s.src
 	j := i + 2
@@ -1838,11 +1706,10 @@ func (s *clikeScanner) scanLuaBlock(i, limit int) (int, bool) {
 	return cutBlockComment(s.o, src, end, limit), true
 }
 
-// scanHeredoc handles shell-style heredocs: <<EOF, <<-EOF, <<"EOF", ...
 func (s *clikeScanner) scanHeredoc(i, limit int) (int, bool) {
 	src := s.src
 	if i+2 < limit && src[i+2] == '<' {
-		return 0, false // <<< here-string, not a heredoc
+		return 0, false
 	}
 	j := i + 2
 	strip := false
@@ -1910,7 +1777,6 @@ func (s *clikeScanner) scanHeredoc(i, limit int) (int, bool) {
 	return 0, false
 }
 
-// tryURL protects url(...) in SCSS/Less/Sass so that http:// inside is kept.
 func (s *clikeScanner) tryURL(i, limit int) (int, bool) {
 	src := s.src
 	if !hasPrefixFold(src[i:], "url") {
@@ -1970,8 +1836,6 @@ var podCmds = map[string]bool{
 	"for": true, "encoding": true,
 }
 
-// scanPOD strips Perl POD blocks (=pod ... =cut) when unterminated blocks are
-// absent; an unterminated block is left untouched to avoid data loss.
 func (s *clikeScanner) scanPOD(i, limit int) (int, bool) {
 	src := s.src
 	j := i + 1
@@ -1987,7 +1851,7 @@ func (s *clikeScanner) scanPOD(i, limit int) (int, bool) {
 		if p < 0 {
 			return 0, false
 		}
-		e := k + p + 1 + 4 // position right after "=cut"
+		e := k + p + 1 + 4
 		if e < limit && isWordByte(src[e]) {
 			k = e
 			continue
@@ -2006,8 +1870,6 @@ func (s *clikeScanner) scanPOD(i, limit int) (int, bool) {
 	}
 	return 0, false
 }
-
-// ----------------------------- JSX -----------------------------------------
 
 func isJSXSpace(c byte) bool { return c == ' ' || c == '\t' || c == '\n' || c == '\r' }
 
@@ -2035,7 +1897,7 @@ func (s *clikeScanner) jsxElement(i, limit int) (int, bool) {
 		return 0, false
 	}
 	j := i + 1
-	if j < limit && src[j] == '>' { // fragment <>...</>
+	if j < limit && src[j] == '>' {
 		s.o.write(src[i : j+1])
 		return s.jsxChildren(j+1, limit, "")
 	}
@@ -2049,7 +1911,7 @@ func (s *clikeScanner) jsxElement(i, limit int) (int, bool) {
 	name := string(src[ns:j])
 	s.o.write(src[i:j])
 
-	for { // attributes
+	for {
 		ws := j
 		for j < limit && isJSXSpace(src[j]) {
 			j++
@@ -2175,7 +2037,6 @@ func (s *clikeScanner) jsxChildren(j, limit int, name string) (int, bool) {
 			if !ok {
 				return 0, false
 			}
-			// drop the empty braces left behind by {/* comment */}
 			if isBlankBraces(s.o.b[mark:]) {
 				s.o.reset(mark)
 				s.o.trimTrailingSpace()
@@ -2183,7 +2044,6 @@ func (s *clikeScanner) jsxChildren(j, limit int, name string) (int, bool) {
 			j = n
 			continue
 		}
-		// JSX text: kept verbatim ("//" here is not a comment)
 		s.o.writeByte(c)
 		j++
 	}
@@ -2193,7 +2053,6 @@ func (s *clikeScanner) jsxBrace(i, limit int) (int, bool) {
 	return s.scanBraceExpr(i, limit)
 }
 
-// isBlankBraces reports whether b is exactly "{" + whitespace + "}".
 func isBlankBraces(b []byte) bool {
 	if len(b) < 2 || b[0] != '{' || b[len(b)-1] != '}' {
 		return false
@@ -2205,10 +2064,6 @@ func isBlankBraces(b []byte) bool {
 	}
 	return true
 }
-
-// ---------------------------------------------------------------------------
-// markup scanner: templates with distinctive comment delimiters
-// ---------------------------------------------------------------------------
 
 func stripMarkup(src []byte, k *keeper, lang string, pairs [][2]string) []byte {
 	o := newOut(len(src))
@@ -2243,10 +2098,6 @@ func stripMarkup(src []byte, k *keeper, lang string, pairs [][2]string) []byte {
 	return o.b
 }
 
-// ---------------------------------------------------------------------------
-// HTML scanner (also used for XML, Vue, Svelte, Astro)
-// ---------------------------------------------------------------------------
-
 func stripHTML(src []byte, k *keeper, delegate bool) []byte {
 	o := newOut(len(src))
 	i, n := 0, len(src)
@@ -2278,8 +2129,6 @@ func stripHTML(src []byte, k *keeper, delegate bool) []byte {
 	return o.b
 }
 
-// htmlDelegate processes an embedded <script>/<style> block with the matching
-// code scanner. It reports ok when src[i:] really starts such a tag.
 func htmlDelegate(o *outBuf, src []byte, i, n int, k *keeper) (int, bool) {
 	var tag string
 	switch {
@@ -2299,7 +2148,6 @@ func htmlDelegate(o *outBuf, src []byte, i, n int, k *keeper) (int, bool) {
 	default:
 		return i, false
 	}
-	// find the end of the opening tag, honoring quoted attribute values
 	j := nxt
 	for j < n && src[j] != '>' {
 		if src[j] == '"' || src[j] == '\'' {
@@ -2343,8 +2191,6 @@ func htmlDelegate(o *outBuf, src []byte, i, n int, k *keeper) (int, bool) {
 	return after, true
 }
 
-// embeddedCfg picks the scanner config for an embedded block; ok is false when
-// the block holds data instead of code (type="application/json", templates...).
 func embeddedCfg(tag string, attrs []byte) (*clikeCfg, bool) {
 	typ := ""
 	if v, ok := attrValue(attrs, "type"); ok {
@@ -2460,13 +2306,8 @@ func indexFold(b []byte, needle string, from int) int {
 	return from + p
 }
 
-// ---------------------------------------------------------------------------
-// markdown / MDX scanner
-// ---------------------------------------------------------------------------
-
 type ivl struct{ a, b int }
 
-// mdFenceIntervals returns the byte ranges covered by fenced code blocks.
 func mdFenceIntervals(src []byte) []ivl {
 	var res []ivl
 	i, n := 0, len(src)
@@ -2524,8 +2365,6 @@ func mdFenceIntervals(src []byte) []ivl {
 	return res
 }
 
-// stripMarkdown removes HTML comments (and, for MDX, {/* ... */} expression
-// comments) while leaving fenced code blocks untouched.
 func stripMarkdown(src []byte, k *keeper, mdx bool) []byte {
 	prot := mdFenceIntervals(src)
 	o := newOut(len(src))
@@ -2577,10 +2416,6 @@ func stripMarkdown(src []byte, k *keeper, mdx bool) []byte {
 	return o.b
 }
 
-// ---------------------------------------------------------------------------
-// PHP scanner: only strips inside <?php ... ?> / <?= ... ?> segments
-// ---------------------------------------------------------------------------
-
 func stripPHP(src []byte, k *keeper) []byte {
 	if !bytes.Contains(src, []byte("<?")) {
 		return src
@@ -2611,7 +2446,6 @@ func stripPHP(src []byte, k *keeper) []byte {
 	return o.b
 }
 
-// findPHPOpen locates the next PHP open tag, ignoring XML declarations.
 func findPHPOpen(src []byte, from, n int) int {
 	for i := from; i < n; i++ {
 		if src[i] != '<' || i+1 >= n || src[i+1] != '?' {
@@ -2626,10 +2460,6 @@ func findPHPOpen(src []byte, from, n int) int {
 	}
 	return -1
 }
-
-// ---------------------------------------------------------------------------
-// make scanner
-// ---------------------------------------------------------------------------
 
 func stripMake(src []byte, k *keeper) []byte {
 	o := newOut(len(src))
@@ -2646,7 +2476,6 @@ func stripMake(src []byte, k *keeper) []byte {
 		if next < n {
 			next++
 		}
-		// inside a heredoc started by a previous recipe line: keep verbatim
 		if hd != "" {
 			t := line
 			if hdStrip {
@@ -2685,7 +2514,7 @@ func stripMake(src []byte, k *keeper) []byte {
 		}
 		head := bytes.TrimRight(line[:cut], " \t")
 		if len(head) == 0 {
-			i = next // whole-line comment: drop it entirely
+			i = next
 			continue
 		}
 		o.write(head)
@@ -2698,8 +2527,6 @@ func stripMake(src []byte, k *keeper) []byte {
 	return o.b
 }
 
-// makeHashIndex finds the comment start in a makefile line: '#' anywhere
-// unless escaped as '\#'.
 func makeHashIndex(line []byte) int {
 	for j := 0; j < len(line); j++ {
 		if line[j] != '#' {
@@ -2713,8 +2540,6 @@ func makeHashIndex(line []byte) int {
 	return -1
 }
 
-// shellHashIndex finds a '#' that starts a comment in shell-like text: at the
-// start of a word and outside quotes.
 func shellHashIndex(line []byte) int {
 	var q byte
 	for j := 0; j < len(line); j++ {
@@ -2741,8 +2566,6 @@ func shellHashIndex(line []byte) int {
 	return -1
 }
 
-// findHeredoc looks for a shell-style heredoc opener in a single line and
-// returns its delimiter plus whether '<<-' (tab/space stripping) was used.
 func findHeredoc(line []byte) (delim string, strip bool, ok bool) {
 	var q byte
 	for j := 0; j < len(line); j++ {
@@ -2799,10 +2622,6 @@ func findHeredoc(line []byte) (delim string, strip bool, ok bool) {
 	return "", false, false
 }
 
-// ---------------------------------------------------------------------------
-// batch scanner (cmd.exe): REM / :: lines
-// ---------------------------------------------------------------------------
-
 func stripBatch(src []byte, k *keeper) []byte {
 	o := newOut(len(src))
 	i, n := 0, len(src)
@@ -2838,10 +2657,6 @@ func stripBatch(src []byte, k *keeper) []byte {
 	return o.b
 }
 
-// ---------------------------------------------------------------------------
-// language registry
-// ---------------------------------------------------------------------------
-
 type langSpec struct {
 	name string
 	scan func(src []byte, k *keeper) []byte
@@ -2858,10 +2673,12 @@ func markupLang(name string, pairs [][2]string) langSpec {
 
 var (
 	qDQ       = quoteSpec{delim: '"', escBS: true}
+	qDQMulti  = quoteSpec{delim: '"', escBS: true, multiLine: true}
 	qSQ       = quoteSpec{delim: '\'', escBS: true}
 	qSQRaw    = quoteSpec{delim: '\'', raw: true}
 	qTpl      = quoteSpec{delim: '`', template: true, multiLine: true}
 	qBQRaw    = quoteSpec{delim: '`', raw: true, multiLine: true}
+	qBracket  = quoteSpec{delim: '[', luaLong: true}
 	qDQTri    = quoteSpec{delim: '"', escBS: true, triple: true, multiLine: true}
 	qSQTri    = quoteSpec{delim: '\'', escBS: true, triple: true, multiLine: true}
 	qDQTriRaw = quoteSpec{delim: '"', raw: true, triple: true, multiLine: true}
@@ -2929,15 +2746,16 @@ var (
 	cfgProperties = &clikeCfg{line: []string{"#", "!"}, lineWordStart: true}
 	cfgIgnore     = &clikeCfg{line: lineHash, lineStartOnly: true}
 
-	cfgSQL       = &clikeCfg{line: []string{"--"}, block: blockC, quotes: []quoteSpec{{delim: '\'', escBS: true, escDouble: true}, {delim: '"', escBS: true, escDouble: true}, {delim: '`', raw: true}}}
-	cfgLua       = &clikeCfg{line: []string{"--"}, quotes: []quoteSpec{{delim: '[', luaLong: true}, qDQ, qSQ}, luaBlock: true}
-	cfgHaskell   = &clikeCfg{line: []string{"--"}, block: [][2]string{{"{-", "-}"}}, quotes: []quoteSpec{qDQ}, nestedBlock: true}
-	cfgOCaml     = &clikeCfg{block: [][2]string{{"(*", "*)"}}, quotes: []quoteSpec{qDQ}, nestedBlock: true}
-	cfgLisp      = &clikeCfg{line: []string{";"}, block: [][2]string{{"#|", "|#"}}, quotes: []quoteSpec{qDQ}, nestedBlock: true}
-	cfgClojure   = &clikeCfg{line: []string{";"}, quotes: []quoteSpec{qDQ}}
-	cfgScheme    = &clikeCfg{line: []string{";"}, quotes: []quoteSpec{qDQ}}
-	cfgErlang    = &clikeCfg{line: []string{"%"}, quotes: []quoteSpec{qDQ, qSQ}}
-	cfgCMake     = &clikeCfg{line: lineHash, block: [][2]string{{"#[[", "]]"}}, quotes: []quoteSpec{qDQ}}
+	cfgSQL     = &clikeCfg{line: []string{"--"}, block: blockC, quotes: []quoteSpec{{delim: '\'', escBS: true, escDouble: true}, {delim: '"', escBS: true, escDouble: true}, {delim: '`', raw: true}}}
+	cfgLua     = &clikeCfg{line: []string{"--"}, quotes: []quoteSpec{{delim: '[', luaLong: true}, qDQ, qSQ}, luaBlock: true}
+	cfgHaskell = &clikeCfg{line: []string{"--"}, block: [][2]string{{"{-", "-}"}}, quotes: []quoteSpec{qDQ}, nestedBlock: true}
+	cfgOCaml   = &clikeCfg{block: [][2]string{{"(*", "*)"}}, quotes: []quoteSpec{qDQ}, nestedBlock: true}
+	cfgLisp    = &clikeCfg{line: []string{";"}, block: [][2]string{{"#|", "|#"}}, quotes: []quoteSpec{qDQ}, nestedBlock: true}
+	cfgClojure = &clikeCfg{line: []string{";"}, quotes: []quoteSpec{qDQ}}
+	cfgScheme  = &clikeCfg{line: []string{";"}, quotes: []quoteSpec{qDQ}}
+	cfgErlang  = &clikeCfg{line: []string{"%"}, quotes: []quoteSpec{qDQ, qSQ}}
+	cfgCMake   = &clikeCfg{line: lineHash, block: [][2]string{{"#[[", "]]"}},
+		quotes: []quoteSpec{qDQMulti, qBracket}}
 	cfgNix       = &clikeCfg{line: lineHash, block: blockC, quotes: []quoteSpec{qDQ}}
 	cfgTerraform = &clikeCfg{line: []string{"#", "//"}, block: blockC, quotes: []quoteSpec{qDQ},
 		heredoc: true, heredocStripSpaces: true}
@@ -3033,27 +2851,21 @@ var (
 )
 
 var extLangs = map[string]langSpec{
-	// Go
 	".go": langGo,
-	// JavaScript / TypeScript
 	".js": langJS, ".mjs": langJS, ".cjs": langJS, ".jsx": langJSX,
 	".ts": langTS, ".mts": langTS, ".cts": langTS, ".tsx": langTSX,
 	".json": langJSONC, ".jsonc": langJSONC, ".json5": langJSONC,
-	// styles
 	".css": langCSS, ".scss": langSCSS, ".less": langLess, ".sass": langSass,
-	// C family
 	".c": langC, ".h": langC,
 	".cc": langCpp, ".cxx": langCpp, ".cpp": langCpp, ".c++": langCpp, ".cp": langCpp,
 	".hpp": langCpp, ".hh": langCpp, ".hxx": langCpp, ".h++": langCpp,
 	".ipp": langCpp, ".tpp": langCpp, ".inl": langCpp,
-	// JVM / .NET / other C-like
 	".java": langJava, ".cs": langCS, ".csx": langCS,
 	".kt": langKt, ".kts": langKt, ".swift": langSwift, ".dart": langDart,
 	".scala": langScala, ".sc": langScala,
 	".php": langPHP, ".phtml": langPHP,
 	".rs": langRust, ".zig": langZig, ".sol": langSol,
 	".proto": langProto, ".prisma": langPrisma, ".graphql": langGQL, ".gql": langGQL,
-	// shells / infra
 	".sh": langShell, ".bash": langShell, ".zsh": langShell, ".ksh": langShell,
 	".dash": langShell, ".ash": langShell, ".csh": langShell, ".tcsh": langShell,
 	".fish": langFish,
@@ -3061,7 +2873,6 @@ var extLangs = map[string]langSpec{
 	".bat": langBatch, ".cmd": langBatch,
 	".mk": langMake, ".cmake": langCMake, ".nix": langNix,
 	".tf": langTerraform, ".tfvars": langTerraform, ".hcl": langTerraform, ".nomad": langTerraform,
-	// scripting
 	".py": langPython, ".pyi": langPython, ".pyw": langPython,
 	".rb": langRuby, ".rake": langRuby, ".gemspec": langRuby, ".rbw": langRuby,
 	".pl": langPerl, ".pm": langPerl, ".t": langPerl,
@@ -3070,17 +2881,14 @@ var extLangs = map[string]langSpec{
 	".jl": langJulia, ".nim": langNim, ".nims": langNim,
 	".cr": langCrystal, ".coffee": langCoffee, ".litcoffee": langCoffee,
 	".lua": langLua,
-	// config
 	".yml": langYAML, ".yaml": langYAML, ".toml": langTOML,
 	".ini": langINI, ".cfg": langINI, ".conf": langINI, ".properties": langProperties,
 	".sql": langSQL, ".ddl": langSQL, ".dml": langSQL,
-	// functional
 	".hs": langHaskell, ".ml": langOCaml, ".mli": langOCaml,
 	".lisp": langLisp, ".lsp": langLisp, ".cl": langLisp, ".el": langLisp,
 	".clj": langClojure, ".cljs": langClojure, ".cljc": langClojure, ".edn": langClojure,
 	".scm": langScheme, ".ss": langScheme,
 	".erl": langErlang, ".hrl": langErlang,
-	// docs / markup
 	".md": langMarkdown, ".markdown": langMarkdown, ".mdown": langMarkdown, ".mkd": langMarkdown,
 	".mdx":  langMDX,
 	".html": langHTML, ".htm": langHTML, ".xhtml": langHTML, ".shtml": langHTML,
@@ -3088,7 +2896,6 @@ var extLangs = map[string]langSpec{
 	".xml": langXML, ".svg": langXML, ".xsl": langXML, ".xslt": langXML, ".xsd": langXML,
 	".plist": langXML, ".csproj": langXML, ".vbproj": langXML, ".fsproj": langXML,
 	".props": langXML, ".targets": langXML, ".resx": langXML, ".wsdl": langXML,
-	// templates
 	".twig": langJinja, ".njk": langJinja, ".nunjucks": langJinja,
 	".j2": langJinja, ".jinja": langJinja, ".jinja2": langJinja,
 	".hbs": langHbs, ".handlebars": langHbs, ".mustache": langHbs,
@@ -3144,8 +2951,6 @@ func detectLang(path string) (langSpec, bool) {
 	return langSpec{}, false
 }
 
-// shebangLang detects the language of an extension-less executable script by
-// reading its shebang line.
 func shebangLang(path string) *langSpec {
 	f, err := os.Open(path)
 	if err != nil {
@@ -3172,7 +2977,6 @@ func shebangLang(path string) *langSpec {
 		for _, f := range fields[1:] {
 			if strings.HasPrefix(f, "-") {
 				if f == "-S" || strings.HasPrefix(f, "-S") {
-					// env -S "cmd args..." — the command may follow directly
 					if rest := strings.TrimPrefix(f, "-S"); rest != "" {
 						interp = rest
 						break

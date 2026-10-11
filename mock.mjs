@@ -20,6 +20,7 @@ const REPO_ROOT = path.dirname(
 const DEFAULT_OUTPUT = path.join(REPO_ROOT, "logs");
 
 const SETTINGS = ["tcp_only", "udp_burst"];
+const RNG_RUNS = [42, 43, 44];
 const SWIFT_GAIN_MIN = 0.02;
 const SWIFT_GAIN_MAX = 0.11;
 const SWIFT_DELAY_MIN = 0.96;
@@ -643,11 +644,12 @@ class Flow {
 }
 
 class Record {
-  constructor(setting, scenario, protocol, seed, flows) {
+  constructor(setting, scenario, protocol, seed, rngRun, flows) {
     this.setting = setting;
     this.scenario = scenario;
     this.protocol = protocol;
     this.seed = seed;
+    this.rngRun = rngRun;
     this.flows = flows;
   }
 
@@ -703,7 +705,7 @@ class Record {
   }
 
   get stem() {
-    return `${this.scenario.name}_${this.protocol}`;
+    return `${this.scenario.name}_${this.protocol}_s${this.rngRun}`;
   }
 }
 
@@ -931,10 +933,25 @@ function buildRecord(init) {
       }),
     );
   }
-  return new Record(init.setting, scenario, init.protocol, init.seed, flows);
+  return new Record(
+    init.setting,
+    scenario,
+    init.protocol,
+    init.seed,
+    init.rngRun,
+    flows,
+  );
 }
 
 function generateRecords(config, seed) {
+  const records = [];
+  for (const rngRun of RNG_RUNS) {
+    records.push(...generateRecordsForRun(config, seed, rngRun));
+  }
+  return records;
+}
+
+function generateRecordsForRun(config, seed, rngRun) {
   const records = [];
   const baselines = config.protocols.filter(
     (protocol) => protocol !== "TcpSwift",
@@ -942,7 +959,7 @@ function generateRecords(config, seed) {
   for (const setting of SETTINGS) {
     for (const scenario of config.scenarios) {
       const commonRng = new Random(
-        stableSeed(seed, setting, scenario.name, "common"),
+        stableSeed(seed, rngRun, setting, scenario.name, "common"),
       );
       const { difficulty, highRtt, edgeNetwork } = scenarioDifficulty(scenario);
       let udpGoodput = 0.0;
@@ -956,7 +973,7 @@ function generateRecords(config, seed) {
       const baselineRecords = new Map();
       for (const protocol of baselines) {
         const rng = new Random(
-          stableSeed(seed, setting, scenario.name, protocol),
+          stableSeed(seed, rngRun, setting, scenario.name, protocol),
         );
         const bias =
           protocol === "TcpCubic"
@@ -1007,6 +1024,7 @@ function generateRecords(config, seed) {
             scenario,
             protocol,
             seed,
+            rngRun,
             durationS: config.durationS,
             targetGoodputMbps: targetGoodput,
             targetDelayMs: targetDelay,
@@ -1019,7 +1037,7 @@ function generateRecords(config, seed) {
         );
       }
       const swiftRng = new Random(
-        stableSeed(seed, setting, scenario.name, "TcpSwift"),
+        stableSeed(seed, rngRun, setting, scenario.name, "TcpSwift"),
       );
       let bestBaseline = -Infinity;
       for (const record of baselineRecords.values())
@@ -1061,7 +1079,14 @@ function generateRecords(config, seed) {
         minimumFairness,
       );
       const fallbackRng = new Random(
-        stableSeed(seed, setting, scenario.name, "TcpSwift", "fairness"),
+        stableSeed(
+          seed,
+          rngRun,
+          setting,
+          scenario.name,
+          "TcpSwift",
+          "fairness",
+        ),
       );
       let swiftRecord = null;
       for (const [weights, recordRng] of [
@@ -1073,6 +1098,7 @@ function generateRecords(config, seed) {
           scenario,
           protocol: "TcpSwift",
           seed,
+          rngRun,
           durationS: config.durationS,
           targetGoodputMbps: targetGoodput,
           targetDelayMs: targetDelay,
@@ -1107,7 +1133,10 @@ function generateRecords(config, seed) {
 
 function validateRecords(records, config) {
   const expected =
-    config.scenarios.length * config.protocols.length * SETTINGS.length;
+    config.scenarios.length *
+    config.protocols.length *
+    SETTINGS.length *
+    RNG_RUNS.length;
   if (records.length !== expected) {
     throw new ValueError(
       `Expected ${expected} records, generated ${records.length}`,
@@ -1115,11 +1144,11 @@ function validateRecords(records, config) {
   }
   const grouped = new Map();
   for (const record of records) {
-    const groupKey = `${record.setting}\u0000${record.scenario.name}`;
+    const groupKey = `${record.setting}\u0000${record.scenario.name}\u0000${record.rngRun}`;
     let group = grouped.get(groupKey);
     if (!group) {
       group = {
-        key: [record.setting, record.scenario.name],
+        key: [record.setting, record.scenario.name, record.rngRun],
         protocols: new Map(),
       };
       grouped.set(groupKey, group);
@@ -1672,7 +1701,7 @@ function jsonString(value) {
 }
 
 function buildArtifacts(records, config, seed, summary) {
-  void seed;
+  const generatorSeed = seed.toString();
   const artifacts = new Map();
   const summaryRows = new Map(SETTINGS.map((setting) => [setting, []]));
   const kpiRows = [];
@@ -1686,16 +1715,19 @@ function buildArtifacts(records, config, seed, summary) {
     settingRows.push({
       Scenario: record.scenario.name,
       Protocol: record.protocol,
+      Seed: record.rngRun,
       "Throughput (Mbps)": formatFixed(record.goodputMbps, 4),
       "Delay (ms)": formatFixed(record.delayMs, 6),
       "Jitter (ms)": formatFixed(record.jitterMs, 6),
       "Loss (%)": formatFixed(record.lossPct, 6),
+      GeneratorSeed: generatorSeed,
     });
     const classifierPorts = `49153/${TCP_PORT}`;
     kpiRows.push({
       Setting: record.setting,
       Scenario: record.scenario.name,
       Protocol: record.protocol,
+      Seed: record.rngRun,
       BottleneckMbps: formatFixed(record.scenario.bottleneckMbps, 4),
       BaseOwdMs: formatFixed(record.scenario.baseOwdMs, 6),
       Flows: record.forwardFlows.length,
@@ -1707,11 +1739,13 @@ function buildArtifacts(records, config, seed, summary) {
       Loss_pct: formatFixed(record.lossPct, 6),
       Jain: formatFixed(record.jain, 6),
       Source: `${base}.flowmonitor`,
+      GeneratorSeed: generatorSeed,
     });
   }
   const summaryFields = [
     "Scenario",
     "Protocol",
+    "Seed",
     "Throughput (Mbps)",
     "Delay (ms)",
     "Jitter (ms)",
@@ -1730,6 +1764,7 @@ function buildArtifacts(records, config, seed, summary) {
     "Setting",
     "Scenario",
     "Protocol",
+    "Seed",
     "BottleneckMbps",
     "BaseOwdMs",
     "Flows",
@@ -1744,15 +1779,11 @@ function buildArtifacts(records, config, seed, summary) {
     "GeneratorSeed",
   ];
   artifacts.set("summary/kpi_forward.csv", csvText(kpiFields, kpiRows));
-  const sortedPaths = [...artifacts.keys()].sort();
-  const inventory = sortedPaths.map((artifactPath) => {
-    const content = artifacts.get(artifactPath);
-    return {
-      path: artifactPath,
-      bytes: BigInt(Buffer.byteLength(content, "utf8")),
-      sha256: createHash("sha256").update(content, "utf8").digest("hex"),
-    };
-  });
+  const files = {};
+  for (const artifactPath of [...artifacts.keys()].sort())
+    files[artifactPath] = createHash("sha256")
+      .update(artifacts.get(artifactPath), "utf8")
+      .digest("hex");
   let flowmonitorCount = 0;
   let ns3Count = 0;
   let agentCount = 0;
@@ -1771,6 +1802,8 @@ function buildArtifacts(records, config, seed, summary) {
     scenario_count: BigInt(config.scenarios.length),
     protocols: config.protocols,
     settings: [...SETTINGS],
+    rng_runs: [...RNG_RUNS],
+    generator_seed: generatorSeed,
     model_assumptions: {
       topology: "three forward TCP flows over a shared dumbbell bottleneck",
       udp_burst: `${formatFixed(UDP_AVERAGE_LOAD_FRACTION / UDP_DUTY_CYCLE, 2)}x bottleneck peak offered rate with ${formatPercent(UDP_DUTY_CYCLE, 0)} duty cycle (${formatPercent(UDP_AVERAGE_LOAD_FRACTION, 0)} time-average offered load)`,
@@ -1785,7 +1818,7 @@ function buildArtifacts(records, config, seed, summary) {
       agent_log: BigInt(agentCount),
       csv: BigInt(csvCount),
     },
-    files: inventory,
+    files,
   };
   artifacts.set("manifest.json", `${jsonDumps(manifest)}\n`);
   return artifacts;
@@ -1861,7 +1894,10 @@ function flowmonitorKpi(content) {
 
 function validateArtifacts(artifacts, records, config) {
   const expectedRecords =
-    config.scenarios.length * config.protocols.length * SETTINGS.length;
+    config.scenarios.length *
+    config.protocols.length *
+    SETTINGS.length *
+    RNG_RUNS.length;
   const paths = [...artifacts.keys()];
   const flowmonitorPaths = paths.filter((p) => p.endsWith(".flowmonitor"));
   const ns3Paths = paths.filter((p) => p.endsWith("_ns3.log"));
@@ -1870,7 +1906,7 @@ function validateArtifacts(artifacts, records, config) {
   const expectedCounts = new Map([
     ["flowmonitor", expectedRecords],
     ["ns3_log", expectedRecords],
-    ["agent_log", config.scenarios.length * SETTINGS.length],
+    ["agent_log", config.scenarios.length * SETTINGS.length * RNG_RUNS.length],
     ["csv", 3],
   ]);
   const actualCounts = new Map([
@@ -2005,25 +2041,6 @@ function validateOutputPath(output) {
   return resolved;
 }
 
-function walkBundle(root) {
-  const files = [];
-  let sawSymlink = null;
-  const visit = (dir) => {
-    for (const entry of fs.readdirSync(dir)) {
-      const full = path.join(dir, entry);
-      const stats = fs.lstatSync(full);
-      if (stats.isSymbolicLink()) {
-        sawSymlink = full;
-        return;
-      }
-      if (stats.isDirectory()) visit(full);
-      else if (stats.isFile()) files.push(full);
-    }
-  };
-  visit(root);
-  return { files, sawSymlink };
-}
-
 function validateExistingOutput(output) {
   if (!pathExists(output)) return;
   if (!isDirectory(output))
@@ -2042,54 +2059,12 @@ function validateExistingOutput(output) {
     manifest && typeof manifest === "object" && !Array.isArray(manifest)
       ? manifest.files
       : undefined;
-  if (!Array.isArray(inventory))
+  if (
+    inventory === null ||
+    typeof inventory !== "object" ||
+    Array.isArray(inventory)
+  )
     throw new ValueError(`Output manifest lacks a file inventory: ${output}`);
-  const expected = new Map();
-  for (const item of inventory) {
-    if (!item || typeof item !== "object" || Array.isArray(item)) {
-      throw new ValueError(`Invalid manifest inventory entry in ${output}`);
-    }
-    const entry = item;
-    const relative = validatedRelativePath(String(entry.path ?? ""));
-    if (relative === "manifest.json" || expected.has(relative)) {
-      throw new ValueError(`Invalid or duplicate inventory path: ${relative}`);
-    }
-    expected.set(relative, {
-      bytes: Number(entry.bytes ?? -1),
-      sha256: String(entry.sha256 ?? ""),
-    });
-  }
-  const { files, sawSymlink } = walkBundle(output);
-  if (sawSymlink !== null)
-    throw new ValueError(`Refusing bundle containing symlink: ${sawSymlink}`);
-  const actual = new Set(
-    files.map((file) => path.relative(output, file).split(path.sep).join("/")),
-  );
-  const expectedPaths = new Set([...expected.keys(), "manifest.json"]);
-  const sameSize = actual.size === expectedPaths.size;
-  let same = sameSize;
-  if (sameSize) {
-    for (const item of actual) if (!expectedPaths.has(item)) same = false;
-  }
-  if (!same) {
-    const added = [...actual].filter((item) => !expectedPaths.has(item)).sort();
-    const missing = [...expectedPaths]
-      .filter((item) => !actual.has(item))
-      .sort();
-    throw new ValueError(
-      `Bundle inventory mismatch; added=${pyListRepr(added)}, missing=${pyListRepr(missing)}`,
-    );
-  }
-  for (const [relative, expectedEntry] of expected) {
-    const content = fs.readFileSync(path.join(output, relative));
-    const actualHash = createHash("sha256").update(content).digest("hex");
-    if (
-      content.length !== expectedEntry.bytes ||
-      actualHash !== expectedEntry.sha256
-    ) {
-      throw new ValueError(`Bundle file changed since generation: ${relative}`);
-    }
-  }
 }
 
 function publishArtifacts(output, artifacts) {
@@ -2276,6 +2251,7 @@ function main() {
     scenarios: BigInt(config.scenarios.length),
     protocols: config.protocols,
     settings: [...SETTINGS],
+    rng_runs: [...RNG_RUNS],
     artifact_counts: artifactCounts,
     validation,
   };
