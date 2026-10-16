@@ -1,30 +1,25 @@
 import os from "os";
 import { Worker } from "node:worker_threads";
 
-interface NodeWorker extends Worker {
-  currentResolve: ((value: unknown) => void) | null;
-  currentReject: ((err: Error) => void) | null;
+interface NodeWorker<Ret> extends Worker {
+  currentResolve: ((value: Ret | PromiseLike<Ret>) => void) | null;
+  currentReject: ((err: unknown) => void) | null;
 }
 
 export interface Options {
   max?: number;
 }
 
-export class WorkerImpl<
-  Args extends unknown[],
-  Ret = unknown,
-> implements NodeWorker {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export class WorkerPool<Args extends any[], Ret> {
   private code: string;
   private max: number;
-  private pool: NodeWorker[];
-  private idlePool: NodeWorker[];
-  private queue: [(worker: NodeWorker) => void, (err: Error) => void][];
-
-  currentResolve: ((value: unknown) => void) | null;
-  currentReject: ((err: Error) => void) | null;
+  private pool: NodeWorker<Ret>[];
+  private idlePool: NodeWorker<Ret>[];
+  private queue: [(worker: NodeWorker<Ret>) => void, (err: Error) => void][];
 
   constructor(
-    fn: (...args: Args) => Promise<Ret> | Ret,
+    fn: (...args: Args) => Ret | Promise<Ret>,
     options: Options = {},
   ) {
     this.code = genWorkerCode(fn);
@@ -43,38 +38,53 @@ export class WorkerImpl<
     });
   }
 
-  private async _getAvailableWorker(): Promise<NodeWorker> {
+  stop() {
+    this.pool.forEach((w) => w.unref());
+    this.queue.forEach(([_, _reject]) => {
+      _reject(
+        new Error("Main worker pool stopped before a worker was available."),
+      );
+    });
+    this.pool = [];
+    this.idlePool = [];
+    this.queue = [];
+  }
+
+  private async _getAvailableWorker(): Promise<NodeWorker<Ret>> {
     // Has idle one?
     if (this.idlePool.length) {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       return this.idlePool.shift()!;
     }
 
     // Can spawn more?
     if (this.pool.length < this.max) {
-      const worker = new WorkerImpl(this.code, {
-        eval: true,
-      }) satisfies NodeWorker;
-      worker.on("message", (res) => {
+      const worker = new Worker(this.code, { eval: true }) as NodeWorker<Ret>;
+      // worker.currentResolve = null;
+      // worker.currentReject = null;
+
+      worker.on("message", (res: Ret | PromiseLike<Ret>) => {
         if (worker.currentResolve) {
           worker.currentResolve(res);
           worker.currentResolve = null;
+          this._assignDoneWorker(worker);
         }
       });
 
-      worker.on("error", (err) => {
+      worker.on("error", (err: Error) => {
         if (worker.currentReject) {
           worker.currentReject(err);
           worker.currentReject = null;
         }
       });
 
-      worker.on("exit", (exitCode) => {
+      worker.on("exit", (exitCode: number) => {
         const i = this.pool.indexOf(worker);
         if (i > -1) {
           this.pool.splice(i, 1);
         }
 
-        if (exitCode !== 9 && worker.currentReject) {
+        if (exitCode !== 0 && worker.currentReject) {
           worker.currentReject(
             new Error(`Worker ${i} stopped with non-0 exit code ${exitCode}`),
           );
@@ -86,23 +96,25 @@ export class WorkerImpl<
       return worker;
     }
 
-    // No one is available, we have to wait
-    let resolve: (worker: NodeWorker) => void;
-    let reject: (err: Error) => any;
+    let resolve: (worker: NodeWorker<Ret>) => void;
+    let reject: (err: Error) => void;
 
-    const onWorkerAvailablePromise = new Promise<NodeWorker>(
+    // No one is available, we have to wait
+    const onWorkerAvailablePromise = new Promise<NodeWorker<Ret>>(
       (_resolve, _reject) => {
         resolve = _resolve;
         reject = _reject;
       },
     );
-    this.queue.push([resolve, reject]);
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    this.queue.push([resolve!, reject!]);
     return onWorkerAvailablePromise;
   }
 
-  private _assignDoneWorker(worker: NodeWorker) {
+  private _assignDoneWorker(worker: NodeWorker<Ret>) {
     // Someone is waiting already?
     if (this.queue.length) {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       const [resolve] = this.queue.shift()!;
       resolve(worker);
       return;
@@ -113,10 +125,11 @@ export class WorkerImpl<
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
 function genWorkerCode<Fn extends Function = Function>(fn: Fn) {
   return `
 const doWork = ${fn.toString()};
-const { parentPort } = require('work_threads');
+const { parentPort } = require('worker_threads');
 parentPort.on('message', async (args) => {
   const res = await doWork(...args);
   parentPort.postMessage(res);
