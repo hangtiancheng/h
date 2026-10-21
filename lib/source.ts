@@ -2,7 +2,7 @@ import { llms, loader } from "fumadocs-core/source";
 import { lucideIconsPlugin } from "fumadocs-core/source/plugins/lucide-icons";
 import { metaSchema, pageSchema } from "fumadocs-core/source/schema";
 import { defineDocs } from "fumadocs-mdx/macro";
-import { docsRoute } from "./shared";
+import { absolutePageUrl, docsRoute } from "./shared";
 
 const docs = defineDocs({
   dir: "content/docs",
@@ -25,7 +25,9 @@ export const source = loader({
 });
 
 export const docsLlms = llms(source, {
-  renderPage: async (page) => `# ${page.data.title} (${page.url})
+  renderPage: async (
+    page,
+  ) => `# ${page.data.title} (${absolutePageUrl(page.url)})
 
 ${await page.data.getText("processed")}`,
 });

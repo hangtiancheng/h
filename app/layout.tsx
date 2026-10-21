@@ -2,17 +2,27 @@ import type { Metadata, Viewport } from "next";
 import { TreeContextProvider } from "@fumadocs/base-ui/contexts/tree";
 import { NextProvider } from "fumadocs-core/framework/next";
 import { Provider } from "@/components/provider";
+import { appName, basePath, mountUrl, siteDescription } from "@/lib/shared";
 import { source } from "@/lib/source";
 import "./global.css";
 
 export const metadata: Metadata = {
+  metadataBase: new URL(mountUrl),
   title: {
-    default: "Yukino Homepage",
-    template: "%s | Yukino Homepage",
+    default: appName,
+    template: `%s | ${appName}`,
   },
   description: "knowledge base covering agent, frontend, and backend.",
   icons: {
-    icon: "/h/favicon.svg",
+    icon: `${basePath}/favicon.svg`,
+  },
+  openGraph: {
+    title: appName,
+    description: siteDescription,
+    url: mountUrl,
+    siteName: appName,
+    type: "website",
+    locale: "zh_CN",
   },
 };
 
