@@ -3,10 +3,6 @@
   "title": "base",
   "pages": [
     "index",
-    "yukino",
-    "yukino-agent",
-    "yukino-agent2",
-    "yukino-agent-test",
     "css",
     "git",
     "go",
