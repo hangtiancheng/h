@@ -38,7 +38,7 @@ Preview (first 2KB):
 
 > 注意: 本轮已被溢出到磁盘的工具调用结果、以及从溢出文件读回的工具调用结果 (isSpillReadback) 不会被重复溢出, 避免模型在「读回」和「溢出」之间循环
 
-精确常量 (源码: src/tool-result/index.ts)
+精确常量 (`MAX_OUTPUT_CHARS` 在 src/agent/constants.ts, `MESSAGE_AGGREGATE_LIMIT` 和预览长度在 src/tool-result/constants.ts; 溢出逻辑在 src/tool-result/index.ts)
 
 - `MAX_OUTPUT_CHARS = 50000`: 单个工具调用结果的溢出阈值
 - `MESSAGE_AGGREGATE_LIMIT = 200000`: 单条消息中工具调用结果的聚合上限

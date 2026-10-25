@@ -26,6 +26,7 @@
     "telemetry",
     "terminal-ui",
     "what-is-an-agent",
-    "worktree"
+    "worktree",
+    "workflow"
   ]
 }

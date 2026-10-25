@@ -126,28 +126,26 @@ export interface ToolResult {
 
 createToolRegistry (src/bootstrap/tool-registry.ts) 注册的基础工具:
 
-| 工具                                                     | 分类    | 只读 | 破坏性 | 场景                                    |
-| -------------------------------------------------------- | ------- | ---- | ------ | --------------------------------------- |
-| ReadFile                                                 | read    | 是   | 否     | 读文件/读图片                           |
-| WriteFile                                                | write   | 否   | 否     | 创建或重写文件                          |
-| EditFile                                                 | write   | 否   | 否     | 批量精确替换修改文件                    |
-| Bash                                                     | command | 否   | 是     | 执行 shell 命令                         |
-| PowerShell                                               | command | 否   | 是     | Windows/pwsh 命令                       |
-| Glob                                                     | read    | 是   | 否     | 查找文件名                              |
-| Grep                                                     | read    | 是   | 否     | 查找文件内容                            |
-| WebFetch                                                 | read    | 是   | 否     | 抓取 URL 转 Markdown                    |
-| WebSearch                                                | read    | 是   | 否     | Bing 公开搜索页, 免 API Key             |
-| LSP                                                      | read    | 是   | 否     | 语言服务器语义查询 (见 lsp)             |
-| ComputerUse                                              | command | 否   | 是     | 操作本机 GUI                            |
-| AskUserQuestion                                          | read    | 是   | 否     | 向用户提选择题                          |
-| Goal                                                     | read    | 是   | 否     | 持久目标的查询和完成/受阻汇报 (见 goal) |
-| TaskCreate / TaskGet / TaskList / TaskUpdate / TodoWrite | read    | 是   | 否     | 私有任务板 (见 task-tracking)           |
-| TaskOutput                                               | read    | 是   | 否     | 查看后台任务状态和结果                  |
-| EnterWorktree / ExitWorktree                             | command | 否   | 部分   | git worktree 隔离 (见 worktree)         |
-| ExitPlanMode                                             | command | 否   | 否     | plan 模式的唯一出口                     |
-| ToolSearch / McpCall                                     | read    | 是   | 否     | MCP 延迟加载的发现和调用通道 (见 mcp)   |
+| 工具                         | 分类    | 只读 | 破坏性 | 场景                                                                          |
+| ---------------------------- | ------- | ---- | ------ | ----------------------------------------------------------------------------- |
+| ReadFile                     | read    | 是   | 否     | 读文件/读图片                                                                 |
+| WriteFile                    | write   | 否   | 否     | 创建或重写文件                                                                |
+| EditFile                     | write   | 否   | 否     | 批量精确替换修改文件                                                          |
+| Bash                         | command | 否   | 是     | 执行 shell 命令                                                               |
+| PowerShell                   | command | 否   | 是     | Windows/pwsh 命令                                                             |
+| Glob                         | read    | 是   | 否     | 查找文件名                                                                    |
+| Grep                         | read    | 是   | 否     | 查找文件内容                                                                  |
+| WebFetch                     | read    | 是   | 否     | 抓取 URL 转 Markdown                                                          |
+| LSP                          | read    | 是   | 否     | 语言服务器语义查询 (见 lsp)                                                   |
+| ComputerUse                  | command | 否   | 是     | 操作本机 GUI                                                                  |
+| Goal                         | read    | 是   | 否     | 持久目标的查询和完成/受阻汇报 (见 goal)                                       |
+| TodoWrite                    | read    | 是   | 否     | 任务板的原子增量读写 (见 task-tracking)                                       |
+| TaskOutput                   | read    | 是   | 否     | 查看后台任务状态和结果                                                        |
+| EnterWorktree / ExitWorktree | command | 否   | 部分   | git worktree 隔离 (见 worktree)                                               |
+| EnterPlanMode / ExitPlanMode | command | 否   | 否     | 进入/退出 plan 模式 (ExitPlanMode 是唯一出口); EnterPlanMode 仅交互式宿主注册 |
+| ToolSearch / McpCall         | read    | 是   | 否     | MCP 延迟加载的发现和调用通道 (见 mcp)                                         |
 
-基础注册之外, 宿主再注册交互类工具: LoadSkill / InstallSkill (见 skills)、Agent (见 subagent)、SyntheticOutput、团队工具 (TeamCreate / SendMessage / ListTeams / TeamDelete / TaskStop, 见 agent-team)
+基础注册之外, 宿主再注册交互类工具: LoadSkill / InstallSkill (见 skills)、AskUserQuestion、Agent (见 subagent)、Workflow (见 workflow)、SyntheticOutput、团队工具 (TeamCreate / SendMessage / TeamList / TeamDelete / TaskStop, 见 agent-team)
 
 ### ReadFile
 
@@ -223,13 +221,6 @@ PowerShell
 - HTML → Markdown 用 turndown (移除 script/style); 二进制 content-type 拒绝
 - 缓存: 按 URL 15 分钟 TTL, 总预算 50MB, 插入序最旧先逐出
 
-### WebSearch
-
-- properties: query (必填), num_results (1-20, 默认 8), allowed_domains, blocked_domains (各至多 100 个主机名, 互斥)
-- 免 API Key: 直接抓取 Bing 公开搜索页 `https://www.bing.com/search?q=...&count=...` (src/tools/bing-search.ts), 不依赖任何搜索 API 密钥
-- 结果解析: cheerio/slim 解析结果卡片, 提取标题/来源 URL/摘要; Bing 的跳转链接 (`/ck/a?u=...`) 解码 base64url 还原为真实 URL, 非 http(s)、带凭据或仍指向 Bing 自身的链接丢弃
-- 域名过滤: allowed_domains / blocked_domains 对结果主机名 (含子域名) 过滤; 网络受限或反爬拦截时如实报错, 不伪造结果
-
 ### ComputerUse
 
 - 操作本机 GUI: 截图、点击、输入、滚动、缩放; 动作集包括 key、type、left_click、double_click、drag、scroll、screenshot、zoom、wait 等, 兼容 OpenAI 风格的批量 actions[] (单批 ≤100, 批后强制返回截图)
@@ -245,13 +236,13 @@ PowerShell
 
 ## 工具注册的装配
 
-基础注册 (createToolRegistry, 23 个): Goal、Task 系列 (TaskCreate/TaskGet/TaskList/TaskUpdate/TodoWrite)、TaskOutput、LSP、Bash、PowerShell、ComputerUse、EditFile、EnterWorktree、ExitPlanMode、ExitWorktree、ReadFile、ToolSearch、McpCall、WriteFile、Glob、Grep、WebFetch、WebSearch; 有 team 时再注册 leader 的团队任务工具 (见 agent-team)
+基础注册 (createToolRegistry, src/bootstrap/tool-registry.ts): Goal、TodoWrite (有 team 时换成团队感知版本)、TaskOutput、LSP、Bash、PowerShell、ComputerUse、EditFile、EnterPlanMode (仅交互式)、EnterWorktree、ExitPlanMode、ExitWorktree、ReadFile、ToolSearch、McpCall、WriteFile、Glob、Grep、WebFetch —— 交互式 19 个, print 等非交互宿主 18 个 (不含 EnterPlanMode)
 
 宿主在基础注册之上的差异:
 
-- 交互式 UI: + LoadSkill、InstallSkill、AskUserQuestion、Agent、SyntheticOutput、TeamCreate、SendMessage、ListTeams、TeamDelete、TaskStop
-- remote: 与 UI 相同的装配, 但没有 InstallSkill 和 ListTeams
-- print 模式: + Agent、SyntheticOutput、TeamCreate、SendMessage、TeamDelete、TaskStop (无 skills、无 AskUserQuestion, 没有审批通道)
+- 交互式 UI: + LoadSkill、InstallSkill、AskUserQuestion、Agent、Workflow、SyntheticOutput、TeamCreate、SendMessage、TeamList、TeamDelete、TaskStop
+- remote: 与 UI 相同的装配, 但没有 InstallSkill 和 TeamList
+- print 模式: + Agent、Workflow、SyntheticOutput、TeamCreate、SendMessage、TeamDelete、TaskStop (无 skills、无 AskUserQuestion, 没有审批通道)
 - teammate / subagent: 经工具过滤后的子集 (见 subagent)
 
 ## 流式 tool_use 解析: 拼接 partialJson JSON 碎片

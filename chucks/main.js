@@ -81,3 +81,21 @@ function multiple(a, b) {
 const a = multiple("12", "34");
 const b = 12 * 34;
 console.log(a, b);
+
+function double(a) {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve(a * 2);
+    }, 1000);
+  });
+}
+
+function main() {
+  const arr = [2, 4, 6];
+  arr.forEach(async (item) => {
+    const d = await double(item);
+    console.log(d);
+  });
+}
+
+main();

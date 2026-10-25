@@ -28,25 +28,30 @@ interface Tool {
 {
   "description": "", // 必填, 一句话说明这个 subagent 做什么
   "prompt": "", // 必填, 任务指令 (自包含: 目标、相关文件、约束、期望结果)
-  "subagent_type": "", // 预定义的 agent 角色, 例如 explore, plan, general-purpose
+  "kind": "teammate", // 可选, "teammate" (默认, 当前团队的持久成员) | "subagent" (一次性, 只返回工具结果)
+  "subagent_type": "general-purpose", // 可选, 预定义的 agent 角色, 缺省 general-purpose
+  "fork": true, // 可选, true 复制父对话作为初始上下文 / false 全新对话; 缺省取 enable_fork 配置 (未设时 true)
   "model": "", // 可选, 覆盖本次运行的模型
   "run_in_background": false, // 可选, 异步执行, 立即返回 task ID
-  "isolation": "", // 可选, "worktree": 在独立 git worktree 中运行
-  "team_name": "", // 可选, 以持久 teammate 身份运行 (见 agent-team)
-  "name": "", // 可选, teammate 的稳定名字
-  "plan_mode_required": false, // 可选, 仅配合 team_name: teammate 以 plan 模式启动, 写操作需 leader 审批
+  "worktree": false, // 可选, true 时在独立 git worktree 中运行, 编辑不与父/其他 agent 冲突
 }
 ```
+
+- `kind` 和 `subagent_type` 独立选择: kind 决定「一次性 subagent 还是持久 teammate」, subagent_type 决定角色和工具/权限约束
+- teammate 名字从 description 自动生成, 加入当前团队 (没有则自动创建); 不再有 team_name / name / plan_mode_required 参数 (见 agent-team)
 
 - 多 Agent 框架 (CrewAI、AutoGen): 中心化编排
   - AutoGen 的 GroupChat 使用 GroupChatManager, 按策略决定 agent chat 顺序
   - CrewAI 使用 Crew 对象编排 agent 和任务调度
 - Yukino: 主从模式, coding 场景下主从模式更稳定, 避免多 Agent 循环等待
 
-## 两种创建模式
+## 角色与初始上下文: 两个独立维度
 
-- 预定义的 subagent (Definition-based): 指定 subagent_type, 预定义的 subagent 角色, 无对话历史
-- fork 的 subagent (Fork-based): 省略 subagent_type, fork 当前对话的快照, 继承父 Agent 的完整对话历史
+- 角色由 `subagent_type` 决定 (缺省 general-purpose), 决定工具/权限/模型约束
+- 初始上下文由 `fork` 决定 (缺省取 enable_fork 配置, 未设时 true): `fork: true` 复制父对话快照, `fork: false` 全新对话
+- 两者正交: `subagent_type: "plan", fork: true` 是「plan 角色 + 继承上下文」, `subagent_type: "plan", fork: false` 是「plan 角色 + 全新上下文」; 其余角色同理
+
+下文仍按习惯把 `fork: false` 的叫「定义式 subagent」, `fork: true` 的叫「fork 的 subagent」
 
 ### 预定义的 subagent (Definition-based)
 
@@ -78,7 +83,7 @@ max_turns: 20
 ...
 ```
 
-frontmatter 支持的字段: name、description、tools、disallowed_tools、system_prompt、max_turns、model、permission_mode、background、isolation; permission_mode 做枚举校验 (default | acceptEdits | plan | bypassPermissions), 拼错则整个文件加载失败; description 缺省取 body 前 200 字; body 映射为 initialPrompt
+frontmatter 支持的字段: name、description、tools、disallowed_tools、system_prompt、max_turns、model、permission_mode、background、worktree; permission_mode 做枚举校验 (default | acceptEdits | plan | bypassPermissions), 拼错则整个文件加载失败; description 缺省取 body 前 200 字; body 映射为 initialPrompt
 
 Agent 定义文件, 加载顺序从低到高, 同名后者覆盖
 
@@ -96,7 +101,8 @@ export interface AgentDefinition {
   model?: string;
   permissionMode?: PermissionMode;
   background?: boolean; // 是否后台异步运行
-  isolation?: "worktree"; // git worktree 文件系统隔离
+  worktree?: boolean; // git worktree 文件系统隔离
+  readOnly?: boolean; // 只读角色 (plan/explore 内置为 true)
   initialPrompt?: string; // markdown body
   // ...
 }
@@ -104,7 +110,7 @@ export interface AgentDefinition {
 
 ### fork 的 subagent (Fork-based)
 
-- subagent_type 省略且 fork 未禁用时 (`enable_fork` 配置, 缺省启用, 显式 false 关闭), fork 当前对话的快照
+- fork 缺省取 `enable_fork` 配置 (未设时启用, 显式 false 关闭); 显式 `fork: true` 复制父对话快照, `fork: false` 全新对话, 与 subagent_type 无关
 - 典型场景: 将一个 react 类组件迁移到函数组件后, fork 3 个 subagent 迁移剩余的类组件
 - 降低成本: fork 的 subagent 和父 Agent 使用相同的 tools、system、messages (prompt cache 按前缀匹配, 顺序是 tools -> system -> messages), fork 的 subagent 首次 LLM API 请求可以命中 prompt cache, 降低 input_tokens 成本
 
@@ -137,7 +143,7 @@ fork 的 subagent 默认前台同步运行, 结果内联返回; `run_in_backgrou
 
 ## 选择哪种创建模式: Definition-based / Fork-based
 
-- 如果任务通用、固定角色、固定职责, 例如 plan 指定计划、explore 代码探索、code-review 代码审查, 使用定义式 subagent, 指定 subagent_type:
+- 如果任务通用、固定角色、固定职责, 例如 plan 指定计划、explore 代码探索、review 代码审查, 使用定义式 subagent, 指定 subagent_type:
   - 可以精确控制 subagent 的能力边界
   - 可以限制 subagent 调用的工具
   - 可以指定一个更小更快的模型: haiku, sonnet, deepseek...
@@ -148,7 +154,7 @@ fork 的 subagent 默认前台同步运行, 结果内联返回; `run_in_backgrou
 - 基础设施共享: API Key、LLM API 连接、工具集、MCP、Skill、Hook
 - 权限 (permissionMode): subagent 缺省继承 acceptEdits (定义或调用参数可以指定; options 的 plan 强制生效)
 - 对话历史: 定义式 subagent 无历史, fork 的 subagent 继承快照
-- 文件系统: 默认共享, 使用 `isolation: "worktree"` 时隔离
+- 文件系统: 默认共享, 使用 `worktree: true` 时隔离
 - maxIterations: subagent 默认 200 轮, 主 agent 默认不限制
 
 ## Subagent Loop
@@ -164,20 +170,15 @@ subagent loop 和主 agent loop 的区别
 
 工具过滤 (src/subagent/tool-filter.ts) 按五层顺序组合:
 
-1. 主 agent 专属工具 `MAIN_AGENT_ONLY_TOOLS`: ComputerUse (独占物理屏幕/键鼠)、AskUserQuestion (独占模态对话框)、ExitPlanMode (需要主线程审批对话框)、Goal (持久目标是会话级状态); 所有委派 agent (fork 和定义式) 都剥离
-2. 委派策略限制 `SUBAGENT_EXTRA_TOOLS`: Agent (递归 spawn, 调用树在 subagent 层终止; fork 例外, 保留打标克隆)、TeamCreate、TeamDelete (只有 leader 管理 team)、SendMessage (委派 agent 不继承 leader 的通信权限); mcp\_\_\* 工具豁免这两层
-3. 后台异步 subagent: 白名单 `ASYNC_AGENT_ALLOWED_TOOLS` (23 个): TaskCreate, TaskGet, TaskList, TaskUpdate, TodoWrite, TaskOutput, TaskStop, LSP, WebSearch, ReadFile, WebFetch, Grep, Glob, Bash, PowerShell, EditFile, WriteFile, LoadSkill, SyntheticOutput, ToolSearch, EnterWorktree, ExitWorktree, McpCall; 没有交互式工具, 后台任务不能阻塞等用户
+1. 主 agent 专属工具 `MAIN_AGENT_ONLY_TOOLS`: Workflow (防递归编排)、ComputerUse (独占物理屏幕/键鼠)、AskUserQuestion (独占模态对话框)、EnterPlanMode、ExitPlanMode (需要主线程审批对话框)、Goal (持久目标是会话级状态); 所有委派 agent (fork 和定义式) 都剥离
+2. 委派策略限制 `SUBAGENT_EXTRA_TOOLS`: Agent (递归 spawn, 调用树在 subagent 层终止)、TeamCreate、TeamDelete (只有 leader 管理 team)、SendMessage (委派 agent 不继承 leader 的通信权限); mcp\_\_\* 工具豁免这两层
+3. 后台异步 subagent: 白名单 `ASYNC_AGENT_ALLOWED_TOOLS` (18 个): TodoWrite, TaskOutput, TaskStop, LSP, ReadFile, WebFetch, Grep, Glob, Bash, PowerShell, EditFile, WriteFile, LoadSkill, SyntheticOutput, ToolSearch, EnterWorktree, ExitWorktree, McpCall; 没有交互式工具, 后台任务不能阻塞等用户
 4. 定义的 disallowedTools 黑名单
 5. 定义的 tools 白名单 (`["*"]` 关闭该层)
 
 TaskStop 保留给委派 agent: 它只能停自己启动的任务, 不会越权
 
-fork 的 subagent 不能继续 fork, 双重检测:
-
-- fork 时克隆的 registry 中, Agent 工具是原型级克隆并打 `querySource = "agent:builtin:fork"` 标记; 带标记的 Agent 工具再被调用时报错 "cannot fork from a forked agent" (上下文压缩后仍然有效)
-- 扫描对话历史中的 fork boilerplate 标记, 命中同样拒绝
-
-fork 的 registry 只剥离主 agent 专属工具 (ComputerUse, AskUserQuestion, ExitPlanMode, Goal), 保留打标的 Agent 和 TaskStop
+fork 不改变工具边界: fork 的 subagent 和定义式 subagent 走同一套工具过滤 (filterToolsForAgent), fork 继承的只是父对话快照; Agent 工具对所有委派 agent 剥离, 所以 fork 出来的 subagent 没有 Agent 工具, 无法再 spawn, 调用树在 subagent 层终止 (早期的 querySource 打标 + fork boilerplate 扫描的双重检测已移除)
 
 ## 后台异步运行模式
 
@@ -200,7 +201,7 @@ Agent 工具的 isConcurrencySafe 恒 true: LLM 在同一批里请求多个 Agen
 
 ## 内置 subagent_type
 
-BUILTIN_AGENTS 三个内置角色 (源码: src/subagent/definition.ts):
+BUILTIN_AGENTS 四个内置角色 (源码: src/subagent/constants.ts):
 
 ### general-purpose
 
@@ -208,8 +209,12 @@ BUILTIN_AGENTS 三个内置角色 (源码: src/subagent/definition.ts):
 
 ### plan
 
-软件架构师, 只读规划任务: 调查现有架构, 提出带文件、约束、验证步骤的实现计划; `disallowedTools: ["EditFile", "WriteFile"]`, `permissionMode: "plan"`
+软件架构师, 只读规划任务: 调查现有架构, 提出带文件、约束、验证步骤的实现计划; `disallowedTools: ["EditFile", "WriteFile", "ExitPlanMode"]`, `permissionMode: "plan"`, `readOnly: true`
 
 ### explore
 
-代码探索专家, 只读: 找代码、追调用链、报告带 file:line 的证据; `disallowedTools: ["EditFile", "WriteFile"]`, `permissionMode: "plan"`, 指定一个更小更快的模型
+代码探索专家, 只读: 找代码、追调用链、报告带 file:line 的证据 (用 Glob/Grep/ReadFile 和只读 shell 命令); `disallowedTools: ["EditFile", "WriteFile", "ExitPlanMode"]`, `permissionMode: "plan"`, `readOnly: true`
+
+### review
+
+代码审查专家: 读 PR diff 和相关代码, 从正确性、项目约定、性能、测试覆盖、安全五个角度给出带 file:line、影响和改进建议的发现; `disallowedTools: ["EditFile", "WriteFile", "ExitPlanMode"]`; 不修改文件、不发布 GitHub review, 缺上下文或受阻时如实汇报; `/review` 命令委派给这个角色 (见 code-review)

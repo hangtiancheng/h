@@ -26,28 +26,30 @@ Yukino 是一个基于终端的 AI coding agent: 单一 CLI 二进制, 连接可
 
 ## 6 种运行模式
 
-同一个 agent 内核 (Agent loop + 工具 + 会话), 六种宿主形态 (入口: src/main.tsx):
+同一个 agent 内核 (Agent loop + 工具 + 会话), 六种宿主形态 (入口: src/main.tsx 的 runMode, 旗标在 src/cli.ts 解析为 typed CliMode):
 
-| 模式     | 旗标                 | 形态                                          |
-| -------- | -------------------- | --------------------------------------------- |
-| 交互式   | (默认)               | 终端 TUI, 流式输出、权限对话框、slash 命令    |
-| print    | `-p "..."`           | 非交互, 一次执行, 适合脚本和 CI               |
-| remote   | `--remote [addr]`    | HTTP + WebSocket, 浏览器聊天 UI               |
-| ACP      | `--acp` / `--acp-ws` | 编辑器集成 (Agent Client Protocol)            |
-| A2A      | `--a2a [addr]`       | agent 互通服务器 (Agent2Agent Protocol)       |
-| teammate | (内部旗标)           | agent team 中的独立进程成员 (tmux/iterm pane) |
+| 模式            | 旗标              | 形态                                       |
+| --------------- | ----------------- | ------------------------------------------ |
+| 交互式          | (默认)            | 终端 TUI, 流式输出、权限对话框、slash 命令 |
+| print           | `-p "..."`        | 非交互, 一次执行, 适合脚本和 CI            |
+| remote          | `--remote [addr]` | HTTP + WebSocket, 浏览器聊天 UI            |
+| ACP (stdio)     | `--acp`           | 编辑器集成 (Agent Client Protocol)         |
+| ACP (WebSocket) | `--acp-ws [addr]` | 同上, 经 WebSocket 传输                    |
+| A2A             | `--a2a [addr]`    | agent 互通服务器 (Agent2Agent Protocol)    |
+
+agent team 的 teammate 不再是独立的 CLI 模式: 它经 Agent 工具的 `kind: "teammate"` 在同一进程内派生 (见 agent-team), 没有 `--teammate` 旗标
 
 ## 文档地图
 
 - 核心循环: react-and-agent-loop (ReAct 与循环机制)、llm (三种协议的封装)、function-calling (工具抽象与内置工具)、system-prompt (prompt 工程)
-- 扩展能力: mcp (动态工具接入)、hook (生命周期事件)、skills (可移植 SOP)、slash-command (命令系统)、lsp (语言服务器集成)、WebSearch/WebFetch (联网检索, 见 function-calling)
+- 扩展能力: mcp (动态工具接入)、hook (生命周期事件)、skills (可移植 SOP)、slash-command (命令系统)、lsp (语言服务器集成)、WebFetch (联网抓取, 见 function-calling)
 - 记忆与上下文: context-compaction (两层压缩)、agents-md-and-memory (指令文件、会话持久化、自动记忆、文件历史)
-- 任务与目标: task-tracking (任务板与后台任务)、goal (持久目标与自动续跑)
-- 多 agent: subagent (主从委派)、agent-team (团队协作与 coordinator 模式)、worktree (文件系统隔离)
+- 任务与目标: task-tracking (任务板与后台任务)、goal (持久目标与自动续跑)、workflow (脚本编排多 subagent)
+- 多 agent: subagent (主从委派)、agent-team (团队协作与 coordinator 模式)、worktree (文件系统隔离)、workflow (后台并发编排)
 - 安全: permission (权限系统)、sandbox (OS 级沙箱)
 - 对外集成: a2a、acp、remote、print-mode、telemetry (可观测性)
 - 交互: terminal-ui (终端 TUI 交互: 原生滚动、用户 Bash、快捷键)
-- 质量: code-review (结构化代码审查子系统)
+- 质量: code-review (/review 命令与 review 角色)
 
 Yukino 以 npm 包发布 (`npm install -g @yukino.js/yukino`), 支持 `yukino update` 自更新到最新发布版; TUI 异步检查新版本并提示
 

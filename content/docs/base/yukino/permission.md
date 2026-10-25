@@ -26,7 +26,7 @@ title: "Permission"
 
 ## 权限模式
 
-四种权限模式 (Shift+Tab 循环切换 default → acceptEdits → bypassPermissions, plan 不在循环里: 经 /plan 进入、退出时回到 default; 初始值来自 config.yaml 的 `permission_mode`, 环境变量 `YUKINO_BYPASS_PERMISSIONS=1` 优先)
+四种权限模式 (Shift+Tab 循环切换 default → acceptEdits → bypassPermissions, plan 不在循环里: 经 /plan 进入、退出时回到 default; 初始值来自 config.yaml 的 `permission_mode`)
 
 | 模式              | 只读工具 (read) | 写工具 (write) | 命令工具 (command) |
 | ----------------- | --------------- | -------------- | ------------------ |

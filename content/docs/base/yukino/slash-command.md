@@ -25,8 +25,10 @@ Slash Command: 以 / 开头的输入会被命令解析器拦截
 
 | 命令                   | 类型     | 行为                                                                                                                                                                                     |
 | ---------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| /workflows             | local_ui | 打开 workflow 运行监控面板 (见 workflow)                                                                                                                                                 |
+| /ultracode [args]      | prompt   | 把任务交给 Workflow 工具编排多 subagent (ULTRACODE_PROMPT + 任务), 后台运行, /workflows 监控 (见 workflow)                                                                               |
 | /login                 | local_ui | 打开表单配置、保存并激活一个 LLM provider                                                                                                                                                |
-| /provider              | local_ui | 切换当前 provider (仅终端 UI 注册)                                                                                                                                                       |
+| /provider              | local_ui | 切换当前 provider (终端 UI 和 remote 注册)                                                                                                                                               |
 | /model [model]         | local_ui | 切换当前 provider 的模型; 无参数时打开模型选择器                                                                                                                                         |
 | /help [command]        | local    | 列出全部命令 (不含 skill), 或单个命令的详情                                                                                                                                              |
 | /status                | local    | 当前会话状态: 模式、模型、provider、token、工具、沙箱、记忆、skills、MCP、会话、目录                                                                                                     |
@@ -34,7 +36,7 @@ Slash Command: 以 / 开头的输入会被命令解析器拦截
 | /memory                | local    | 列出记忆; `/memory clear` 清空记忆                                                                                                                                                       |
 | /skills                | local_ui | 列出 skills; `/skills reload` 从磁盘热重载                                                                                                                                               |
 | /skill `<name>` [args] | -        | 按名运行 skill (等价于 `/<name> [args]`; `/skill reload` 路由到 /skills reload)                                                                                                          |
-| /plan                  | local_ui | 进入 plan 模式 (只读调查)                                                                                                                                                                |
+| /plan [args]           | prompt   | 在前台 plan agent 里规划当前任务 (fork 父上下文), 成功后进入 plan 审批                                                                                                                   |
 | /goal [args]           | prompt   | 设置/查看持久目标 (status、pause、resume、continue、complete、clear、replace, `--budget <tokens>`); UI 拦截本地处理, 不消耗 LLM token, 只在目标设置/替换时注入 prompt 启动循环 (见 goal) |
 | /compact               | local_ui | 强制上下文压缩                                                                                                                                                                           |
 | /clear                 | local_ui | 重置会话并清屏                                                                                                                                                                           |
@@ -42,9 +44,10 @@ Slash Command: 以 / 开头的输入会被命令解析器拦截
 | /rewind                | local_ui | 打开检查点回退对话框 (见 agents-md-and-memory 的文件历史)                                                                                                                                |
 | /sandbox [mode]        | local_ui | 配置沙箱: auto (开启+自动放行) / manual (开启+手动确认) / off                                                                                                                            |
 | /worktree              | local_ui | 列出 git worktrees                                                                                                                                                                       |
-| /mcp                   | local    | 显示 MCP server 连接状态; `/mcp reload` 重读配置并 reconcile                                                                                                                             |
+| /review [PR]           | prompt   | 委派给内置 review agent 审查 PR (`gh pr view` / `gh pr diff`), 只读返回发现 (见 code-review)                                                                                             |
+| /mcp                   | local    | 显示 MCP server 连接状态; `/mcp reload` 重读配置并 reconnect                                                                                                                             |
+| /feedback `<text>`     | local_ui | 在前台 agent 里分析当前会话, 审查问题后提交到 yukino 仓库                                                                                                                                |
 | /thinking [level]      | local    | 无参数打开思考强度选择器; 带参数设置 (off...max), 持久化到 config.yaml                                                                                                                   |
-| /code-review           | local_ui | 打开代码审查表单 (workspace / branch-range / commit)                                                                                                                                     |
 | /quit                  | local_ui | 退出                                                                                                                                                                                     |
 
 ## 用户自定义命令
@@ -85,4 +88,4 @@ $ARGUMENTS
 
 ## prompt 命令
 
-prompt 类型的命令由 CLI 构造 prompt 发送给 LLM API, 消耗 token; 来源有两类: 用户自定义命令 (上文) 和自动注册的 inline skill (见 skills)
+prompt 类型的命令由 CLI 构造 prompt 发送给 LLM API, 消耗 token; 来源有三类: 内置命令 (/plan、/goal、/review、/ultracode)、用户自定义命令 (上文) 和自动注册的 inline skill (见 skills)

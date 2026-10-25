@@ -148,7 +148,7 @@ Yukino 的会话持久化使用 JSONL 格式 (JSON lines), 每行一个 JSON 对
 
 ## 存储布局
 
-所有会话和运行态统一存放在 `~/.yukino` 下 (源码: src/storage/paths.ts), 项目目录不再承载运行态数据; 按项目隔离的命名空间是项目规范路径的 sha256 (`projectKey = sha256(canonicalPath(cwd))`)
+所有会话和运行态统一存放在 `~/.yukino` 下 (源码: src/storage/index.ts), 项目目录不再承载运行态数据; 按项目隔离的命名空间是项目规范路径的 sha256 (`projectKey = sha256(canonicalPath(cwd))`)
 
 ```txt
 ~/.yukino/

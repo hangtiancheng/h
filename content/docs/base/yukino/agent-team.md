@@ -40,19 +40,19 @@ _去中心化协调_
 ```txt
 ~/.yukino/teams/<sha256(项目路径)>/     # 按项目命名空间哈希隔离
   <team>/
-    config.json        # TeamFile: name, description, createdAt, leaderAgentId, leaderPid, members[]
+    config.json        # TeamFile: name, description, createdAt, leaderAgentId, permissionMode, members[]
     inboxes/
       leader.json      # leader 的邮箱
       jane.json        # teammate jane 的邮箱
       john.json
     tasks.json         # 共享任务板 { next_id, tasks[] }
-    logs/              # 独立进程 teammate 的日志
+    logs/              # teammate 的结构化日志
 ```
 
 - 团队名 sanitize: 非字母数字字符转 `-`, 小写
 - 邮箱是 JSON 数组文件 (不是 jsonl), 每条消息带 `read` 布尔字段作读指针, 没有单独的 .read 文件; 写入用「写临时文件 + rename」原子替换
 - 已读消息保留上限 500 条, 未读消息永不删; 等待 plan 审批期间误收的消息会重新入队 (requeue)
-- config.json 的 leaderPid 供独立进程的 teammate 检测 leader 存活
+- config.json 的 permissionMode 记录创建 team 时 leader 的权限模式
 
 ### 邮箱文件锁
 
@@ -67,25 +67,20 @@ _去中心化协调_
 
 同一时刻最多存在一个 team: 创建新 team 前先清扫旧 team (停止成员 + 删磁盘残留)
 
-- TeamCreate 工具: 创建 team
-  - team_name: 必填; description 可选
-  - 创建 TeamFile、检测运行后端、注册 leader (主 agent 自己)
-- Agent 工具: 向 team 中 spawn 一个 teammate (team_name 参数), team 不存在时自动创建指定的 team, leader 不需要先调 TeamCreate
-  - name: 可选的稳定 teammate 名字, 校验 `^[a-zA-Z0-9_-]+$` 且不能是 `leader`; 成员已存在报错
-- ListTeams 工具: 无参数, 输出 `name [mode]: members (active 标记)`
-- TeamDelete 工具: 停止成员、注销名字、删除 team 目录
+- TeamCreate 工具: 创建 team, 团队名自动生成 (`team-<uuid>`), 只有可选的 `description` 参数; 创建 TeamFile、注册 leader (主 agent 自己)
+- Agent 工具: `kind: "teammate"` (默认) 向当前 team spawn 一个 teammate, team 不存在时自动创建, leader 不需要先调 TeamCreate; teammate 名字从 description 自动生成
+- TeamList 工具: 无参数, 输出当前 team 名和成员 (`name (active)` 逗号分隔); 没有 team 时返回提示
+- TeamDelete 工具: 无参数, 停止成员、注销名字、删除当前 team 目录
 
 ```js
-// 创建 team
+// 创建 team (名字自动生成)
 TeamCreate.execute({
-  team_name: "migrate-react-app",
   description: "迁移 react-router 到 @tanstack/router",
 });
 
-// 调用 Agent 工具 (team_name 参数) spawn 一个 teammate `jane`
+// 调用 Agent 工具 (kind: teammate) spawn 一个 teammate
 Agent.execute({
-  team_name: "migrate-react-app",
-  name: "jane",
+  kind: "teammate",
   description: "迁移 swr 到 @tanstack/query",
   prompt: "迁移 swr 到 @tanstack/query",
 });
@@ -94,35 +89,29 @@ Agent.execute({
 - team leader: 即主 agent, 主 agent 创建 agent team 后自动成为 team leader, 负责创建 team、spawn teammate, 拆解任务, 协调进度
 - teammate: 任务执行者, 每个 teammate 是一个独立的 agent 实例, 有自己的上下文窗口和工具集, teammate 可以是预定义的 (指定 subagent_type, 无对话历史), 也可以是 fork 的 (不指定 subagent_type, 继承 leader 的完整对话历史)
 
-## 三种运行后端
+## 运行后端: in-process
 
-后端检测: Windows 恒为 in-process; 否则按环境变量: `TMUX` 存在 → tmux, `ITERM_SESSION_ID` 存在 → iterm, 都没有 → in-process; 外部后端启动失败自动回落到 in-process
+teammate 和 leader 运行在同一个进程 (早期的 tmux / iterm 独立进程后端和 `--teammate` 旗标已移除):
 
-- tmux / iterm: teammate 是 pane 中的独立进程 (`node <cli> --teammate --team-dir ... --team-name ... --member-name ... --task ...`), 和 leader 完全隔离, 隔离性强
-  - tmux: `tmux new-session -d -s "yukino-<ts36>" -n teammate "<cmd>"`, 取消 = kill-session; paneId 就是 session 名, leader 重启后仍然可以找到并控制它
-  - iterm: osascript 创建新 tab 并执行命令, 没有取消句柄 (靠邮箱的 shutdown 消息退出)
-  - 一个 teammate 崩溃不会影响 leader 和其他 teammate
-  - 独立进程的 teammate 没有 Agent/TeamCreate/TeamDelete 工具, 不能继续 spawn
-- in-process: teammate 和 leader 运行在同一个进程, 隔离性弱, 但更轻量
-  - teammate 的生命周期绑定 leader, leader 退出, 所有 in-process 的 teammate 都退出
-  - in-process 的 teammate 可以调用 Agent 工具, 但只能 spawn 同步 subagent
-
-teammate 的唤醒完全靠邮箱轮询 (in-process 每 500ms 空闲轮询, 独立进程每 2000ms), 没有 pane 级的 send-keys 唤醒
+- teammate 经 Agent 工具的 `kind: "teammate"` 派生, 由 teamRunAgentFactory 调 spawnSubagent 在同一进程内跑一个独立的 agent loop (有自己的 ConversationManager、权限检查器、工具表)
+- 生命周期绑定 leader: leader 退出, 所有 teammate 都退出; 停止 teammate 经 AbortController 中断其 loop, 不是杀进程
+- teammate 没有 Agent / TeamCreate / TeamDelete 工具 (委派策略剥离, 见 subagent), 不能继续 spawn teammate
+- 唤醒靠邮箱轮询: teammate 完成一轮任务后进入空闲, 每 500ms (IDLE_POLL_INTERVAL_MS) 轮询自己的邮箱, 读到新消息就拼为下一个任务、恢复完整上下文继续工作
 
 ## 协调机制
 
 agent team 给 teammate 额外注入两组协调工具
 
-- 任务管理工具: TeamTaskCreate、TeamTaskGet、TeamTaskList、TeamTaskUpdate; 实现上继承主对话的任务板工具 (TaskCreate/TaskGet/TaskList/TaskUpdate, 见 task-tracking), 工具名完全相同, 注册进 teammate 的工具表时覆盖继承的版本, 底层 board 换成团队共享任务板 (SharedTaskStore, tasks.json, 跨进程共享, 多 assignee / blocks / blockedBy 依赖字段)
+- 任务管理工具: TodoWrite (团队感知版本 TeamTodoWriteTool, 继承自 TodoWriteTool, 见 task-tracking); 工具名和 schema 与私有版本完全相同, 注册进 teammate 的工具表时覆盖继承的版本, 底层 board 换成团队共享任务板 (SharedTaskStore, tasks.json, 多 owner / blocks / blockedBy 依赖字段); teammate 以自己的名字认领 in_progress 任务
 - 通信工具: SendMessage, 使得 leader/teammate 间可以相互发送邮件
 
 ```txt
 teammate 注入的协调工具:
-  TaskCreate / TaskGet / TaskList / TaskUpdate  <- 团队任务板 (SharedTaskStore)
-  SendMessage                                   <- 邮箱通信
+  TodoWrite (TeamTodoWriteTool)  <- 团队共享任务板 (SharedTaskStore)
+  SendMessage                    <- 邮箱通信
 ```
 
-leader 侧的任务工具同样被替换为团队感知版本 (registerLeaderTaskTools): 存在 team 上下文时操作共享任务板, 没有 team 时回落到 leader 的私有任务板; 因此 leader 不需要切换工具就能同时管理私有任务和团队任务
+leader 侧的 TodoWrite 同样被替换为团队感知版本: 存在 team 上下文时操作共享任务板, 没有 team 时回落到 leader 的私有任务板 (subscribeLeaderTasks 监听 board 切换); 因此 leader 不需要切换工具就能同时管理私有任务和团队任务
 
 - teammate 和 leader (主 agent) 都有 SendMessage 工具
 - 普通 subagent 没有 SendMessage 工具 (委派策略剥离, 见 subagent)
@@ -147,14 +136,16 @@ SendMessage.execute({
 
 ## plan 审批
 
-leader spawn teammate 时指定 `plan_mode_required: true`, 该 teammate 以 plan 权限模式启动 (读放行、写确认, 确认方是 leader):
+coordinator 模式下, `subagent_type: "plan"` 的 teammate 以 plan 权限模式启动 (读放行、写确认, 确认方是 leader); 内置 plan 角色作为 teammate 时先规划再执行 (PLAN_TEAMMATE_AGENT), 一次性 plan subagent 和所有 explore worker 则永久只读:
 
 1. teammate 分析任务、将执行计划写入 plan 文件
 2. teammate 没有 ExitPlanMode 工具, 以回合结束作为提交信号: leader 侧检测到 teammate 的权限模式仍是 plan 且回合结束, 读取 plan 文件
 3. plan 全文作为 plan_approval_request 发送到 leader 邮箱 (requestId 配对); 等待期间 teammate 收到的其他消息挂起并重新入队
-4. leader 审批后, 使用 SendMessage `type: plan_approval_response` + request_id + approve 响应
-   - approve: teammate 的权限模式就地提升为 default, 下一轮 prompt 提示「The Leader has approved your plan. Begin execution now.」
+4. leader 审批后, 使用 SendMessage `type: plan_approval_response` + request_id + approve + content (审查反馈) 响应
+   - approve: teammate 的权限模式就地写入 leader 当前模式 (leader 仍是 plan 时写 default), 恢复执行; 批准不授权后续工具调用, 每次写操作仍按权限走
    - reject + feedback: teammate 留在 plan 模式, prompt 携带反馈, 要求修订计划重新提交
+
+非 coordinator 模式下, 提交的执行计划自动批准
 
 ## 邮件路由与生命周期
 
@@ -167,9 +158,9 @@ teammate 每轮 agent loop turn 开始时, leader 侧 drain leader 邮箱: 未�
 4. jane 的轮询循环读到新消息, 拼为 "You have new messages from your team: ..." 作为下一个任务, 恢复完整上下文继续工作
 ```
 
-- teammate 空闲后不需要重新 spawn: 独立进程的 teammate 完成一轮后进入轮询等待; in-process 的 teammate 从磁盘会话日志恢复上下文
-- 停止外部成员: 先写 `[shutdown] stop` 消息, 等待 2.5s 优雅退出, 超时强杀进程
-- leader 重启恢复: 遍历项目命名空间目录重建 team, 活跃的外部成员恢复状态和名字注册; leader 重新认领 leaderPid
+- teammate 空闲后不需要重新 spawn: 完成一轮后进入 500ms 邮箱轮询等待, 读到新消息恢复完整上下文继续工作
+- 停止 teammate: TaskStop 工具按名停 (team.stopMember), 或 SendMessage 发 shutdown_request 让其优雅退出 (teammate 在空闲轮询里收到后回 shutdown_response 再退出); 底层经 AbortController 中断 loop, 不是杀进程
+- leader 重启恢复: 遍历项目命名空间目录重建 team, 标记旧 runtime 不活跃并重新认领未完成的工作; 编辑过的 worktree 保留待显式整合, 不随 runtime 清理删除
 
 ### teammate 对比 subagent
 
@@ -186,10 +177,10 @@ leader 的任务拆解策略, 直接决定 team 的效率:
 
 ### 任务拆解原则
 
-- 明确子任务间的依赖关系: leader 拆解任务时, 如果 task C 需要等待 task A 完成 (task C 依赖 task A 的输出), 则使用 `addBlocks`, `addBlockedBy` 字段创建结构化的任务依赖图, 同时将依赖关系写到任务描述; 不要指望 teammate 知道先做 task A 后做 task C
+- 明确子任务间的依赖关系: leader 拆解任务时, 如果 task C 需要等待 task A 完成 (task C 依赖 task A 的输出), 则用 TodoWrite 的 `blocks` / `blockedBy` 字段创建结构化的任务依赖图, 同时将依赖关系写到任务描述; 不要指望 teammate 知道先做 task A 后做 task C
 - 按文件边界拆解子任务: 只读子任务 (例如探索代码库) 可以并行, 如果两个子任务同时修改同一个文件, 则很容易冲突; 尽量让不同的子任务操作不同的文件, 如果不可避免的 task A、task B 两个子任务修改同一个文件, 则可以:
   - 对 task A、task B 两个子任务建立依赖关系, 串行执行
-  - leader spawn teammate 时指定 `isolation: "worktree"`, 为 teammate 创建独立的 worktree, 文件系统隔离
+  - leader spawn teammate 时指定 `worktree: true`, 为 teammate 创建独立的 worktree, 文件系统隔离
 - 控制每个 teammate 的子任务数: 每个 teammate 安排 2-4 个子任务 (经验值)
 - 安排一个验证任务: 所有子任务完成后, 验证结果: typecheck + lint、test、build
 
@@ -206,7 +197,7 @@ leader 的任务拆解策略, 直接决定 team 的效率:
 如果不可避免的 task A、task B 两个子任务修改同一个文件, 则可以:
 
 - 对 task A、task B 两个子任务建立依赖关系, 串行执行
-- spawn teammate 时指定 `isolation: "worktree"`, 为 teammate 创建独立的 worktree, 文件系统隔离
+- spawn teammate 时指定 `worktree: true`, 为 teammate 创建独立的 worktree, 文件系统隔离
 
 ### 第三层: 收集结果
 
@@ -228,22 +219,19 @@ coordinator 模式下 leader 的工具白名单 (src/teams/coordinator.ts):
 
 ```js
 const COORDINATOR_ALLOWED_TOOLS = new Set([
+  "Workflow", // 脚本编排多 subagent (见 workflow)
   "Goal", // 持久目标状态
   "Agent", // spawn 和管理 teammate
   "SendMessage", // 向 teammate 发送邮件
   "TaskStop", // 停止 teammate 或后台任务
   "SyntheticOutput", // 交付结构化结果
   "TeamDelete", // 删除 team
-  "TaskCreate", // 共享任务板调度
-  "TaskGet",
-  "TaskList",
-  "TaskUpdate",
-  "TodoWrite",
+  "TodoWrite", // 共享任务板调度
 ]);
 // MCP 工具同样被排除
 ```
 
-分界不是读/写, 而是「是否会把大量内容灌进 leader 的上下文」: ReadFile/Glob/Grep/Bash 的输出会占用 leader 的上下文窗口, 探索和执行都应该委派给 teammate; 共享任务板是调度元数据, 属于编排而不是探索, 所以任务板工具保留; 只保留让 leader 能调度、通信、停止、交付结果的最小工具集 (TeamCreate 不需要: Agent 的 team_name 路径会自动建 team)
+分界不是读/写, 而是「是否会把大量内容灌进 leader 的上下文」: ReadFile/Glob/Grep/Bash 的输出会占用 leader 的上下文窗口, 探索和执行都应该委派给 teammate; 共享任务板是调度元数据, 属于编排而不是探索, 所以 TodoWrite 保留; 只保留让 leader 能调度、通信、停止、交付结果的最小工具集 (TeamCreate 不需要: Agent 的 kind:teammate 路径会自动建 team)
 
 ### Coordinator 工作流
 

@@ -4,29 +4,29 @@ title: "Worktree"
 
 文件系统隔离
 
-subagent / teammate 指定 `isolation: "worktree"` 时, 在独立的 git worktree 中工作: 并发的文件修改互不覆盖, 结果由主 agent 决定是否合并; 用户也可以直接调用 EnterWorktree / ExitWorktree 工具
+subagent / teammate 指定 `worktree: true` 时, 在独立的 git worktree 中工作: 并发的文件修改互不覆盖, 结果由主 agent 决定是否合并; 用户也可以直接调用 EnterWorktree / ExitWorktree 工具
 
 ## 路径与分支格式
 
 ```js
 const worktreeDir = yukinoPath("worktrees", projectKey(gitRoot), slug);
 // ~/.yukino/worktrees/<projectKey>/<slug>
-const branch = `worktree-${slug}`;
+const branch = `worktree/${slug}/work`;
 ```
 
 - worktree 目录在 `~/.yukino/worktrees/<projectKey>/` 下 (projectKey 是仓库根规范路径的 sha256), 不在仓库内, 不污染工作区
-- 分支名加 `worktree-` 前缀
-- slug 需要安全校验, 防止路径遍历 (../../etc/passwd): EnterWorktree 工具要求 slug 匹配 `/^[a-zA-Z0-9_-]+$/`; ref 名另有 isSafeRefName 校验 (拒绝空串、以 `-` 或 `/` 开头、包含 `..`、任何一段为 `.` 或空, 字符集限定 `[a-zA-Z0-9/._+@-]`)
+- 分支名格式 `worktree/<slug>/work`
+- slug 需要安全校验, 防止路径遍历 (../../etc/passwd): slug 必须匹配 `/^[a-zA-Z0-9_-]+$/`; EnterWorktree 的 `slug` 参数可选, 缺省用随机 UUID
 - subagent 的 worktree slug 自动生成: `agent-a<7位hex>`
 
 ## git worktree 命令
 
 ```bash
 # 分支不存在: 创建新分支
-git worktree add -b worktree-<slug> -- <worktreeDir>
+git worktree add -b worktree/<slug>/work -- <worktreeDir>
 
 # 分支已存在: 重挂现有分支 tip, 不重置
-git worktree add -- <worktreeDir> worktree-<slug>
+git worktree add -- <worktreeDir> worktree/<slug>/work
 ```
 
 分支已存在时用重挂而不是强制覆盖 (`-B`): 并发场景下另一个 agent 可能刚在这个分支上提交了工作, `-B` 会把分支重置到 base, 悄悄丢掉这些提交
@@ -69,33 +69,38 @@ Changes made here are isolated from the parent working tree.
 
 ## 退出 worktree
 
-ExitWorktree 工具的参数: `path`、`branch`、`git_root` 必填, `head_commit` 可选 (worktree 创建时的 HEAD SHA)
+ExitWorktree 工具的参数: `action` 必填 (`keep` | `remove`), `discard_changes` 可选 (布尔)。worktree 的路径、分支、创建时 HEAD 都由 PermissionChecker 的 worktreeSession 内部记录, 工具不需要也不接受这些参数
 
-变更检测 `hasWorktreeChanges(path, headCommit)`:
+- `action: "keep"`: 保留 worktree 和分支, 输出 `Your work is preserved at <path> on branch <branch>`, 会话退回原工作目录
+- `action: "remove"`: 先做变更检测和身份校验, 再决定是否真正删除
 
-```bash
-# 是否有未 commit 的修改
-git status --porcelain
-
-# 当前 HEAD SHA 是否等于 headCommit (worktree 创建时的基准)
-git rev-parse HEAD
-```
-
-- porcelain 输出非空 → 有变更
-- HEAD SHA ≠ headCommit → 有新 commit
-- 检测本身报错 → 保守返回有变更
-
-退出策略 (没有交互式确认, 按检测结果直接决定):
-
-- 没传 head_commit: 无法判断新增 commit, 保留 worktree 并在输出中说明
-- 无变更: 清理
+变更检测 `countWorktreeChanges(path, headCommit)`:
 
 ```bash
-git worktree remove -- <path>   # git 自己会复查 dirty/locked
-git branch -d -- <branch>       # -d 而不是 -D: 分支有未合并提交时拒绝删除, 保留 tip
+# 未 commit 的修改 (含 untracked)
+git status --porcelain --untracked-files=all
+
+# 相对创建基准新增的 commit 数
+git rev-list --count <headCommit>..HEAD
 ```
 
-- 有变更: 保留 worktree, 输出提示路径, 等待主 agent 或用户处理
+`action: "remove"` 且未给 `discard_changes: true` 时的安全闸:
+
+- 变更状态无法核实: 拒绝删除, 提示与用户确认后重试 `discard_changes: true` 或改用 `action: "keep"`
+- 有未 commit 文件或新增 commit: 拒绝删除, 报告具体数量, 提示确认后重试 `discard_changes: true` 或改用 `action: "keep"`
+- 确无变更: 执行清理
+
+```bash
+# discard_changes=false: git 自己复查 dirty/locked; -d 在分支有未合并提交时拒绝删除
+git worktree remove -- <path>
+git branch -d -- <branch>
+
+# discard_changes=true: 强制删除, 丢弃未 commit 修改和未合并 commit
+git worktree remove --force -- <path>
+git branch -D -- <branch>
+```
+
+删除前还有一层身份校验: worktree 的 gitdir / commondir / 当前分支必须仍与创建时的记录一致, 被外部改动过就拒绝清理, 防止误删不属于自己的 worktree
 
 ## 清理
 
@@ -105,13 +110,13 @@ git branch -d -- <branch>       # -d 而不是 -D: 分支有未合并提交时�
 
 ## worktree 与 subagent
 
-subagent 使用 `isolation: "worktree"` 时, subagent 的启动流程
+subagent 使用 `worktree: true` 时, subagent 的启动流程
 
-1. 创建 worktree
-2. 创建 subagent, 工具调用的 workDir 替换为 worktree 路径
-3. 运行 subagent
-4. subagent loop 结束后在 worktree 中提交
-5. worktree 保留, 返回结果给主 agent (附 worktree 路径)
+1. 创建 worktree (slug 自动生成为 `agent-a<7位hex>`, 分支 `worktree/agent-a.../work`)
+2. subagent 的 PermissionChecker 切到 worktree (forWorktree), 工具调用的 workDir 覆盖为 worktree 路径
+3. prompt 前置一条 worktree 通知 (buildWorktreeNotice)
+4. 运行 subagent
+5. 结束后 worktree 原样保留 (不自动 commit、不自动删除), 返回结果附 `Worktree retained at: <path>`
 6. 主 agent review, 决定是否合并
 
 > 考虑以下场景

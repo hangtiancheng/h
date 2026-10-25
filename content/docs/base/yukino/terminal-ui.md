@@ -56,5 +56,5 @@ teammate spawn 卡片和后台 subagent 卡片随 transcript 滚动, 当前进�
 
 ## 版本检查与自更新
 
-- TUI 异步检查 npm 上的新版本并在界面提示 `yukino update`, 网络错误不打断 UI; `YUKINO_SKIP_VERSION_CHECK=1` 关闭自动检查
+- TUI 异步检查 npm 上的新版本并在界面提示 `yukino update`, 检查失败 (网络错误等) 静默忽略、不打断 UI
 - `yukino update` CLI 子命令 (src/update/): 查询 npm latest, 用当前安装所用的包管理器 (npm/yarn/pnpm) 升级到精确版本; 一键安装脚本装的全局包也支持

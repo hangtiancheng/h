@@ -2,133 +2,59 @@
 title: "Code Review"
 ---
 
-`/code-review` 背后是一个独立的代码审查子系统 (src/code-review/, 约 3k 行): 不是「让主 agent 顺手 review 一下」, 而是一条确定性的流水线 + 一组并发的小审查 agent
+代码审查不再是独立子系统: 早期的 `src/code-review/` (确定性流水线 + 并发小审查 agent + CodeComment/FileReadDiff 工具, 约 3k 行) 已整体移除。现在审查就是一条 `/review` 命令, 委派给内置的 `review` subagent 角色, 用 `gh` CLI 读 PR、读代码, 直接返回文字发现。
 
-为什么要独立子系统:
+为什么收敛成一个角色:
 
-- 审查的范围是 diff, 不是对话: 需要精确的 git diff 采集、解析、分组
-- 审查的输出要能落地: 评论必须定位到文件和行号, 才能被主 agent 或人直接消费
-- 大变更需要并发: 一个 500 文件的 PR 塞不进一个上下文, 要分组并行审查再汇总
+- 审查的本质是「读 diff + 读上下文 + 给结论」, 一个带只读约束的 agent 循环就够, 不需要独立的 diff 采集/分组/定位管线
+- PR 的采集交给 `gh` (`gh pr list` / `gh pr view` / `gh pr diff`), 比自研 git diff 解析更省事也更准
+- 发现以文字返回给主会话, 主 agent 下一轮可以直接按发现修复, 不需要专门的评论锚定机制
 
-## 入口与审查范围
+## `/review` 命令
 
-终端 UI 输入 `/code-review` 打开表单, 5 个字段: Focus (审查重点)、From、To、Commit、Exclude (glob, `;` 或换行分隔); remote 模式经 code_review_start WS 消息触发同一个 runner
-
-三种审查模式 (ReviewMode):
-
-| 模式      | 触发条件  | diff 来源                                                                                       |
-| --------- | --------- | ----------------------------------------------------------------------------------------------- |
-| workspace | 无 ref    | `git diff HEAD` (staged + unstaged) + 合成的 untracked 文件 diff; 无 commit 的仓库回退 --staged |
-| range     | from + to | `git diff merge-base(from, to)..to`                                                             |
-| commit    | commit    | `git show --diff-merges=first-parent <commit>`                                                  |
-
-diff 采集的统一 git 旗标: `core.quotepath=false --no-ext-diff --no-textconv --find-renames --src-prefix=a/ --dst-prefix=b/ --no-color -U3`, maxBuffer 256MB; untracked 文件用 `ls-files -z` 枚举 (防文件名含换行), 前 8000 字节嗅探 NUL 判二进制, 超过 10MB 按 binary 上报
-
-## 流水线
+`/review` 是 prompt 类型命令 (src/commands/commands.ts), `agent: REVIEW_AGENT_NAME` ("review"), handler 是 `buildReviewPrompt(args)` (src/commands/prompts.ts):
 
 ```txt
-validateReviewInput     校验: commit 与 from/to 互斥、from/to 成对、ref 不得以 - 开头
-  -> collectDiffs       git diff 采集 + 解析 (diff-parser: hunk 头、rename、binary、增删统计)
-  -> selectFiles        确定性文件筛选
-  -> groupDiffs         LLM 语义分组 (失败回退确定性切块)
-  -> worker pool        每组一个审查 agent, 默认并发 3
-  -> finalizeComments   去重、排序、汇总报告
+/review                 无参数: agent 先跑 gh pr list 列出开放 PR 让用户选
+/review 123             审查 PR #123
+/review <url>           审查指定 URL 的 PR
+/review 123 重点看并发   PR 号 + 额外审查指令
 ```
 
-进度经 onProgress 上报 7 个 phase: diff / selection / grouping / plan / review / filter / done (终端和浏览器 UI 都渲染进度条)
+`buildReviewPrompt` 生成的提示词要求 agent:
 
-### 文件筛选 (selectFiles)
+1. 没给 PR 号/URL 时先 `gh pr list` 返回开放 PR 供用户选择
+2. 对目标 PR 跑 `gh pr view <number-or-url>` 取详情、`gh pr diff <number-or-url>` 取 diff
+3. 读相关代码和项目指令, 在上下文中理解改动
+4. 给出简洁但完整的审查: PR 做了什么、正确性、项目约定、性能、测试覆盖、安全; 具体问题带文件路径和行号, 说明影响并给改进建议; 如实说明没能完成的检查
 
-确定性规则, 排除原因四类:
+提示词明确「只审查」: 不修改文件、不发布 GitHub review, 直接把发现返回。
 
-- binary: 二进制文件
-- user-rule: 命中 Exclude glob (minimatch, dot: true)
-- deleted: 已删除的文件 (保留在 prompt 上下文中, 但从不派发审查)
-- too-large: 单文件 diff token 超限 (上限 = contextWindow × 0.8, 无窗口信息时回退 160k; token 估算 = 字符数 / 4)
+## 执行路径
 
-锁文件/凭据/扩展名的静态黑名单有意不做: 语义分组和审查 agent 自己会忽略噪音, 硬编码名单只会误伤
+`/review` 走 prompt 命令的 subagent 分支 (src/ui/app.tsx): 命中 `cmd.agent` 时调用 `runSubagentCommand` (src/commands/subagent.ts), 以 `kind: "subagent"`、`subagent_type: "review"`、`fork: false`、`run_in_background: false` 前台跑一次 Agent 工具:
 
-### 语义分组 (groupDiffs)
+- 用户输入和 agent 返回都写进当前会话 (saveUserMessage / saveMessage), 发现直接出现在对话里
+- 前台执行, 事件经 onEvent 流式渲染成 Agent 卡片; 只有 `plan` 命令会 fork 父上下文, `review` 用全新对话
+- 结果作为 `stream_text` 输出, 主 agent 下一轮可基于发现继续修复
 
-请求 LLM 把文件按「一起改动才有意义」分组 (同一功能的实现 + 测试 + 文档进一组):
+## review 角色
 
-- 少于 4 个文件不分组; 每组最多 10 个文件; 每组 token 预算 60k
-- 输入是零基索引的文件清单 `[0] MODIFIED path (+12/-3)`, 输出索引数组
-- LLM 分组失败或超限时, 回退确定性切块: 按 diff 顺序先按文件数切、再按 token 预算切
-
-## 每组审查 agent
-
-每组是一个独立的小 agent (runGroupAgent):
-
-- 新建 ToolRegistry, 只注册 5 个只读工具: CodeComment、FileReadDiff、ReadFile、Grep、Glob
-- 新建 ConversationManager + Agent (maxIterations 50), PermissionChecker 用 default 模式; 审查工具全是 category read, 自动放行; write/command 工具根本不存在
-- 每组一个独立的 persona client (绑定审查 system prompt), 避免跨组泄漏 max-output 升级等状态; 分组/plan/filter/relocate 等一次性调用共用一个 thinking off 的 util client
-
-### 两阶段执行
-
-1. plan 阶段 (仅大组): 最大文件 ≥50 行, 或组内 ≥2 文件且总变更 ≥100 行时, 先让审查 agent 产出一份审查计划 (Summary + Issues[severity] + 上下文指引); 失败降级为无 plan; 第 2 轮起剥离 plan
-2. 主循环 (最多 maxRounds = 2 轮): 审查 agent 读 diff、读文件、grep 上下文, 调用 CodeComment 工具提交发现; 本轮没有新的确认发现、或累计确认数达到 30 条上限时停止
-3. 每轮结束跑一次反思过滤 (filterComments): 只允许删除「被 diff 本身证明是错的」评论, 默认批准, 解析失败全部批准; 过滤器是防误报的, 不是二次审查
-4. agent 既没调用工具也没有发现时, 追加一次 nudge 重试
-
-### 评论的定位管线
-
-评论必须锚定到文件和行号, CodeComment 工具要求 `existing_code` (逐字代码锚点), 定位按四级管线依次尝试:
-
-1. hunk 匹配: 锚点在 diff hunk 的新侧/旧侧连续行中匹配 (归一化空白和 +/- 前缀)
-2. 文件内容匹配: 在完整新文件内容上滑窗匹配 (空行不打断连续)
-3. 跨文件搜索: 锚点在整个 changeset 内找唯一归属 (0 个或多个命中都放弃)
-4. LLM 重定位: 最后手段, 提取修正后的代码片段重跑确定性解析; 失败恢复原锚点 (防止污染过滤证据)
-
-resolution 记录定位方式: hunk / file-content / cross-file / llm / unresolved
-
-### FileReadDiff 工具
-
-range/commit 模式审查的是历史版本, 工作区的文件可能已经变了; FileReadDiff 返回 changeset 中任意文件的完整 diff (包括组外和已删除的文件), 避免审查 agent 用 ReadFile 读到错误的工作区副本
-
-## 评论模型与报告
+`review` 是四个内置角色之一 (src/subagent/constants.ts 的 BUILTIN_AGENTS):
 
 ```ts
-interface ReviewComment {
-  path: string;
-  content: string;
-  suggestionCode?: string;
-  existingCode: string; // 逐字锚点
-  startLine: number;
-  endLine: number;
-  category:
-    | "bug"
-    | "security"
-    | "performance"
-    | "maintainability"
-    | "test"
-    | "style"
-    | "documentation"
-    | "other";
-  severity: "critical" | "high" | "medium" | "low";
-  resolution: "hunk" | "file-content" | "cross-file" | "llm" | "unresolved";
-  groupLabel?: string;
+{
+  name: "review",
+  description: REVIEW_AGENT_DESCRIPTION,
+  disallowedTools: ["EditFile", "WriteFile", "ExitPlanMode"],
 }
 ```
 
-汇总: 按 path + startLine + content 去重, 按 path → 行号 → severity 排序
+- `disallowedTools` 禁掉写文件和退出 plan 模式, 保证审查只读; 与 plan/explore 不同的是 review 不设 `permissionMode: "plan"` / `readOnly`, 因为它需要跑 `gh` 等命令
+- REVIEW_AGENT_DESCRIPTION (src/subagent/prompts.ts): 从正确性、项目约定、性能、测试覆盖、安全五个角度审查 PR, 读 diff 和相关代码, 返回带文件路径、行号、影响和改进建议的简洁发现; 不修改文件、不发布 review, 缺上下文或受阻时如实汇报
+- 主 agent 也可以不经 `/review`, 直接用 Agent 工具指定 `subagent_type: "review"` 委派审查 (见 subagent)
 
-报告是 Markdown, severity 图标 critical 🔴 / high 🟠 / medium 🟡 / low 无图标, 头部统计 (files changed / reviewed / groups / excluded / filtered / aborted), 按文件分节:
+## 与其它角色的关系
 
-```md
-### src/agent/index.ts
-
-🟠 **[high] bug** — src/agent/index.ts:412-418
-
-abort 之后仍然提交了工具结果...
-
-Suggestion:
-if (this.abortSignal?.aborted) { ... }
-```
-
-行号未定位成功的评论显示 `(line unresolved)`
-
-## 与会话的集成
-
-- 报告经流式文本输出到终端/浏览器
-- 有发现时, 报告还会作为 `<code_review_findings>` system-reminder 注入当前会话; 主 agent 在下一轮可以直接按发现清单修复问题, 不需要用户复制粘贴
+- `review` 只读、面向 PR 审查; `explore` 只读、面向代码探索; `plan` 只读、面向实现计划 (见 subagent)
+- 需要并发编排多个审查/验证任务时用 Workflow 脚本 (见 workflow), `/ultracode` 就是把任务交给 Workflow 编排的入口

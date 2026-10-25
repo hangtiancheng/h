@@ -24,7 +24,7 @@ yukino -p "fix the failing test" --output-format stream-json
 - 支持持久目标 (GoalManager): 单次非交互执行内目标可以自动续跑 (见 goal)
 - 遥测正常初始化 (mode: print)
 
-工具集是完整的基础注册 (createToolRegistry 23 个, 含 Goal、Task 系列、LSP、WebSearch、WebFetch) + 团队工具 (TeamCreate、SendMessage、TeamDelete、TaskStop、leader 任务工具覆盖) + Agent + SyntheticOutput
+工具集是非交互的基础注册 (createToolRegistry 18 个, 不含 EnterPlanMode; 含 Goal、TodoWrite、LSP、WebFetch) + 团队工具 (TeamCreate、SendMessage、TeamDelete、TaskStop、leader 任务工具覆盖) + Agent + Workflow + SyntheticOutput
 
 - 团队工具保留: 单次非交互执行内, leader 仍然可以组建 team 委派任务
 - 团队不从磁盘恢复: 退出时 stopAll 会停掉所有 team, 恢复交互会话留下的外部 teammate 会误杀它们

@@ -62,13 +62,14 @@ Yukino 的 AgentEvent 转换为 ACP 的 SessionUpdate (源码: src/acp/conversio
 tool_call 的 kind 分类:
 
 ```js
-ReadFile                                      -> "read"
-WriteFile | EditFile                          -> "edit"
-Glob | Grep | ToolSearch | LSP | WebSearch    -> "search"
-Bash | PowerShell | ComputerUse               -> "execute"
-Agent | TaskCreate/Get/List/Update/Stop/Output | TodoWrite -> "think"
-ExitPlanMode                                  -> "switch_mode"
-其他                                          -> "other"
+ReadFile                                  -> "read"
+WriteFile | EditFile                      -> "edit"
+Glob | Grep | ToolSearch | LSP            -> "search"
+Bash | PowerShell | ComputerUse           -> "execute"
+Agent | TaskStop | TaskOutput | TodoWrite -> "think"
+ExitPlanMode                              -> "switch_mode"
+WebFetch                                  -> "fetch"
+其他                                      -> "other"
 ```
 
 locations 从参数中的 file_path/path 提取 (相对路径按 workDir 解析), 编辑器可以据此高亮相关文件

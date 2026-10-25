@@ -22,7 +22,7 @@ Langfuse:      LANGFUSE_PUBLIC_KEY 和 LANGFUSE_SECRET_KEY 同时设置
 Sentry:        SENTRY_DSN 设置
 ```
 
-运行模式 (TelemetryMode) 会作为 `yukino.mode` 属性附加到观测数据上: terminal / print / remote / teammate / acp / a2a (未初始化时是 unknown); 六种运行模式都初始化遥测
+运行模式 (TelemetryMode) 会作为 `yukino.mode` 属性附加到观测数据上: terminal / print / remote / acp / a2a (未初始化时是 unknown); 五种运行模式都初始化遥测
 
 ```bash
 export OTEL_TRACES_EXPORTER=otlp
