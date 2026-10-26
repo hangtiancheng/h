@@ -79,7 +79,7 @@ show variables like 'datadir';
 ```shell
 ls /var/lib/mysql/db0
 # db.opt    -- 数据库的默认字符集
-# users.frm -- users 表结构文件
+# users.frm -- users 表结构文件, mysql8.0 已移除
 # users.ibd -- users 表空间文件, 存储表数据
 ```
 
@@ -373,9 +373,11 @@ create index <index_name> on <table_name> (<column_name1>, <column_name2>, ...);
 - B+ 树有大量的冗余节点, 插入和删除时, 不会发生复杂的树变形, 插入和删除的效率更高
 - B+ 树的叶子节点使用双向链表, 范围查询效率高; B 树范围查询时, 需要遍历 B 树, 范围查询效率低
 
-### `count(*)` 对比 `count(1)`
+### `count(*)` 对比 `count(1)` 对比 `count(字段)`
 
-- count(\*) 等价于 count(0)
+- count(\*): 统计行数, 不关心某列是否为 NULL
+- count(1): 对每一行统计 1, 1 不为 NULL, 等价于 count(\*)
+- count(字段): 统计该字段不为 NULL 的行数
 - 按性能排序: count(\*) = count(1) > count(主键字段) > count(非主键字段)
 - 对于 count(\*)、count(1)、count(主键字段), 如果表中存在二级索引, 会扫描 key_len 最小的二级索引, 比扫描主键索引效率更高
 - 对于 count(非主键字段), 会全表扫描
@@ -540,8 +542,8 @@ mysql -u <username> -p<password> [<database_name>] < ./backup.sql
 
 #### 表锁 (table S, table X)
 
-- 表共享锁 (Shared Lock, table S): 允许共享读本表, 允许本线程写本表, 不允许其他线程写本表
-- 表排他锁 (Exclusive Lock, table X): 允许本线程读写本表, 不允许其他线程读写本表
+- 表共享锁 (Shared Lock, table S): 允许共享读本表, 允许本事务写本表, 不允许其他事务写本表
+- 表排他锁 (Exclusive Lock, table X): 允许本事务读写本表, 不允许其他事务读写本表
 
 ```sql
 -- 表共享锁
@@ -555,8 +557,8 @@ lock tables <table_name> write;
 - 元数据: 表结构, 无需显式的使用元数据锁, 元数据锁是在事务提交后释放
 - 对一张表进行 crud 时, 加 MDL 共享读锁
 - 对一张表进行修改表结构时, 加 MDL 排他写锁
-- 有线程 crud 表时, 加 MDL 共享读锁; 如果有其他线程修改表结构 (申请 MDL 排他写锁), 则会被阻塞, 直到 crud 结束释放 MDL 共享读锁
-- 有线程修改表结构时, 加 MDL 排他写锁; 如果有其他线程 curd 表 (申请 MDL 共享读锁), 则会被阻塞, 直到修改表结构结束释放 MDL 排他写锁
+- 有事务 crud 表时, 加 MDL 共享读锁; 如果有其他事务修改表结构 (申请 MDL 排他写锁), 则会被阻塞, 直到 crud 结束释放 MDL 共享读锁
+- 有事务修改表结构时, 加 MDL 排他写锁; 如果有其他事务 curd 表 (申请 MDL 共享读锁), 则会被阻塞, 直到修改表结构结束释放 MDL 排他写锁
 - 申请 MDL 锁的请求会形成一个 FIFO 队列, 队列中 MDL 排他写锁的获取优先级高于 MDL 共享读锁
 
 - 线程 A 开启了长事务, 一直没有提交, 执行一条 select 语句, 对该表加 MDL 共享读锁
@@ -622,9 +624,9 @@ delete from table ... where id = 1;
 | sql                             | 加记录锁类型                                                            |
 | ------------------------------- | ----------------------------------------------------------------------- |
 | 普通 select 语句                | 不加记录锁                                                              |
-| `insert、delete、update`        | 加记录排他锁 record X, 不允许其他线程读写该行                           |
-| `select ... lock in share mode` | 锁定读, 加记录共享锁 record S, 允许其他线程读该行, 不允许其他线程写该行 |
-| `select ... for update`         | 锁定读, 加记录排他锁 record X, 不允许其他线程读写该行                   |
+| `insert、delete、update`        | 加记录排他锁 record X, 不允许其他事务读写该行                           |
+| `select ... lock in share mode` | 锁定读, 加记录共享锁 record S, 允许其他事务读该行, 不允许其他事务写该行 |
+| `select ... for update`         | 锁定读, 加记录排他锁 record X, 不允许其他事务读写该行                   |
 
 #### 行级锁加锁规则
 
@@ -702,6 +704,8 @@ delete from table ... where id = 1;
 - roll_pointer: 指向该行上个版本的指针, roll_pointer 指针将 undo log 串联为一个链表, 这个链表称为版本链
 
 ### 为什么需要 buffer pool
+
+buffer pool 缓存的是页, mysql8.0 移除的查询缓存缓存的是 sql 结果
 
 mysql 启动时, 为 buffer pool 申请一块连续的内存空间, 按默认的 16KB 划分缓存页
 
@@ -937,6 +941,10 @@ update <table_name> set <column_name1> = <value1>, <column_name2> = <value2>, ..
 delete from <table_name> [where <condition_expr>];
 ```
 
+- delete: 开启事务, 事务提交前可以回滚, 会产生 undo log 和 redo log, 会触发行级 DELETE 触发器
+- truncate: 清空整张表, 保留表结构, 重置自增计数器, 不会触发行级 DELETE 触发器
+- drop: 删除整张表, 包括数据和表结构
+
 ### 查询
 
 - and &&
@@ -1115,17 +1123,18 @@ t_dep 部门表 (父表) 中删除某行, 或更新某行的 id 时; 如果 t_em
 
 ### 联表查询
 
-1. 一对多: 部门表 -> 员工表; 通常为 "多" (员工表, 子表) 创建外键 (foreign key), 指向 "一" 的主键 (部门表, 父表)
+1. 一对多: 部门表 -> 员工表; 通常为 "多" (员工表) 创建外键 (foreign key), 指向 "一" 的主键 (部门表)
 2. 多对多: 学生表 -> 课程表; 通常创建中间表, 中间表有 2 个外键, 分别指向两个表的主键, 即转换为「学生表 -> 中间表」,「课程表 -> 中间表」两个一对多问题
 3. 一对一: 常用于单表拆分, 基本字段放在一张表中, 详情字段放在另一张表中; 通常详情表的外键 (user_id), 指向基础表的主键 (id), 并且外键所在的列使用唯一约束
 
 #### 联表查询分类
 
 - 连接查询
-  - 内连接: 查询 left 表, right 表交集的数据
+  - 内连接: 查询两表交集的数据
   - 外连接
-    - 左外连接: 查询 left 表, 和 left 表, right 表交集的数据
-    - 右外连接: 查询 right 表, 和 left 表, right 表交集的数据
+    - 全外连接: 查询两表并集的数据
+    - 左外连接: 查询 left 表, 和两表交集的数据
+    - 右外连接: 查询 right 表, 和两表交集的数据
   - 自连接: left 表 == right 表 == 自身, 自连接必须使用表别名
 - 联合查询
 - 子查询
@@ -1569,3 +1578,37 @@ const sql = `SELECT username, id, email FROM member WHERE username LIKE '%${name
 
 </Tab>
 </Tabs>
+
+## 使用 MySQL 实现可重入锁
+
+可以使用一张锁表, 记录「锁名、持有者、重入次数」, 再通过事务和 `SELECT ... FROM UPDATE` 保证加锁、解锁不会被并发请求打乱
+
+```sql
+create table lock_table (
+  lock_name varchar(128) primary key,
+  owner_id varchar(128) default null,
+  reentry_count int not null default 0
+) engine = innodb;
+
+insert into lock_table (lock_name) values ('order_lock')
+```
+
+- 锁名必须唯一
+- 持有者不能使用线程名, 不同的实例可能有同名线程, 可以使用「实例 ID + 线程 ID + 唯一标识」以区分持有者
+
+### 加锁的逻辑
+
+1. `begin/start transaction` 开启事务, 查询锁记录: `select owner_id, reentry_count from lock_table where lock_name = ? for update`; for update: 当前读, 开启事务, 事务提交前, 不允许其他事务写
+2. 如果 owner_id 是 NULL, 说明锁空闲, 将 owner_id 设置为自身, reentry_count 设置为 1
+3. 如果 owner_id 是自身, 说明是重入, 将 reentry_count += 1
+4. 如果 owner_id 是其他持有者, 说明加锁失败, `rollback` 回滚事务后返回失败或等待重试
+5. `commit` 提交事务, 释放数据库的行锁
+
+### 解锁的逻辑
+
+1. `begin/start transaction` 开启事务, 查询锁记录: `select owner_id, reentry_count from lock_table where lock_name = ? for update`; for update: 当前读, 开启事务, 事务提交前, 不允许其他事务写
+2. 如果 owner_id 是 NULL 或 其他持有者, 则不能释放锁, `rollback` 回滚事务后返回失败或等待重试
+3. 如果 owner_id 是自身
+   - 如果 reentry_count > 1, 则 reentry_count -= 1
+   - 如果 reentry_count == 1, 则将 owner_id 设置为 NULL, reentry_count 设置为 0, 释放锁
+4. `commit` 提交事务, 释放数据库的行锁
