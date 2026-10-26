@@ -4,14 +4,9 @@ on:
   push:
     branches: [main]
     paths:
-      - "app/**"
-      - "components/**"
-      - "content/**"
-      - "lib/**"
-      - "public/**"
-      - "next.config.mjs"
-      - "source.config.ts"
-      - "postcss.config.mjs"
+      - "docs/**"
+      - "theme/**"
+      - "rspress.config.ts"
       - "tsconfig.json"
       - "package.json"
       - "pnpm-lock.yaml"
@@ -47,7 +42,7 @@ jobs:
         uses: actions/configure-pages@v4
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-      - name: Build with Next.js
+      - name: Build with Rspress
         run: pnpm build
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

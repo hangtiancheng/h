@@ -1,7 +1,11 @@
+# AGENTS.md
+
 Ignore chunks directory
 
-# This is NOT the Next.js you know
+## Docs site (Rspress v2)
 
-This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
-
-This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+- Static site built with Rspress v2 (`@rspress/core`): config in `rspress.config.ts`, content in `docs/`, theme overrides in `theme/`, static assets in `docs/public/`.
+- `pnpm dev` / `pnpm build` / `pnpm preview`; build output goes to `out/`, deployed to GitHub Pages under base `/h`.
+- Navbar comes from `docs/_nav.json`; per-section sidebars come from `docs/<section>/_meta.json`.
+- `Tabs`, `Tab`, and `Callout` are imported per page from `@rspress/core/theme-original` (e.g. `import { Tabs, Tab, Callout } from "@rspress/core/theme-original";`); `mermaid` code blocks are rendered by `rspress-plugin-mermaid`.
+- `llms: true` emits `llms.txt`, `llms-full.txt`, and a Markdown version of every page (page URL with `.html` replaced by `.md`).

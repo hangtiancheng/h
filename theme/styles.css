@@ -1,0 +1,38 @@
+:root {
+  --rp-c-brand: #76b900;
+  --rp-c-brand-light: #8fd400;
+  --rp-c-brand-lighter: #a3d929;
+  --rp-c-brand-dark: #6aa700;
+  --rp-c-brand-darker: #5a8d00;
+  --rp-c-brand-tint: #76b90029;
+  --rp-font-family-base:
+    "Yukino", "Maple Mono", Menlo, "Cascadia Code", "Sarasa Gothic SC",
+    "PingFang SC", "Microsoft YaHei", sans-serif;
+  --rp-font-family-mono:
+    "Yukino", "Maple Mono", Menlo, "Cascadia Code", "Sarasa Gothic SC",
+    "PingFang SC", "Microsoft YaHei", monospace;
+}
+
+html {
+  scrollbar-gutter: stable;
+}
+
+/* resume page */
+.resume-frame {
+  display: block;
+  width: 100%;
+  height: calc(100dvh - var(--rp-nav-height, 64px));
+  border: 0;
+}
+
+@media print {
+  body:has(.resume-frame) .rp-nav {
+    display: none;
+  }
+}
+
+/* mermaid diagrams */
+svg[aria-roledescription] {
+  max-width: 100%;
+  height: auto;
+}

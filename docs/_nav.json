@@ -1,0 +1,6 @@
+[
+  { "text": "base", "link": "/base/", "activeMatch": "^/base/" },
+  { "text": "backend", "link": "/backend/", "activeMatch": "^/backend/" },
+  { "text": "frontend", "link": "/frontend/", "activeMatch": "^/frontend/" },
+  { "text": "resume", "link": "/resume/", "activeMatch": "^/resume/" }
+]

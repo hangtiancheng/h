@@ -10,10 +10,9 @@ export default defineConfig(
     ignores: [
       "**/dist/**",
       "**/node_modules/**",
-      ".next/**",
-      ".source/**",
       "out/**",
-      "next-env.d.ts",
+      "doc_build/**",
+      "chucks/**",
     ],
   },
   eslint.configs.recommended,

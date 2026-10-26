@@ -1,5 +1,0 @@
-{
-  "root": true,
-  "title": "backend",
-  "pages": ["index", "mysql", "redis", "mq", "distributed"]
-}

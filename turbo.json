@@ -3,7 +3,7 @@
   "tasks": {
     "build": {
       "dependsOn": ["build:chunk", "build:go"],
-      "outputs": [".next/**", "!.next/cache/**", "out/**"]
+      "outputs": ["out/**"]
     },
     "build:chunk": {
       "inputs": [
