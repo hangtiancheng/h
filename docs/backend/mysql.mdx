@@ -6,16 +6,6 @@ import { Tabs, Tab, Callout } from "@rspress/core/theme-original";
 
 ## todo
 
-### 索引
-
-- mysql 分页性能优化
-
-### 锁
-
-- update 语句没有使用索引, 会锁全表吗
-- mysql 间隙锁 + 记录锁可以避免删除操作导致的幻读吗
-- mysql 死锁
-
 ### 日志, Buffer Pool, 架构
 
 ```shell
@@ -111,14 +101,14 @@ ls /var/lib/mysql/db0
 - 不紧凑的行格式: redundant
 - 紧凑的行格式: compact、dynamic (默认)、compressed
 - 1 行数据的最大字节数是 65535 (除了 TEXT、BLOBs 等)
-- compact 行格式发生行溢出时, 只存储该列的部分数据, 剩余数据存储到溢出页中
+- compact 行格式发生行溢出时, 只存储该列的部分数据, 剩余数据存储到**溢出页**中
 - dynamic 和 compressed 行格式发生行溢出时, 不存储该列的部分数据, 数据完全存储到溢出页中
 
 #### compact 行格式
 
 一条记录, 分为「记录的额外信息」和「记录的真实数据」
 
-记录的额外信息: 变长字段的长度列表、null 值列表、记录头信息
+**记录的额外信息**: 变长字段的长度列表、null 值列表、记录头信息
 
 - 变长字段的长度列表
   - 只有表中存在变长字段时, 才有变长字段的长度列表 (例如 varchar)
@@ -292,23 +282,23 @@ create index <index_name> on <table_name> (<column_name1>, <column_name2>, ...);
 
 ### 索引优化
 
-- 前缀索引优化
+- **前缀索引优化**
   - 使用字符类型字段的前几个字符建立索引
   - 减少索引占用的存储空间, 增大一个索引页中存储的索引数量, 提高查询效率
   - 前缀索引的局限性
     - order by 无法使用前缀索引
     - 覆盖索引中, 无法使用前缀索引
-- 覆盖索引优化
+- **覆盖索引优化**
   - 联合索引的列包含查询的全部列, 查询的数据可以在二级索引的 B+ 树的叶子节点中找到时, 不需要回表查询
   - 可以避免回表查询, 减少 I/O 操作
-- 主键索引最好自增
+- **主键索引最好自增**
   - InnoDB 默认主键索引是聚簇索引
   - 如果使用自增主键, 则插入数据时是追加, 不需要移动数据; 页写满时自动分配新页
   - 如果使用非自增主键, 则插入数据时是随机插入, 可能需要移动数据, 甚至可能导致「页分裂」即复制一个页的数据到另一个页, 页分裂会导致内存碎片, 索引不紧凑, 影响查询效率
-- 主键的长度最好不要太长
+- **主键的长度最好不要太长**
   - 主键的长度越小, 二级索引的叶子节点越小 (二级索引的 B+ 树的叶子节点存储的是主键值), 二级索引占用的存储空间越小
-- 索引列最好 not null
-- 防止索引失效
+- **索引列最好 not null**
+- **防止索引失效**
 
 ### 索引失效
 
@@ -402,6 +392,50 @@ show table status;
 explain select count(*) from users;
 ```
 
+### 深度分页问题, 分页查询性能优化
+
+- `limit <offset>, <row_count>`/`limit <row_count> offset <offset>` 比 `limit <row_count>` 更慢, offset 越大, sql 执行速度越慢
+- offset 过大, 会导致深度分页问题
+
+#### 使用主键索引 (聚簇索引) 的 limit 分页查询
+
+- LIMIT offset, row_count
+- LIMIT row_count OFFSET offset
+
+```sql
+-- server 调用 InnoDB 的接口
+-- 使用 InnoDB 的主键索引查询到第 0 到第 1000010 行数据
+-- 返回给 server: offset 非 0 时, 丢弃前 1000000 行数据
+select * from users order by id limit 1000000, 10;
+
+-- 先执行子查询 select id from users order by id limit 1 offset 1000000
+-- 使用 InnoDB 的主键索引查询到第 1 到第 1000000 行数据
+-- 返回给 server, offset 非 0 时, 丢弃前 1000000 行数据, 只保留第 1000001 行数据的 ID (假设是 3000001)
+-- 再执行查询 select * from users where id >= (3000001) order by id limit 10;
+-- 使用 InnoDB 的主键索引, B+ 树快速定位到 id = 3000001 的行数据, 向后取 10 条数据
+select * from users where id >= (select id from users order by id limit 1 offset 1000000) order by id limit 10;
+```
+
+#### 使用非主键索引的 limit 分页查询
+
+- 使用非主键索引 (二级索引) 的 limit 分页查询, 比使用主键索引 (聚簇索引) 的 limit 分页查询多了回表查询的消耗
+- 当 limit, offset 过大时, 使用非主键索引的 limit 分页查询可能退化为全表扫描, 影响性能
+
+```sql
+-- server 的 sql 优化器看到 1000010 次回表查询, 选择全表扫描
+-- server 调用 InnoDB 的接口, 全表扫描
+-- 返回给 server: offset 非 0 时, 丢弃前 1000000 行数据
+select * from users order by username limit 1000000, 10;
+
+-- 先执行子查询 select id from users order by username limit 10 offset 1000000
+-- 使用 InnoDB 的主键索引查询到第 1 到第 1000010 行数据, 查询的是主键字段, 不需要回表查询
+-- 返回给 server: offset 非 0 时, 丢弃前 1000000 行数据, 只保留第 1000001 到第 100010 行数据的 ID (假设是 3000001 到 3000010)
+-- 使用 InnoDB 的主键索引, B+ 树快速定位到 10 个 ID 的行数据, 10 次回表查询
+select * from users t1, (select id from users order by username limit 10 offset 1000000) t2 where t1.id = t2.id;
+```
+
+#### 深度分页问题
+
 ## 事务
 
 ### 事务的 4 个特性: ACID
@@ -414,9 +448,9 @@ explain select count(*) from users;
 ### InnoDB 如何保证事务的 4 个特性
 
 - 原子性 atomicity: 通过 undo log 回滚日志保证原子性
-- 一致性 consistency: 通过持久性 + 原子性 + 隔离性保证一致性
-- 隔离性 isolation: 通过 MVCC 多版本并发控制、锁机制保证隔离性
 - 持久性 durability: 通过 redo log 重做日志保证持久性
+- 隔离性 isolation: 通过 MVCC 多版本并发控制、锁机制保证隔离性
+- 一致性 consistency: 通过持久性 + 原子性 + 隔离性保证一致性
 
 ### 并发事务会引发的问题
 
@@ -492,9 +526,9 @@ if (trx_id < min_trx_id) {
 }
 ```
 
-- 如果记录的 trx_id \< read view 中的 min_trx_id, 说明这个版本的记录是在创建 read view 前已提交的事务创建/更新的, 所以该版本的记录对当前事务可见
-- 如果记录的 trx_id >= read view 中的 max_trx_id, 说明这个版本的记录是在创建 read view 后才启动的事务创建/更新的, 所以该版本的记录对当前事务不可见
-- 如果记录的 trx_id [min_trx_id, max_trx_id)
+- 如果 undo log 记录的 trx_id \< read view 中的 min_trx_id, 说明这个版本的记录是在创建 read view 前已提交的事务创建/更新的, 所以该版本的记录对当前事务可见
+- 如果 undo log 记录的 trx_id >= read view 中的 max_trx_id, 说明这个版本的记录是在创建 read view 后才启动的事务创建/更新的, 所以该版本的记录对当前事务不可见
+- 如果 undo log 记录的 trx_id [min_trx_id, max_trx_id)
   - 如果该记录的 trx_id 在 m_ids 列表中, 说明创建/更新该版本的记录的事务是活跃事务 (已启动、未提交), 所以该版本的记录对当前事务不可见
   - 如果该记录的 trx_id 不在 m_ids 列表中, 说明创建/更新该版本的记录的事务是已提交事务, 所以该版本的记录对当前事务可见
 
@@ -557,8 +591,8 @@ lock tables <table_name> write;
 #### 元数据锁 (MDL)
 
 - 元数据: 表结构, 无需显式的使用元数据锁, 元数据锁是在事务提交后释放
-- 对一张表进行 crud 时, 加 MDL 共享读锁
-- 对一张表进行修改表结构时, 加 MDL 排他写锁
+- 对一张表进行 crud 时, 加 MDL 共享读锁 (MDL S)
+- 对一张表进行修改表结构时, 加 MDL 排他写锁 (MDL X)
 - 有事务 crud 表时, 加 MDL 共享读锁; 如果有其他事务修改表结构 (申请 MDL 排他写锁), 则会被阻塞, 直到 crud 结束释放 MDL 共享读锁
 - 有事务修改表结构时, 加 MDL 排他写锁; 如果有其他事务 curd 表 (申请 MDL 共享读锁), 则会被阻塞, 直到修改表结构结束释放 MDL 排他写锁
 - 申请 MDL 锁的请求会形成一个 FIFO 队列, 队列中 MDL 排他写锁的获取优先级高于 MDL 共享读锁
@@ -632,12 +666,12 @@ delete from table ... where id = 1;
 
 #### 行级锁加锁规则
 
-唯一索引 (聚簇索引) 等值查询
+**唯一索引 (聚簇索引) 等值查询**
 
 - 查询的记录存在时, 在索引 B+ 树上找到该记录后, 该记录的索引中的临键锁会退化为记录锁
 - 查询的记录不存在时, 在索引 B+ 树上找到第一条大于该记录的记录后, 该记录的索引中的临键锁会退化为间隙锁
 
-唯一索引 (聚簇索引) 范围查询
+**唯一索引 (聚簇索引) 范围查询**
 
 - 对于「大于等于」条件的范围查询, 因为存在等值查询条件, 如果查询的记录存在, 则该记录的索引中的临键锁会退化为记录锁
 - 对于「小于、小于等于」条件的范围查询
@@ -652,7 +686,7 @@ delete from table ... where id = 1;
       - 扫描到终止范围查询条件的记录时, 该记录的索引的临键锁「不会」退化为间隙锁
       - 其他扫描到的记录, 对这些记录的索引加临键锁
 
-非唯一索引 (二级索引) 等值查询
+**非唯一索引 (二级索引) 等值查询**
 
 - 3.1 查询的记录存在时
   - 3.1.1 直到扫描到第一个不满足条件的二级索引时, 才停止扫描
@@ -663,8 +697,8 @@ delete from table ... where id = 1;
   - 3.2.1 对于第一个不满足条件的二级索引, 该二级索引的临键锁会退化为间隙锁
   - 3.2.2 因为满足条件的记录不存在, 所以不会对聚簇索引加记录锁
 
-- 非唯一索引 (二级索引) 范围查询: 对二级索引都是加临键锁, 「不会」退化为间隙锁或记录锁
-- 如果没有使用索引, 则是全表扫描, 会对每个聚簇索引加临键锁, 等价于加表锁, 效率很低
+- **非唯一索引 (二级索引) 范围查询**: 对二级索引都是加临键锁, 「不会」退化为间隙锁或记录锁
+- 如果**没有使用索引**, 则是全表扫描, 会对每个聚簇索引加临键锁, 等价于加表锁, 效率很低
 
 #### 插入意向锁
 
@@ -679,11 +713,31 @@ delete from table ... where id = 1;
 
 </Callout>
 
+### update 时没有使用索引
+
+update 时没有使用索引, 会走全表扫描, 所有行都会加行锁, 相当于锁全表
+
+### mysql 死锁
+
+- 死锁的 4 个必要条件: 互斥、占有且等待、非抢占 (不可剥夺)、循环等待; 如果死锁则该 4 个条件必然成立, 只要破坏任意一个条件死锁就不成立
+- 对于数据库, 有两种通过「打破循环等待条件」解除死锁的策略
+  1. 设置事务等待锁的超时时间 `innodb_lock_wait_timeout`: 一个事务的等待时间超过该值时, 就对该事务 rollback 回滚; 事务等待锁释放, 另一个事务就可以继续执行
+  2. 开启主动死锁检测 `innodb_deadlock_detect: on`, 主动死锁检测发现死锁后, rollback 回滚死锁链中的某一个事务, 使得其他事务可以继续执行
+  3. 业务角度, 可以使用唯一索引、幂等键
+
 ## undo log, redo log, binlog
 
-- undo log 回滚日志: InnoDB 存储引擎层生成的日志, 保证事务的原子性, 实现事务回滚和 MVCC 多版本并发控制
-- redo log 重做日志: InnoDB 存储引擎层生成的日志, 保证事务的持久性, 用于故障恢复 (crash-safe)
-- binlog 二进制日志: server 层生成的日志, 主要用于数据备份、主从复制
+### 执行一条 update 语句发生了什么
+
+1. 客户端通过连接器建立连接, 连接器校验客户端身份
+2. 解析器通过词法分析解析到 token 流: update 关键字、表名、字段等, 语法分析校验是否符合 mysql 语法, 构建抽象语法树
+3. 预处理器判断表和字段是否存在
+4. 优化器确定 sql 执行计划
+5. 执行器负责执行 sql, 定位到该行并 update
+
+- **undo log 回滚日志**: InnoDB 存储引擎层生成的日志, 保证事务的原子性, 实现事务回滚和 MVCC 多版本并发控制
+- **redo log 重做日志**: InnoDB 存储引擎层生成的日志, 保证事务的持久性, 用于故障恢复 (crash-safe)
+- **binlog 二进制日志**: server 层生成的日志, 主要用于数据备份、主从复制
 
 ### 为什么需要 undo log
 
@@ -820,6 +874,9 @@ mysql 引入 binlog 组提交机制 (group commit), 多事务场景下, 可以�
 ### redo log 组提交
 
 prepare 阶段不再执行多个事务的 redo log 刷盘, 推迟到 binlog 组提交的 flush 子阶段
+
+## Buffer pool
+##
 
 ## SQL
 
