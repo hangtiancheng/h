@@ -404,12 +404,12 @@ explain select count(*) from users;
 
 ```sql
 -- server 调用 InnoDB 的接口
--- 使用 InnoDB 的主键索引查询到第 0 到第 1000010 行数据
+-- 使用 InnoDB 的主键索引扫描第 1 到第 1000010 行数据
 -- 返回给 server: offset 非 0 时, 丢弃前 1000000 行数据
 select * from users order by id limit 1000000, 10;
 
 -- 先执行子查询 select id from users order by id limit 1 offset 1000000
--- 使用 InnoDB 的主键索引查询到第 1 到第 1000000 行数据
+-- 使用 InnoDB 的主键索引扫描第 1 到第 1000001 行数据
 -- 返回给 server, offset 非 0 时, 丢弃前 1000000 行数据, 只保留第 1000001 行数据的 ID (假设是 3000001)
 -- 再执行查询 select * from users where id >= (3000001) order by id limit 10;
 -- 使用 InnoDB 的主键索引, B+ 树快速定位到 id = 3000001 的行数据, 向后取 10 条数据
@@ -427,14 +427,21 @@ select * from users where id >= (select id from users order by id limit 1 offset
 -- 返回给 server: offset 非 0 时, 丢弃前 1000000 行数据
 select * from users order by username limit 1000000, 10;
 
--- 先执行子查询 select id from users order by username limit 10 offset 1000000
--- 使用 InnoDB 的主键索引查询到第 1 到第 1000010 行数据, 查询的是主键字段, 不需要回表查询
--- 返回给 server: offset 非 0 时, 丢弃前 1000000 行数据, 只保留第 1000001 到第 100010 行数据的 ID (假设是 3000001 到 3000010)
+-- 先执行子查询 select id from users order by username limit 10 offset 1000000 得到主键集合
+-- 使用 InnoDB 的二级索引查询到第 1 到第 1000010 行数据, 查询的是主键字段, 不需要回表查询
+-- 返回给 server: offset 非 0 时, 丢弃前 1000000 行数据, 只保留第 1000001 到第 1000010 行数据的 ID (假设是 3000001 到 3000010)
 -- 使用 InnoDB 的主键索引, B+ 树快速定位到 10 个 ID 的行数据, 10 次回表查询
 select * from users t1, (select id from users order by username limit 10 offset 1000000) t2 where t1.id = t2.id;
 ```
 
 #### 深度分页问题
+
+```sql
+-- 前提: id 递增, 并且知道上一页的最大 id
+select * from users where id > 1000000 order by id limit 10;
+-- 先执行子查询得到主键集合, 再进行回表查询
+select u.* from users u join (select id from users order by id limit 1000000, 10) t on u.id = t.id;
+```
 
 ## 事务
 
@@ -720,10 +727,9 @@ update 时没有使用索引, 会走全表扫描, 所有行都会加行锁, 相�
 ### mysql 死锁
 
 - 死锁的 4 个必要条件: 互斥、占有且等待、非抢占 (不可剥夺)、循环等待; 如果死锁则该 4 个条件必然成立, 只要破坏任意一个条件死锁就不成立
-- 对于数据库, 有两种通过「打破循环等待条件」解除死锁的策略
-  1. 设置事务等待锁的超时时间 `innodb_lock_wait_timeout`: 一个事务的等待时间超过该值时, 就对该事务 rollback 回滚; 事务等待锁释放, 另一个事务就可以继续执行
-  2. 开启主动死锁检测 `innodb_deadlock_detect: on`, 主动死锁检测发现死锁后, rollback 回滚死锁链中的某一个事务, 使得其他事务可以继续执行
-  3. 业务角度, 可以使用唯一索引、幂等键
+- 对于 mysql, 有两种解除死锁的策略
+  1. 设置事务 (例如 trx_a) 等待锁的超时时间 `innodb_lock_wait_timeout`: 一个事务的等待时间超过该值时, 默认只 rollback 回滚当前语句 (开启 `innodb_rollback_on_timeout` 时 rollback 回滚整个事务); 该语句释放锁后, 被该语句阻塞的事务 trx_a 就可以继续执行
+  2. 开启主动死锁检测 `innodb_deadlock_detect = on`, 主动死锁检测发现死锁后, rollback 回滚死锁链中的某一个事务, 使得其他事务可以继续执行
 
 ## undo log, redo log, binlog
 
@@ -731,7 +737,7 @@ update 时没有使用索引, 会走全表扫描, 所有行都会加行锁, 相�
 
 1. 客户端通过连接器建立连接, 连接器校验客户端身份
 2. sql 解析器通过词法分析解析为 token 流: update 关键字、表名、字段等, 语法分析校验是否符合 mysql 语法, 构建抽象语法树
-3. prepare 预处理阶段:
+3. 预处理器:
 
 - 检查 sql 查询语句中的表或者字段是否存在
 - 将 select \* 中的 \*, 替换为表中的所有字段名
@@ -767,24 +773,24 @@ update 时没有使用索引, 会走全表扫描, 所有行都会加行锁, 相�
 
 buffer pool 缓存的是页, mysql8.0 移除的查询缓存缓存的是 sql 结果
 
-mysql 启动时, 为 buffer pool 申请一块连续的内存空间, 按默认的 16KB 划分缓存页
+mysql 启动时, 为 buffer pool 申请内存空间, 按默认的 16KB 划分缓存页 (mysql8.0 按 chunk 分配, 默认 128MB)
 
 - 查询数据时
   - 如果 buffer pool 中有该数据的缓存页, 则直接读 buffer pool 中的数据
   - 否则从磁盘中读该页, 并将该页缓存到 buffer pool 中, 再返回数据 (即使查询 1 行, 也会缓存 1 页)
 - 更新数据时:
-  - 如果 buffer pool 中有该数据的缓存页, 则直接写 buffer pool 中的数据, 并将该缓存页标记为脏页 (page cache), 同时向 redo log 中写入本次更新; 为了减少磁盘 I/O 次数, 不会立刻将 page cache 刷新到磁盘, 而是由后台线程每隔 1s 将 page cache 刷新到磁盘 (刷盘)
+  - 如果 buffer pool 中有该数据的缓存页, 则直接写 buffer pool 中的数据, 并将该缓存页标记为脏页, 同时向 redo log 中写入本次更新; 为了减少磁盘 I/O 次数, 不会立刻将脏页刷新到磁盘, 而是由后台线程每隔 1s 将脏页刷新到磁盘 (刷盘)
   - 否则从磁盘中读该页, 并将该页缓存到 buffer pool 中, 再更新数据 (即使更新 1 行, 也会缓存 1 页)
 
 ### 为什么需要 redo log
 
-WAL (Write-Ahead Logging): 更新数据时, 先写 buffer pool 中的数据, 并将该缓存页标记为脏页 (page cache), 同时向 redo log 中写入本次更新; 为了减少磁盘 I/O 次数, 不会立刻将 page cache 刷新到磁盘, 而是由后台线程每隔 1s 将 page cache 刷新到磁盘 (刷盘)
+WAL (Write-Ahead Logging): 更新数据时, 先写 buffer pool 中的数据, 并将该缓存页标记为脏页, 同时向 redo log 中写入本次更新; 为了减少磁盘 I/O 次数, 不会立刻将脏页刷新到磁盘, 而是由后台线程每隔 1s 将脏页刷新到磁盘 (刷盘)
 
-故障时, 虽然 page cache 没有写入磁盘, 但是有 redo log, 可以使用 redo log 恢复数据
+故障时, 虽然脏页没有写入磁盘, 但是有 redo log, 可以使用 redo log 恢复数据
 
 #### redo log 需要写磁盘, 数据也需要写磁盘, 为什么需要 redo log
 
-- redo log 的写磁盘是追加写, 环状写入, 后面写的 redo log 会覆盖前面写的 redo log
+- redo log 的写磁盘是追加写, 环状写入, 后面写的 redo log 会覆盖已被 checkpoint 的旧 redo log
 - 数据的写磁盘需要先找到写入位置, 是随机 I/O
 
 #### 对比 undo log 回滚日志和 redo log 重做日志
@@ -794,14 +800,14 @@ WAL (Write-Ahead Logging): 更新数据时, 先写 buffer pool 中的数据, 并
 
 #### redo log 刷盘时机
 
-- 后台线程每隔 1s 将 page cache 刷新到磁盘
+- 后台线程每隔 1s 将 redo log buffer 刷新到磁盘
 - 每次事务提交时
 - mysql 正常关闭时
 - redo log buffer 使用量大于 1/2 时
 
 #### redo log 写满了怎么办
 
-redo log 写满时, mysql 更新操作会被「阻塞」先将 buffer pool 中的 page cache 刷新到磁盘, 擦除不必要的 redo log, 再继续执行更新操作
+redo log 写满时, mysql 更新操作会被「阻塞」先将 buffer pool 中的脏页刷新到磁盘, 擦除不必要的 redo log, 再继续执行更新操作
 
 ### 为什么需要 binlog
 
@@ -814,7 +820,7 @@ binlog 记录「所有的」表结构修改和表数据更新, 不记录查询�
 
 #### 被删库只能使用 binlog 恢复数据
 
-- redo log: 环状写入, 后面写的 redo log 会覆盖前面写的 redo log, 只记录未被刷入磁盘的数据, 不记录已刷入磁盘的数据
+- redo log: 环状写入, 后面写的 redo log 会覆盖已被 checkpoint 的旧 redo log; 未被 checkpoint 覆盖的变更仍保留在 redo log 中
 - binlog 是全量日志, 记录「所有的」表结构修改和表数据更新
 
 ### 为什么需要两阶段提交
@@ -883,13 +889,13 @@ prepare 阶段不再执行多个事务的 redo log 刷盘, 推迟到 binlog 组�
 
 InnoDB 存储引擎通过 buffer pool (内存缓存) 提高 MySQL 的读写性能
 
-mysql 启动时, 为 buffer pool 申请一块连续的内存空间, 按默认的 16KB 划分缓存页
+mysql 启动时, 为 buffer pool 申请内存空间, 按默认的 16KB 划分缓存页 (mysql8.0 按 chunk 分配, 默认 128MB)
 
 - 查询数据时
   - 如果 buffer pool 中有该数据的缓存页, 则直接读 buffer pool 中的数据
   - 否则从磁盘中读该页, 并将该页缓存到 buffer pool 中, 再返回数据 (即使查询 1 行, 也会缓存 1 页)
 - 更新数据时:
-  - 如果 buffer pool 中有该数据的缓存页, 则直接写 buffer pool 中的数据, 并将该缓存页标记为脏页 (page cache), 同时向 redo log 中写入本次更新; 为了减少磁盘 I/O 次数, 不会立刻将 page cache 刷新到磁盘, 而是由后台线程每隔 1s 将 page cache 刷新到磁盘 (刷盘)
+  - 如果 buffer pool 中有该数据的缓存页, 则直接写 buffer pool 中的数据, 并将该缓存页标记为脏页, 同时向 redo log 中写入本次更新; 为了减少磁盘 I/O 次数, 不会立刻将脏页刷新到磁盘, 而是由后台线程每隔 1s 将脏页刷新到磁盘 (刷盘)
   - 否则从磁盘中读该页, 并将该页缓存到 buffer pool 中, 再更新数据 (即使更新 1 行, 也会缓存 1 页)
 
 buffer pool 除了缓存索引页和数据页, 还缓存:
@@ -914,7 +920,7 @@ InnoDB 为每个缓存页创建一个控制块, 控制块信息包括:
 
 #### 空闲页管理
 
-buffer pool 是一块连续的内存空间, mysql 运行一段时间后, 这块连续的内存空间中的缓存页既有空闲页, 又有脏页
+buffer pool 是一块内存空间, mysql 运行一段时间后, 这块内存空间中的页既有空闲页, 也有干净页和脏页
 
 为了快速找到空闲页, free 链表 (空闲链表) 的节点是空闲页的控制块; 需要从磁盘中读数据页到 buffer pool 中时, 从 free 链表中取一个空闲页, 更新该缓存页对应的控制块信息, 最后将该缓存页对应的控制块从 free 链表中移除
 
@@ -949,7 +955,7 @@ select * from users where `name` like "%yukino%"
 
 #### 解决预读失效
 
-mysql 的改进 lru 算法: 将 lru 链表划分为 2 个区域, old 区域和 young 区域, old 区域占 lru 链表默认是 37%, 即 old 区域和 young 区域的比例默认是 63:37
+mysql 的改进 lru 算法: 将 lru 链表划分为 2 个区域, old 区域和 young 区域, old 区域默认占 lru 链表的 37%, 即 old 区域和 young 区域的比例默认是 37:63
 
 划分为 old 区域和 young 区域后, 预读的页插入到 old 区域的头部, 该页真正被访问时, 才将该页插入到 young 区域的头部; 如果预读的页一直未被访问, 则会从 old 区域中移除, 这样不会影响 young 区域中的热点数据页
 
@@ -994,15 +1000,15 @@ ls /var/lib/mysql/db0
 
 背景: 即使有 buffer pool, 查找某个数据页前, 需要查找 B+ 树索引, 时间复杂度 O(logN)
 
-自适应 hash 索引 (Adaptive Hash Index): 记录每个数据页的查询频率, 对于热点数据页, 以查询的值作为 key, 热点数据页的 buffer pool 中的地址作为 value, 构建 hash 表
+自适应 hash 索引 (Adaptive Hash Index): 根据索引页的访问频率, 为频繁访问的索引页构建 hash 表; 以搜索键和页号等信息作为 key, 索引页在 buffer pool 中的地址作为 value
 
 ### Change Buffer
 
-背景: 更新主键索引的数据页后, 需要更新二级索引页
+背景: 增删改非主键, 非唯一约束的二级索引列时, 需要更新对应的二级索引页
 
-change buffer 是 buffer pool 的一部分, 更新主键索引的数据页后, 需要更新二级索引页, 可以先将二级索引页写入到 change buffer, 等到磁盘中的二级索引页被读入到 buffer pool 中时, 再更新 buffer pool 和磁盘中的二级索引页, 以减少磁盘 IO, 提高写入性能
+change buffer 是 buffer pool 的一部分; 当非主键, 非唯一约束的二级索引页不在 buffer pool 中时, 可以先将对该二级索引页的变更操作记录到 change buffer, 等到该二级索引页被读入到 buffer pool 中时, 再将变更操作合并到 buffer pool 中的二级索引页, 并标记为脏页, 由后续的刷盘机制写回磁盘, 以减少磁盘 IO, 提高写入性能
 
-change buffer 只适用于非唯一约束的二级索引, 对于主键索引和唯一约束的二级索引, 更新时必须立刻判断是否存在唯一性冲突, 必须立刻将目标索引页读入到 buffer pool 中, 无法延迟更新, change buffer 不适用
+change buffer 只适用于非主键, 非唯一约束的二级索引, 对于主键索引和唯一约束的二级索引, 更新时必须立刻判断是否存在唯一性冲突, 必须立刻将目标索引页读入到 buffer pool 中, 无法延迟更新, change buffer 不适用
 
 ### server 层
 
@@ -1010,7 +1016,7 @@ server 层包括
 
 - 连接器
 - sql 解析器: 词法分析, 语法分析
-- prepare 预处理阶段:
+- 预处理器 (preprocessor):
   - 检查 sql 查询语句中的表或者字段是否存在
   - 将 select \* 中的 \*, 替换为表中的所有字段名
 - sql 优化器: 确定 sql 执行计划
@@ -1023,13 +1029,13 @@ binlog 记录「所有的」表结构修改和表数据更新, 不记录查询�
 ### mysql 查询流程
 
 1. InnoDB 先检查 buffer pool 中是否存在相应的索引页和数据页, 如果存在则直接返回 buffer pool 中的数据; 如果不存在则从磁盘中读取相应的索引页和数据页, 并加载到 buffer pool 中, 再返回数据
-2. 如果查询的数据是热点数据, 则会加入到自适应 hash 索引中以加速查询
+2. 如果索引页是热点页, 则会加入到自适应 hash 索引中以加速查询
 
 ### mysql 更新流程
 
-1. 先将数据写入到 buffer pool, 并记录相应的 undo log 日志
+1. 定位数据页, 记录相应的 undo log 日志, 再更新 buffer pool 中的数据页
 2. 将写操作记录到 redo log buffer 中, 周期性的将 redo log 刷新到磁盘
-3. 对于非唯一约束的二级索引的更新, 先将二级索引页写入到 change buffer, 等到磁盘中的二级索引页被读入到 buffer pool 中时, 再更新 buffer pool 和磁盘中的二级索引页, 以减少磁盘 IO, 提高写入性能
+3. 对于非主键, 非唯一约束的二级索引, 如果目标二级索引页不在 buffer pool 中, 先将对该二级索引页的变更操作记录到 change buffer, 等到该二级索引页被读入到 buffer pool 中时, 再将变更操作合并到 buffer pool 中的二级索引页, 并标记为脏页, 由后续的刷盘机制写回磁盘, 以减少磁盘 IO, 提高写入性能
 4. 所有的变更操作都会被记录到 binlog, binlog 是 server 层生成的日志, 主要用于数据备份、主从复制
 
 ## sql

@@ -190,6 +190,7 @@ zrange <key> <start> <stop> rev [withscores] # 逆序返回
 
 - 都是内存数据库, 支持 lru 缓存
 - 都有过期策略
+- 都是高性能
 
 不同
 
@@ -566,8 +567,6 @@ sequenceDiagram
 
 ## redis 实战
 
-### redis 实现分布式锁
-
 ### 缓存热点数据
 
 根据最近访问时间排序, 过滤不经常访问的数据
@@ -627,3 +626,5 @@ get name        # opus
 
 </Tab>
 </Tabs>
+
+### 使用 redis 实现分布式锁
