@@ -72,7 +72,7 @@ show variables like 'datadir';
 ls /var/lib/mysql/db0
 # db.opt    -- 数据库的默认字符集
 # users.frm -- users 表结构文件, mysql8.0 已移除
-# users.ibd -- users 表空间文件, 存储表数据
+# users.ibd -- users 表空间文件, 存储表数据, 分为数据页, 索引页
 ```
 
 ### 表空间、段、区、页、行
@@ -223,7 +223,7 @@ create index <index_name> on <table_name> (<column_name1>, <column_name2>, ...);
 
 使用联合索引时, 存在最左匹配原则, 例如创建一个 (a, b, c) 的联合索引, 则联合索引的 B+ 树先按 a 排序, a 相同时再按 b 排序, b 相同时再按 c 排序
 
-以下的条件查询, 联合索引有效; 因为有查询优化器, 所以 a 字段在 where 子句中的顺序不重要
+以下的条件查询, 联合索引有效; 因为有 sql 优化器, 所以 a 字段在 where 子句中的顺序不重要
 
 - where a = 1
 - where a = 1 and b = 2
@@ -730,9 +730,13 @@ update 时没有使用索引, 会走全表扫描, 所有行都会加行锁, 相�
 ### 执行一条 update 语句发生了什么
 
 1. 客户端通过连接器建立连接, 连接器校验客户端身份
-2. 解析器通过词法分析解析到 token 流: update 关键字、表名、字段等, 语法分析校验是否符合 mysql 语法, 构建抽象语法树
-3. 预处理器判断表和字段是否存在
-4. 优化器确定 sql 执行计划
+2. sql 解析器通过词法分析解析为 token 流: update 关键字、表名、字段等, 语法分析校验是否符合 mysql 语法, 构建抽象语法树
+3. prepare 预处理阶段:
+
+- 检查 sql 查询语句中的表或者字段是否存在
+- 将 select \* 中的 \*, 替换为表中的所有字段名
+
+4. sql 优化器确定 sql 执行计划
 5. 执行器负责执行 sql, 定位到该行并 update
 
 - **undo log 回滚日志**: InnoDB 存储引擎层生成的日志, 保证事务的原子性, 实现事务回滚和 MVCC 多版本并发控制
@@ -767,10 +771,10 @@ mysql 启动时, 为 buffer pool 申请一块连续的内存空间, 按默认的
 
 - 查询数据时
   - 如果 buffer pool 中有该数据的缓存页, 则直接读 buffer pool 中的数据
-  - 否则从磁盘中读该数据页, 并将数据页缓存到 buffer pool 中, 再返回数据 (即使查询 1 行, 也会缓存 1 页)
+  - 否则从磁盘中读该页, 并将该页缓存到 buffer pool 中, 再返回数据 (即使查询 1 行, 也会缓存 1 页)
 - 更新数据时:
   - 如果 buffer pool 中有该数据的缓存页, 则直接写 buffer pool 中的数据, 并将该缓存页标记为脏页 (page cache), 同时向 redo log 中写入本次更新; 为了减少磁盘 I/O 次数, 不会立刻将 page cache 刷新到磁盘, 而是由后台线程每隔 1s 将 page cache 刷新到磁盘 (刷盘)
-  - 否则从磁盘中读该数据页, 并将数据页缓存到 buffer pool 中, 再更新数据 (即使更新 1 行, 也会缓存 1 页)
+  - 否则从磁盘中读该页, 并将该页缓存到 buffer pool 中, 再更新数据 (即使更新 1 行, 也会缓存 1 页)
 
 ### 为什么需要 redo log
 
@@ -780,7 +784,7 @@ WAL (Write-Ahead Logging): 更新数据时, 先写 buffer pool 中的数据, 并
 
 #### redo log 需要写磁盘, 数据也需要写磁盘, 为什么需要 redo log
 
-- redo log 的写磁盘是追加写
+- redo log 的写磁盘是追加写, 环状写入, 后面写的 redo log 会覆盖前面写的 redo log
 - 数据的写磁盘需要先找到写入位置, 是随机 I/O
 
 #### 对比 undo log 回滚日志和 redo log 重做日志
@@ -810,7 +814,7 @@ binlog 记录「所有的」表结构修改和表数据更新, 不记录查询�
 
 #### 被删库只能使用 binlog 恢复数据
 
-- redo log 边写边擦除, 只记录未被刷入磁盘的数据, 不记录已刷入磁盘的数据
+- redo log: 环状写入, 后面写的 redo log 会覆盖前面写的 redo log, 只记录未被刷入磁盘的数据, 不记录已刷入磁盘的数据
 - binlog 是全量日志, 记录「所有的」表结构修改和表数据更新
 
 ### 为什么需要两阶段提交
@@ -875,10 +879,160 @@ mysql 引入 binlog 组提交机制 (group commit), 多事务场景下, 可以�
 
 prepare 阶段不再执行多个事务的 redo log 刷盘, 推迟到 binlog 组提交的 flush 子阶段
 
-## Buffer pool
-##
+## Buffer Pool
 
-## SQL
+InnoDB 存储引擎通过 buffer pool (内存缓存) 提高 MySQL 的读写性能
+
+mysql 启动时, 为 buffer pool 申请一块连续的内存空间, 按默认的 16KB 划分缓存页
+
+- 查询数据时
+  - 如果 buffer pool 中有该数据的缓存页, 则直接读 buffer pool 中的数据
+  - 否则从磁盘中读该页, 并将该页缓存到 buffer pool 中, 再返回数据 (即使查询 1 行, 也会缓存 1 页)
+- 更新数据时:
+  - 如果 buffer pool 中有该数据的缓存页, 则直接写 buffer pool 中的数据, 并将该缓存页标记为脏页 (page cache), 同时向 redo log 中写入本次更新; 为了减少磁盘 I/O 次数, 不会立刻将 page cache 刷新到磁盘, 而是由后台线程每隔 1s 将 page cache 刷新到磁盘 (刷盘)
+  - 否则从磁盘中读该页, 并将该页缓存到 buffer pool 中, 再更新数据 (即使更新 1 行, 也会缓存 1 页)
+
+buffer pool 除了缓存索引页和数据页, 还缓存:
+
+- undo log 页
+- 插入缓存
+- 自适应 hash 索引
+- 锁信息
+
+InnoDB 为每个缓存页创建一个控制块, 控制块信息包括:
+
+- 页号
+- 缓存页地址
+- 表空间
+- 链表节点
+
+### 管理 Buffer Pool
+
+- free page: 空闲页, 空闲页的控制块位于 free 链表 (空闲链表)
+- clean page: 干净页, 干净页的控制块位于改进的 lru 链表
+- dirty page: 脏页, 脏页的控制块同时位于改进的 lru 链表和 flush 链表
+
+#### 空闲页管理
+
+buffer pool 是一块连续的内存空间, mysql 运行一段时间后, 这块连续的内存空间中的缓存页既有空闲页, 又有脏页
+
+为了快速找到空闲页, free 链表 (空闲链表) 的节点是空闲页的控制块; 需要从磁盘中读数据页到 buffer pool 中时, 从 free 链表中取一个空闲页, 更新该缓存页对应的控制块信息, 最后将该缓存页对应的控制块从 free 链表中移除
+
+#### 脏页管理
+
+buffer pool 可以提高读性能, 也可以提高写性能; 更新数据时, 不需要等待写磁盘, 而是将 buffer pool 中对应的缓存页标记为脏页; 为了快速找到脏页, flush 链表的节点是脏页的控制块, 后台线程周期性的遍历 flush 链表, 将脏页刷新到磁盘
+
+#### mysql 的预读机制
+
+- 空间局部性: 靠近当前被访问数据的数据, 未来很大概率也会被访问到
+- 根据空间局部性, mysql 缓存数据页时, 会提前加载该页相邻的数据页, 目的是减少磁盘 IO
+
+#### 改进的 lru 算法
+
+简单的 lru 算法
+
+- 访问的页在 buffer pool 中, 将该页对应的 lru 链表节点移动到链表的头部
+- 访问的页不在 buffer pool 中, 将该页缓存到 buffer pool, 将该页对应的 lru 链表节点移动到链表的头部; 如果 lru 链表满, 则淘汰 lru 链表尾部的节点
+
+简单的 lru 算法无法避免:
+
+- **预读失效**: 根据空间局部性, mysql 缓存数据页时, 会提前加载该页相邻的数据页, 目的是减少磁盘 IO; 预读失效: 提前加载的数据页未被访问
+  -** buffer pool 污染**: 某条 sql 语句**扫描**到大量数据时, 会淘汰 buffer pool 中的大量缓存页, 导致大量热点数据页被淘汰, 等到热点数据页再次被访问时, 缓存未命中会导致大量的磁盘 IO, 导致 mysql 性能下降
+
+不仅是查询语句查询到大量结果集时才会导致 buffer pool 污染, 例如
+
+```sql
+select * from users where `name` like "%yukino%"
+```
+
+该查询会导致索引失效 (对 name 字段创建索引, 对索引列使用「左模糊匹配」`like '%xxx'` 或「左右模糊匹配」`like '%xxx%'`, 会导致索引失效), 退化为全表扫描; 全表扫描会导致 buffer pool 的 young 区域污染
+
+#### 解决预读失效
+
+mysql 的改进 lru 算法: 将 lru 链表划分为 2 个区域, old 区域和 young 区域, old 区域占 lru 链表默认是 37%, 即 old 区域和 young 区域的比例默认是 63:37
+
+划分为 old 区域和 young 区域后, 预读的页插入到 old 区域的头部, 该页真正被访问时, 才将该页插入到 young 区域的头部; 如果预读的页一直未被访问, 则会从 old 区域中移除, 这样不会影响 young 区域中的热点数据页
+
+#### 解决 buffer pool 污染
+
+如果预读的页插入到 old 区域的头部, 该页真正被访问时, 就将该页插入到 young 区域的头部; 则例如全表扫描会导致 buffer pool 的 young 区域污染
+
+提高进入 young 区域的门槛
+
+1. 该页真正被访问时
+2. 该页在 old 区域停留时间超过 1s
+
+#### young 区域的优化
+
+为了防止 young 区域的节点频繁移动到链表的头部, young 区域前 1/4 的节点被访问不会移动到链表的头部, 只有后 3/4 的节点被访问才会移动到链表的头部
+
+### 脏页刷盘时机
+
+#### 脏页还未刷新到磁盘时, mysql 宕机, 会导致数据丢失吗?
+
+不会, InnoDB 使用 Write Ahead Log: 先写日志, 再写磁盘数据; 通过 redo log 重做日志使得 mysql 拥有故障恢复能力
+
+#### 脏页刷盘时机
+
+1. redo log 重做日志满时, 会触发脏页刷新到磁盘
+2. buffer pool 空间不足时, 会淘汰部分缓存页, 如果淘汰的是脏页, 则会先将脏页刷新到磁盘
+3. mysql 空闲时, 后台线程周期性的遍历 flush 链表, 将脏页刷新到磁盘
+4. mysql 正常退出前, 会将所有的脏页刷新到磁盘
+
+开启 mysql 的慢查询日志后, 如果发现偶尔有一些慢 sql, 可能是脏页刷新到磁盘导致的磁盘 IO 开销, 可以考虑增大 buffer pool 空间或者增大 redo log 日志大小
+
+## mysql 架构
+
+```shell
+ls /var/lib/mysql/db0
+# db.opt    -- 数据库的默认字符集
+# users.frm -- users 表结构文件, mysql8.0 已移除
+# users.ibd -- users 表空间文件, 存储表数据, 分为数据页, 索引页
+```
+
+### 自适应 hash 索引
+
+背景: 即使有 buffer pool, 查找某个数据页前, 需要查找 B+ 树索引, 时间复杂度 O(logN)
+
+自适应 hash 索引 (Adaptive Hash Index): 记录每个数据页的查询频率, 对于热点数据页, 以查询的值作为 key, 热点数据页的 buffer pool 中的地址作为 value, 构建 hash 表
+
+### Change Buffer
+
+背景: 更新主键索引的数据页后, 需要更新二级索引页
+
+change buffer 是 buffer pool 的一部分, 更新主键索引的数据页后, 需要更新二级索引页, 可以先将二级索引页写入到 change buffer, 等到磁盘中的二级索引页被读入到 buffer pool 中时, 再更新 buffer pool 和磁盘中的二级索引页, 以减少磁盘 IO, 提高写入性能
+
+change buffer 只适用于非唯一约束的二级索引, 对于主键索引和唯一约束的二级索引, 更新时必须立刻判断是否存在唯一性冲突, 必须立刻将目标索引页读入到 buffer pool 中, 无法延迟更新, change buffer 不适用
+
+### server 层
+
+server 层包括
+
+- 连接器
+- sql 解析器: 词法分析, 语法分析
+- prepare 预处理阶段:
+  - 检查 sql 查询语句中的表或者字段是否存在
+  - 将 select \* 中的 \*, 替换为表中的所有字段名
+- sql 优化器: 确定 sql 执行计划
+- sql 执行器: 负责执行 sql, 根据 sql 执行计划调用 InnoDB 的接口
+
+### mysql 主从架构
+
+binlog 记录「所有的」表结构修改和表数据更新, 不记录查询操作; 即记录所有的变更操作, 主从架构中, binlog 会被复制到从库; 主库负责写流量, 从库负责读流量
+
+### mysql 查询流程
+
+1. InnoDB 先检查 buffer pool 中是否存在相应的索引页和数据页, 如果存在则直接返回 buffer pool 中的数据; 如果不存在则从磁盘中读取相应的索引页和数据页, 并加载到 buffer pool 中, 再返回数据
+2. 如果查询的数据是热点数据, 则会加入到自适应 hash 索引中以加速查询
+
+### mysql 更新流程
+
+1. 先将数据写入到 buffer pool, 并记录相应的 undo log 日志
+2. 将写操作记录到 redo log buffer 中, 周期性的将 redo log 刷新到磁盘
+3. 对于非唯一约束的二级索引的更新, 先将二级索引页写入到 change buffer, 等到磁盘中的二级索引页被读入到 buffer pool 中时, 再更新 buffer pool 和磁盘中的二级索引页, 以减少磁盘 IO, 提高写入性能
+4. 所有的变更操作都会被记录到 binlog, binlog 是 server 层生成的日志, 主要用于数据备份、主从复制
+
+## sql
 
 ### 创建表, 修改表
 
@@ -1638,7 +1792,7 @@ const sql = `SELECT username, id, email FROM member WHERE username LIKE '%${name
 </Tab>
 </Tabs>
 
-## 使用 MySQL 实现可重入锁
+## 使用 sql 实现可重入锁
 
 可以使用一张锁表, 记录「锁名、持有者、重入次数」, 再通过事务和 `SELECT ... FROM UPDATE` 保证加锁、解锁不会被并发请求打乱
 
