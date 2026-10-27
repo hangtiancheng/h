@@ -807,15 +807,18 @@ async function delLargeSortedSet(client, largeSortedSetKey) {
 async function main() {
   const client = createClient({
     socket: {
-      host: process.env.REDIS_HOST || 'redis-host1',
+      host: process.env.REDIS_HOST || "redis-host1",
       port: Number(process.env.REDIS_PORT || 6379),
     },
   });
-  client.on('error', (err) => console.error('redis error:', err));
+  client.on("error", (err) => console.error("redis error:", err));
   await client.connect();
 
   try {
-    const rounds = await delLargeSortedSet(client, process.env.REDIS_KEY || 'xxx');
+    const rounds = await delLargeSortedSet(
+      client,
+      process.env.REDIS_KEY || "xxx",
+    );
     console.log(`cleared in ${rounds} rounds`);
   } finally {
     await client.quit();
