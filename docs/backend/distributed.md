@@ -185,7 +185,77 @@ for resp := range wch {
    - 库存服务: 减商家库存
    - 账户服务: 减消费者余额, 增商家余额
 2. 分库分表
-3. 尽量不用强一致性的分布式事务 (例如传统的两阶段提交) 会严重影响性能, 而是使用消息队列 + 本地消息表, 或者重试机制, 实现最终一致性
+3. 尽量不用强一致性的分布式事务 (例如传统的两阶段提交) 会严重影响性能, 而是使用消息表 + 消息队列, 或者重试机制, 实现最终一致性
+
+### 分布式事务的解决方案
+
+| 方案              | 一致性     | 适用场景               |
+| ----------------- | ---------- | ---------------------- |
+| 2PC 两阶段提交    | 强一致性   | mysql 数据库           |
+| 3PC 三阶段提交    | 强一致性   | 减少阻塞的强一致性场景 |
+| TCC               | 最终一致性 | 库存, 余额             |
+| Saga              | 最终一致性 | 订单, 铁路飞机票, 酒店 |
+| 消息表 + 消息队列 | 最终一致性 | 发布订阅架构, 异步通知 |
+
+- 2PC 两阶段提交: 准备阶段, 统一提交或回滚阶段
+- 3PC 三阶段提交: 准备阶段, 中间阶段 + 超时处理, 统一提交或回滚阶段
+- TCC: 将分布式事务拆分为 Try/Confirm/Cancel 3 个阶段, 业务实现这 3 个接口
+  - Try: 将可用库存冻结为预留库存 (其他实例不能扣减)
+  - Confirm: 扣减预留库存
+  - Cancel: 解冻预留库存
+- Saga: 没有冻结阶段, 直接执行业务; 如果某一步失败则执行反向补偿逻辑, 反向补偿失败时重试, 告警等
+
+```sql
+create table goods_stock (
+  id bigint primary key auto_increment,
+  goods_id bigint,
+  available_stock int not null default 0,
+  reserved_stock int not null default 0
+  unique key uk_goods (goods_id)
+)
+```
+
+Try: 将可用库存冻结为预留库存 (其他实例不能扣减)
+
+```sql
+update goods_stock
+set available_stock - #{num},
+    reserved_stock = reserved_stock + #{num}
+where goods_id = #{goodsId} and available_stock >= #{num};
+```
+
+TCC 事务控制表
+
+status: trying | confirming | cancelling | confirm | cancelled
+
+`XID (全局事务 ID) | biz_type | status | goods_id | num | create_time`
+
+Confirm: 扣减预留库存
+
+```sql
+update goods_stock
+set reserved_stock = reserved_stock - #{num}
+where goods_id = #{goodsId} and reserved_stock >= #{num};
+```
+
+Cancel: 解冻预留库存
+
+```sql
+update goods_stock
+set reserved_stock = reserved_stock - #{num},
+    available_stock = available_stock + #{num}
+where goods_id = #{goodsId} and reserved_stock >= #{num};
+```
+
+### TCC 的幂等, 空回滚和悬挂
+
+背景: 网络请求可能超时, 重试也可能超时, 不能假设 Try/Confirm/Cancel 只执行 1 次, 并且严格按序到达
+
+1. 幂等: Confirm 扣库存成功, 但响应丢失, 协调者因为超时重试 Confirm, 但是重试 Confirm 不能再次扣库存: 使用 TCC **事务控制表**记录事务的状态, 事务状态更新和库存扣减需要在同一个本地事务中原子执行
+2. 空回滚: Try 未执行, 协调者因为超时发送 Cancel 请求; 此时库存未被冻结, Cancel 不能凭空加库存
+3. 悬挂: Cancel 执行后, 迟到的 Try 请求到达并冻结库存, 但后续可能没有 Confirm 或 Cancel, 导致库存一直被冻结: Try 发现事务状态是 cancelled 时, 应该拒绝执行
+
+### 消息表 + 消息队列
 
 ```
 数据库事务提交, 支付状态更新
@@ -197,16 +267,7 @@ sendMessage("支付成功"); // 数据库未更新但是消息已发送
 数据库事务回滚, 支付状态未更新
 ```
 
-- 订单表和消息表在同一个数据库, 可以共用一个事务; 同一个事务中, 同时更新订单表和消息表, 同时成功或失败
-- 后台任务定时扫描状态为等待发送的记录, 发送到 MQ
-- 收到 MQ 的可靠确认后 (broker ACK), 将状态更新为已发送的记录, 如果失败则指数退避重试
-
-### 分布式事务的解决方案
-
-| 方案           | 一致性     | 性能 | 复杂度 | 适用场景               |
-| -------------- | ---------- | ---- | ------ | ---------------------- |
-| 2PC 两阶段提交 | 强一致性   | 低   | 中     | 传统数据库             |
-| 3PC 三阶段提交 | 强一致性   | 低   | 高     | 减少阻塞的强一致性场景 |
-| TCC            | 最终一致性 | 高   | 高     | 高并发业务             |
-| 消息队列       | 最终一致性 | 中   | 高     | 发布订阅价架构         |
-| 本地消息表     | 最终一致性 | 中   | 低     | 异步通知               |
+- 对于支付服务, 数据库中有订单表和消息表, 本地事务中同时更新订单表和消息表: 更新支付状态, 插入一条状态为等待发送的消息, 包括: 消息 ID, 订单号和消息内容等
+- 后台线程定时扫描消息表中, 状态为等待发送的消息, 发送到 MQ
+- 收到 MQ 的可靠确认后 (broker ACK), 将消息的状态更新为已发送, 如果失败则指数退避重试
+- 订单服务收到消息后, 本地事务中同时做消息去重和订单状态更新, 订单状态更新成功后确认消费
