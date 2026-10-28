@@ -317,7 +317,7 @@ AOF 重写时, 如果主进程修改内存中的数据, 则会发生「写时复
 - AOF 日志是文本文件, 故障恢复时较慢, 需要执行 AOF 日志中的命令
 - rdb 快照是二进制文件, 故障恢复时较快, 只需要将 rdb 快照读入内存
 
-redis 提供 save 和 bgsave 两个命令以生成 rdb 快照
+redis 提供 save 和 bgsave 两条命令以生成 rdb 快照
 
 - save: 在主线程生成 rdb 文件, 会阻塞主线程
 - bgsave: fork 子进程生成 rdb 文件, 不会阻塞主线程
@@ -652,9 +652,9 @@ rdb dump.rdb -c memory --bytes 10240 -f redis.csv
 
 #### 分批删除
 
-- 对于删除大 hash, 使用 hscan 命令, 每批扫描 100 个 key, 再使用 hdel 命令, 每批删除 100 个 kv
+- 对于删除大 hash, 使用 hscan 命令, 每批扫描 100 个 key, 再使用 hdel 命令, 每批删除扫描到的 100 个 kv
 - 对于删除大 list, 使用 ltrim 命令, 每批删除最右的 100 个元素
-- 对于删除大 set, 使用 sscan 命令, 每批扫描 100 个元素, 再使用 srem 命令, 每批删除 100 个元素
+- 对于删除大 set, 使用 sscan 命令, 每批扫描 100 个元素, 再使用 srem 命令, 每批删除扫描到的 100 个元素
 - 对于删除大 zset (sorted set), 使用 zremrangebyrank 命令, 每批删除 rank 最小的 100 个元素
 
 <Tabs>
@@ -831,11 +831,24 @@ async function main() {
 
 #### 异步删除
 
-使用 unlink 命令代替 del 命令, 实现异步删除
+使用 unlink 命令代替 del 命令, 实现异步线程中的异步删除
+
+除了主动调用 unlink 命令实现异步删除外, 还可以配置相关参数, 满足某些条件时自动异步删除
+
+```bash
+# redis 运行内存超过 max-memory 时, 是否开启 lazy free 机制删除
+lazyfree-lazy-eviction no
+# 有过期时间的键值, 过期后是否开启 lazy free 机制删除
+lazyfree-lazy-expire no
+# 某些命令处理已存在的键时, 有隐式的删除操作: 例如 rename 命令, 目标键已存在时, redis 会先删除目标键, 如果目标键是一个 bigkey, 则会导致阻塞; 该配置表示此类场景是否开启 lazy free 机制删除
+lazyfree-lazy-server-del no
+# slave (从节点) 进行全量数据同步, 加载 master (主节点) 的 rdb 快照前, 会执行 flushall 命令清空 slave 的数据, 该配置表示此时是否开启 lazy free 机制删除
+slave-lazy-flush no
+```
 
 ### redis 管道
 
-redis 管道是客户端的批量发送/接收机制: 客户端一次性发送多个命令以减少 rtt, redis 按顺序执行命令并返回多个执行结果
+redis 管道是客户端的批量发送/接收机制: 客户端一次性发送多条命令以减少 rtt, redis 按顺序执行命令并返回多个执行结果; 可以解决每条命令执行时的等待
 
 ### redis 事务
 
