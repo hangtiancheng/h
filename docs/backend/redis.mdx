@@ -836,19 +836,19 @@ async function main() {
 除了主动调用 unlink 命令实现异步删除外, 还可以配置相关参数, 满足某些条件时自动异步删除
 
 ```bash
-# redis 运行内存超过 max-memory 时, 是否开启 lazy free 机制删除
+# redis 运行内存超过 maxmemory 时, 是否开启 lazy free 机制删除
 lazyfree-lazy-eviction no
 # 有过期时间的键值, 过期后是否开启 lazy free 机制删除
 lazyfree-lazy-expire no
 # 某些命令处理已存在的键时, 有隐式的删除操作: 例如 rename 命令, 目标键已存在时, redis 会先删除目标键, 如果目标键是一个 bigkey, 则会导致阻塞; 该配置表示此类场景是否开启 lazy free 机制删除
 lazyfree-lazy-server-del no
-# slave (从节点) 进行全量数据同步, 加载 master (主节点) 的 rdb 快照前, 会执行 flushall 命令清空 slave 的数据, 该配置表示此时是否开启 lazy free 机制删除
-slave-lazy-flush no
+# replica (副本节点) 进行全量数据同步, 加载 master (主节点) 的 rdb 快照前, 会执行 flushall 命令清空 replica 的数据, 该配置表示此时是否开启 lazy free 机制删除
+replica-lazy-flush no
 ```
 
 ### redis 管道
 
-redis 管道是客户端的批量发送/接收机制: 客户端一次性发送多条命令以减少 rtt, redis 按顺序执行命令并返回多个执行结果; 可以解决每条命令执行时的等待
+redis 管道是客户端的批量发送/接收机制: 客户端一次性发送多条命令以减少 rtt, redis 按顺序执行命令并返回多个执行结果; 可以消除客户端逐条等待响应的 rtt
 
 ### redis 事务
 
@@ -884,3 +884,30 @@ get name        # opus
 </Tabs>
 
 ### 使用 redis 实现分布式锁
+
+redis 可以被多个客户端读写, 读写性能高, 可以保存分布式锁
+
+- 如果 key 不存在, 则表示加锁成功
+- 如果 key 存在, 则表示加锁失败
+
+```lua
+-- NX: 只有 lock_key 不存在时, 才执行 set 操作
+-- PX: 过期时间 10s
+-- SET lock_key unique_value NX PX 10000
+
+-- Acquire Script
+redis.call("SET", KEYS[1], ARGV[1], "NX", "PX", ARGV[2])
+```
+
+- 加锁包括: Get 读锁变量、Compare 检查锁变量和 Set 写锁变量, 需要使用原子操作 (NX)
+- 锁变量需要设置过期时间, 防止锁的持有者崩溃, 导致锁无法被释放 (EX/PX)
+- 锁变量的值是客户端的唯一标识, 防止锁被其他客户端错误释放
+
+```lua
+-- Release Script
+if redis.call("GET", KEYS[1]) == ARGV[1] then
+  return redis.call("DEL", KEYS[1])
+else
+  return 0
+end
+```
