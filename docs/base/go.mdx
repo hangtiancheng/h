@@ -848,10 +848,10 @@ runtime_Semacquire                    runtime_Semrelease
 
 自旋的目的: 以极小的 CPU 空转开销为代价, 避免一次 goroutine 阻塞/唤醒的上下文切换, 锁竞争不激烈、锁占用时间 (临界区) 极短的场景下节约资源
 
-### mutex 被一个 goroutine G1 占有, 其他 goroutine 等待 G1 释放 mutex, G1 释放 mutex 后, 哪个等待中的 goroutine 可以优先占有 mutex
+### mutex 被一个 goroutine G1 持有, 其他 goroutine 等待 G1 释放 mutex, G1 释放 mutex 后, 哪个等待中的 goroutine 可以优先持有 mutex
 
 1. 正常模式 Normal Mode 下, 锁被释放时, 等待队列中的第一个 goroutine 会被唤醒, 但是需要和新来的、自旋中的 goroutine 竞争锁
-2. 饥饿模式 Starvation Mode 下, 锁被释放时, 等待队列中的第一个 goroutine 会被唤醒并直接占有锁, 新来的 goroutine 不会自旋, 直接加入 goroutine 等待队列
+2. 饥饿模式 Starvation Mode 下, 锁被释放时, 等待队列中的第一个 goroutine 会被唤醒并直持有锁, 新来的 goroutine 不会自旋, 直接加入 goroutine 等待队列
 
 ```go
 // cSpell: words getg runq runqempty
@@ -1191,7 +1191,7 @@ func main() {
 	os.WriteFile(path, nil, 0o644)
 	defer os.Remove(path)
 
-	// goroutine 0 先占有文件锁 3s
+	// goroutine 0 先持有文件锁 3s
 	go func() {
 		f, _ := os.OpenFile(path, os.O_RDONLY, 0)
 		syscall.Flock(int(f.Fd()), syscall.LOCK_EX)
