@@ -9,13 +9,13 @@
       "inputs": [
         "tsconfig.json",
         "tsconfig.build.json",
-        "chucks/**/*.ts",
-        "chucks/**/*.js"
+        "chunks/**/*.ts",
+        "chunks/**/*.js"
       ],
       "outputs": ["dist/**"]
     },
     "build:go": {
-      "inputs": ["go.mod", "go.sum", "chucks/**/*.go"],
+      "inputs": ["go.mod", "go.sum", "chunks/**/*.go"],
       "outputs": []
     },
     "dev": {

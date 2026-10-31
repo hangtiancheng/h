@@ -28,7 +28,7 @@ Built with [Rspress](https://rspress.rs/), deployed to GitHub Pages at
 | **Backend**  | MySQL, Redis                                                                                    |
 | **QA**       | Interview-style question banks                                                                  |
 
-The `chucks/` directory additionally holds an **algorithm notebook** — curated
+The `chunks/` directory additionally holds an **algorithm notebook** — curated
 solutions in Go, JavaScript, and TypeScript for dynamic programming, graphs,
 heaps, and other classic problem families — with an ACM-style stdin/stdout
 harness.
@@ -61,7 +61,7 @@ h/                               # Rspress site
 ├── theme/                       # MDX component wrappers & global styles
 │                                # (brand color, fonts, resume frame)
 ├── rspress.config.ts            # site config (base /h, llms, sitemap, mermaid)
-└── chucks/                      # algorithm notebook (Go / JS / TS)
+└── chunks/                      # algorithm notebook (Go / JS / TS)
 ```
 
 ## Machine-readable outputs

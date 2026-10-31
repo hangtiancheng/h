@@ -10,7 +10,14 @@
     "rootDir": "./",
     "sourceMap": true
   },
-  "exclude": ["node_modules", "dist", "chucks/**/*.test.ts"],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "chunks/**/*.test.ts"
+  ],
   "extends": "./tsconfig.json",
-  "include": ["chucks/**/*.ts", "chucks/**/*.js"]
+  "include": [
+    "chunks/**/*.ts",
+    "chunks/**/*.js"
+  ]
 }

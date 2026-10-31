@@ -12,7 +12,7 @@ export default defineConfig(
       "**/node_modules/**",
       "out/**",
       "doc_build/**",
-      "chucks/**",
+      "chunks/**",
     ],
   },
   eslint.configs.recommended,

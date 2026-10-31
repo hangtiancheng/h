@@ -1,4 +1,4 @@
-// Go port of chucks/index.ts: the Node worker_threads pool becomes a goroutine
+// Go port of chunks/index.ts: the Node worker_threads pool becomes a goroutine
 // pool. Worker "processes" are goroutines, postMessage is a send on the
 // worker's job channel, and the "message"/"error" events are the task's result
 // channel.
