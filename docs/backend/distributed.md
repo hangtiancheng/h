@@ -91,7 +91,7 @@ lease_id=$(etcdctl lease grant 10 --write-out=json | jq -r '.ID')
 # Then:    写入 client-id 并绑定租约
 # Else:    加锁失败
 etcdctl txn --interactive
-mod("lock/key") = "0"
+create("lock/key") = "0"
 
 put lock/key "client-id" --lease=$lease_id
 ```
@@ -126,7 +126,7 @@ for resp := range wch {
 
 ## 分布式 ID
 
-多节点、多数据库环境下, 生成一个全局唯一、并且且最好有序的标识
+多节点、多数据库环境下, 生成一个全局唯一、并且最好有序的标识
 
 场景:
 
@@ -210,7 +210,7 @@ create table goods_stock (
   id bigint primary key auto_increment,
   goods_id bigint,
   available_stock int not null default 0,
-  reserved_stock int not null default 0
+  reserved_stock int not null default 0,
   unique key uk_goods (goods_id)
 )
 ```
@@ -219,7 +219,7 @@ Try: 将可用库存冻结为预留库存 (其他实例不能扣减)
 
 ```sql
 update goods_stock
-set available_stock - #{num},
+set available_stock = available_stock - #{num},
     reserved_stock = reserved_stock + #{num}
 where goods_id = #{goodsId} and available_stock >= #{num};
 ```
@@ -317,7 +317,7 @@ rpc 调用超时, 不代表服务端执行失败; 例如订单服务调用支付
 
 - 注册中心负责: 服务在哪里?
 - 负载均衡负责: 选择哪个服务?
-- 限流、熔断和降级负责:
+- 限流、熔断和降级分别负责:
   - 限流: 请求过多
   - 熔断: 下游服务调用缓慢或失败
   - 降级: 某些服务不可用时, 返回替代结果, 例如推荐服务不可用时, 返回默认商品列表
