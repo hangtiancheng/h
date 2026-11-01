@@ -5,9 +5,7 @@
       "label": "build:chunks",
       "type": "shell",
       "command": "pnpm exec turbo run build:chunk --ui=stream --log-prefix=none",
-      "problemMatcher": [
-        "$tsc"
-      ],
+      "problemMatcher": ["$tsc"],
       "group": {
         "kind": "build",
         "isDefault": true
