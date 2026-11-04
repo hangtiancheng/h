@@ -5,7 +5,7 @@
   "packageManager": "pnpm@12.10.1",
   "description": "homepage",
   "keywords": [
-    "@yukino.js",
+    "yukino",
     "hangtiancheng",
     "homepage"
   ],
