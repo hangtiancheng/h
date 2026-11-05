@@ -2,14 +2,16 @@
 title: "vue-router"
 ---
 
-import { Tabs, Tab } from "@rspress/core/theme-original";
+import { Tabs, Tab, Callout } from "@rspress/core/theme-original";
 
 ## 使用 vue-router
 
-- `<RouterLink />` 链接到 `to` 属性指定的路由
-- `<RouterView />` 路由组件的容器
-- `useRoute()` 获取路由对象
-- `useRouter()` 获取路由器对象
+| API              | 说明                       |
+| ---------------- | -------------------------- |
+| `<RouterLink />` | 链接到 `to` 属性指定的路由 |
+| `<RouterView />` | 路由组件的容器             |
+| `useRoute()`     | 获取路由对象               |
+| `useRouter()`    | 获取路由器对象             |
 
 <Tabs>
 <Tab label="@/router/index.ts" value="@/router/index.ts">
@@ -751,7 +753,6 @@ import { fileURLToPath, URL } from "node:url";
 
 import { defineConfig, type Plugin } from "vite";
 import vue from "@vitejs/plugin-vue";
-import url from "node:url";
 
 const vitePluginServer = (): Plugin => {
   return {
@@ -759,11 +760,8 @@ const vitePluginServer = (): Plugin => {
     configureServer(server) {
       server.middlewares.use("/routes", (req, res) => {
         res.setHeader("Content-Type", "application/json");
-        const queryParams = url.parse(
-          req.originalUrl!,
-          true /** parseQueryString */,
-        ).query;
-        const { username } = queryParams;
+        const { searchParams } = new URL(req.originalUrl!, "http://localhost");
+        const username = searchParams.get("username");
         let resData: {
           routes: { path: string; name: string; component: string }[];
         } = {

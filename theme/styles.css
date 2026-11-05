@@ -36,3 +36,45 @@ svg[aria-roledescription] {
   max-width: 100%;
   height: auto;
 }
+
+/* tables: clearer header + row affordance */
+.rp-table-scroll-container table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.rp-table-scroll-container th,
+.rp-table-scroll-container td {
+  padding: 0.55rem 0.9rem;
+}
+
+.rp-table-scroll-container thead th {
+  background: var(--rp-c-bg-soft);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.rp-table-scroll-container tbody tr:hover {
+  background: var(--rp-c-brand-tint);
+}
+
+/* code blocks & callouts */
+.rp-codeblock,
+.rp-callout {
+  border-radius: 10px;
+}
+
+.rp-callout__title {
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+/* inline emphasis */
+.rp-doc strong {
+  font-weight: 650;
+}
+
+.rp-doc u {
+  text-decoration-color: var(--rp-c-brand);
+  text-underline-offset: 0.2em;
+}

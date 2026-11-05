@@ -2,7 +2,7 @@
 title: "go"
 ---
 
-import { Tabs, Tab } from "@rspress/core/theme-original";
+import { Tabs, Tab, Callout } from "@rspress/core/theme-original";
 
 | 术语             | 适用场景                                                         |
 | ---------------- | ---------------------------------------------------------------- |
@@ -41,15 +41,16 @@ document.designMode = "on";
 ### for range
 
 - go 1.22 前, `for index, value := range collection` 中的 index 内存地址不会改变
-- go 1.22 后, 使用 pre-iteration, `for index, value := range collection` 中的 index 内存地址会改变
+- go 1.22 后, 使用 per-iteration, `for index, value := range collection` 中的 index 内存地址会改变
 
 ```go
-func mutateSlice(s []int) {
+func mutateSlice(s []int) []int {
   return append(s, 1, 2) // 返回新的 slice
 }
+
 // 或者传递指针
-func mutateSlice(s *[]int) {
-  append(*s, 1, 2);
+func mutateSlicePtr(s *[]int) {
+  *s = append(*s, 1, 2)
 }
 ```
 
@@ -128,7 +129,7 @@ func test2() (i int) {
 func main() {
   // defer2
   // defer1
-  // test returns 1
+  // test2 returns 1
 	fmt.Println("test2 returns", test2())
 }
 ```
@@ -344,9 +345,13 @@ func main() {
 修复
 
 1. 使用 `b := a[1:3:3]` 强制 cap=len, append b 时 cap = len, 必然触发扩容
-2. 显式拷贝 `b := make([]int, 2); copy(b, a[1:3])`, 或 `b := slice.Clone(a[1:3])`
+2. 显式拷贝 `b := make([]int, 2); copy(b, a[1:3])`, 或 `b := slices.Clone(a[1:3])`
+
+<Callout type="warning">
 
 Pitfall: 大数组的小切片导致的内存驻留: 例如从 100MB 大数组 data 中切片得到的 `data[:100]`, 会导致整个 100MB 大数组无法被 GC
+
+</Callout>
 
 ### `var s []int` 对比 `s := []int{}`
 
@@ -888,9 +893,9 @@ type Once struct {
 `once.Do(fn)` 被调用时:
 
 1. 通过原子操作 `atomic.LoadUint32` 快速检查 done 标志位, 如果标志位为 1, 则表示 fn 已执行, 直接返回 (无锁、开销极小)
-2. 如果标志位 done 为 1, 则表示 fn 可能未执行, 进入慢路径 (doSlow)
+2. 如果标志位 done 为 0, 则表示 fn 可能未执行, 进入慢路径 (doSlow)
 3. 慢路径中, 先加锁, 再重新检查 done 标志位; 双重检查的目的: 防止多个 goroutine 进入慢路径, 导致 fn 被重复执行
-4. 如果重新检查 done 标志位仍然为 1, 则当前 goroutine 执行传递的函数 fn, 执行结束后通过原子操作 `atomic.StoreUint32` 将 done 标志位设置为 1, 最后释放锁
+4. 如果重新检查 done 标志位仍然为 0, 则当前 goroutine 执行传递的函数 fn, 执行结束后通过原子操作 `atomic.StoreUint32` 将 done 标志位设置为 1, 最后释放锁
 
 ### WaitGroup
 
@@ -1013,7 +1018,7 @@ type Context interface {
 	Deadline() (deadline time.Time, ok bool)
   // 该 ctx 被取消或超时时, 返回的 channel 会被关闭
 	Done() <-chan struct{}
-  // 返回一个错误, 表示该 ctx 被取消的时间
+  // 返回一个错误, 表示该 ctx 被取消的原因
   // 是主动取消 errors.New("context canceled")
   // 还是超时 var DeadlineExceeded error = deadlineExceededError{}
 	Err() error
@@ -1753,7 +1758,7 @@ STW, Stop The World, 指用户代码停止运行
 
 Step0
 
-```
+```txt
 C (黑)
 └── ref2 -> A (灰)
             └── ref1 -> B (白)
@@ -1761,7 +1766,7 @@ C (黑)
 
 Step3. 赋值器并发修改: `C.ref3 = C.ref2.ref1 (= A.ref1 = B)`
 
-```
+```txt
 C (黑)
 ├── ref2 -> A (灰) ──┐
 └── ref3 -> B (白) ←┘ ref1
@@ -1769,7 +1774,7 @@ C (黑)
 
 Step4. 赋值器并发修改: `A.ref1 = nil`
 
-```
+```txt
  C (黑)
 ├── ref2 -> A (灰)
 │           ↘ ref1 == nil

@@ -25,7 +25,7 @@ pnpm add -D \
 
 ```ts
 // 配置合并
-import { defineConfig, searchForWorkspaceRoot } from "vite";
+import { defineConfig } from "vite";
 import { defineConfig as defineTestConfig, mergeConfig } from "vitest/config";
 
 // https://vitest.dev/guide/#configuring-vitest
@@ -556,7 +556,7 @@ it("should display red color after user click", async () => {
   // Assert
   expect(buttonElement).toHaveClass("active");
   expect(buttonElement).toHaveStyle({
-    backgroundColor: "hex(#fb2c36)",
+    backgroundColor: "#fb2c36",
   });
 
   const actualBackgroundColor =
@@ -976,16 +976,21 @@ afterAll(() => worker.stop());
 <Tab label="vitest.config.ts" value="vitest.config.ts">
 
 ```ts
+import { defineConfig } from "vitest/config";
+import { playwright } from "@vitest/browser-playwright";
+
 export default defineConfig({
-  globals: true,
-  // 浏览器模式
-  browser: {
-    enabled: true,
-    provider: playwright(),
-    // https://vitest.dev/config/browser/playwright
-    instances: [{ browser: "chromium" }],
+  test: {
+    globals: true,
+    // 浏览器模式
+    browser: {
+      enabled: true,
+      provider: playwright(),
+      // https://vitest.dev/config/browser/playwright
+      instances: [{ browser: "chromium" }],
+    },
+    setupFiles: ["./tests/vitest.setup.ts"],
   },
-  setupFiles: ["./tests/vitest.setup.ts"],
 });
 ```
 
@@ -1085,12 +1090,12 @@ describe("NoteList by MSW", () => {
 });
 ```
 
-### 使用 @mswjs/data mock CRUD
+### 使用 @msw/data mock CRUD
 
 ```shell
-# 使用 @mswjs/data mock CRUD
+# 使用 @msw/data mock CRUD
 # 使用 faker-js mock 数据
-pnpm add @mswjs/data @faker-js/faker -D
+pnpm add @msw/data @faker-js/faker -D
 ```
 
 ```ts
@@ -1101,7 +1106,7 @@ import { faker } from "@faker-js/faker";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
-// pnpm add @mswjs/data @faker-js/faker -D
+// pnpm add @msw/data @faker-js/faker -D
 const notes = new Collection({
   schema: noteSchema, // zod schema
 });

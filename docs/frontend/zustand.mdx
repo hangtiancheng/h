@@ -211,9 +211,11 @@ console.log(newObj, obj);
 
 ## 状态切片, useShallow
 
-- 使用解构: setSing 时, 会导致 `<First />` 组件更新; setDance 时, 也会导致 `<First />` 组件更新
-- 使用状态切片: setSing 时, 会导致 `<Second />` 组件更新; setDance 时, 不会导致 `<Second />` 组件更新
-- 使用 useShallow 中间件: setSing 时, 会导致 `<Third />` 组件更新; setDance 时, 不会导致 `<Third />` 组件更新
+| 订阅方式                      | setSing  | setDance |
+| ----------------------------- | -------- | -------- |
+| 使用解构 `<First />`          | 组件更新 | 组件更新 |
+| 使用状态切片 `<Second />`     | 组件更新 | 不更新   |
+| 使用 `useShallow` `<Third />` | 组件更新 | 不更新   |
 
 <Tabs>
 <Tab label="@/stores/kun.ts" value="@/stores/kun.ts">
@@ -308,7 +310,7 @@ function Second() {
 
 function Third() {
   console.log("Third update...");
-  // 使用 useShallow 中间件
+  // 使用 useShallow
   // setSing 时, 会导致 <Third /> 组件更新
   // setDance 时, 不会导致 <Third /> 组件更新
   const { name, sing } = useKunStore(
@@ -640,7 +642,7 @@ export default useKunStore;
 useStore.subscribe((state) => console.log(state) /** listener */);
 ```
 
-subscribe 订阅: state 的任意属性改变时, 都会触发 listener 的调用
+subscribe 订阅: state 的**任意属性**改变时, 都会触发 listener 的调用
 
 - 组件外部订阅
 - 组件内部订阅: 需要写在 useEffect 中, 并且依赖项数组 deps 是 [] 空数组, 只会在组件挂载后订阅一次, 防止重复订阅
@@ -767,7 +769,7 @@ export default function App() {
 
 ### subscribe + subscribeWithSelector 中间件
 
-subscribe + subscribeWithSelector 中间件: state 的指定属性改变时, 才会触发 listener 的调用
+subscribe + subscribeWithSelector 中间件: state 的**指定属性**改变时, 才会触发 listener 的调用
 
 示例
 

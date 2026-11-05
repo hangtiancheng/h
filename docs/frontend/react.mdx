@@ -26,58 +26,42 @@ import { Tabs, Tab, Callout } from "@rspress/core/theme-original";
 - [useDebugValue](#hook-usedebugvalue), [react.dev](https://react.dev/reference/react/useDebugValue)
 - [useDeferredValue](#hook-perf-usedeferredvalue), [react.dev](https://react.dev/reference/react/useDeferredValue)
 - [useEffect](#hook-useeffect), [react.dev](https://react.dev/reference/react/useEffect)
-- [useEffectEvent](#todo), [react.dev](https://react.dev/reference/react/useEffectEvent) TODO
+- [useEffectEvent](https://react.dev/reference/react/useEffectEvent)
 - [useId](#hook-useid), [react.dev](https://react.dev/reference/react/useId)
 - [useImperativeHandle](#hook-useimperativehandle), [react.dev](https://react.dev/reference/react/useImperativeHandle)
 - [useInsertionEffect](#hook-useinsertioneffect), [react.dev](https://react.dev/reference/react/useInsertionEffect)
 - [useLayoutEffect](#hook-uselayouteffect), [react.dev](https://react.dev/reference/react/useLayoutEffect)
 - [useMemo](#hook-perf-usememo), [react.dev](https://react.dev/reference/react/useMemo)
-- [useOptimistic](#todo), [react.dev](https://react.dev/reference/react/useOptimistic) TODO
+- [useOptimistic](https://react.dev/reference/react/useOptimistic)
 - [useReducer](#hook-usereducer), [react.dev](https://react.dev/reference/react/useReducer)
 - [useRef](#hook-useref), [react.dev](https://react.dev/reference/react/useRef)
 - [useState](#hook-usestate), [react.dev](https://react.dev/reference/react/useState)
 - [useSyncExternalStore](#hook-usesyncexternalstore), [react.dev](https://react.dev/reference/react/useSyncExternalStore)
 - [useTransition](#hook-perf-usetransition), [react.dev](https://react.dev/reference/react/useTransition)
-- [useFormStatus](#todo), [react.dev](https://react.dev/reference/react-dom/hooks/useFormStatus) TODO
+- [useFormStatus](https://react.dev/reference/react-dom/hooks/useFormStatus)
 
 ## Components
 
 - `<Fragment />` [react.dev](https://react.dev/reference/react/Fragment)
-- `<Profiler />` [`<Profiler />`](#todo), [react.dev](https://react.dev/reference/react/Profiler) TODO
+- `<Profiler />` [react.dev](https://react.dev/reference/react/Profiler)
 - `<StrictMode />` [react.dev](https://react.dev/reference/react/StrictMode)
-- `<Suspense />` [`<Suspense />`](#component-suspense), [react.dev](https://react.dev/reference/react/Suspense)
-- `<Activity />` [`<Activity />`](#todo), [react.dev](https://react.dev/reference/react/Activity) TODO
-- `<ViewTransition />` [`<ViewTransition />`](#todo), [react.dev](https://react.dev/reference/react/ViewTransition) TODO
+- [`<Suspense />`](#component-suspense), [react.dev](https://react.dev/reference/react/Suspense)
+- `<Activity />` [react.dev](https://react.dev/reference/react/Activity)
+- `<ViewTransition />` [react.dev](https://react.dev/reference/react/ViewTransition)
 
 ## API
 
-- [act](#todo), [react.dev](https://react.dev/reference/react/act) TODO
-- [addTransitionType](#todo), [react.dev](https://react.dev/reference/react/addTransitionType) TODO
-- [captureOwnerStack](#todo), [react.dev](https://react.dev/reference/react/captureOwnerStack) TODO
+- [act](https://react.dev/reference/react/act)
+- [addTransitionType](https://react.dev/reference/react/addTransitionType)
+- [captureOwnerStack](https://react.dev/reference/react/captureOwnerStack)
 - [createContext](#hook-usecontext), [react.dev](https://react.dev/reference/react/createContext)
-- [lazy](#todo), [react.dev](https://react.dev/reference/react/lazy) TODO
-- [memo](#api-perf-memo), [react.dev](https://react.dev/reference/react/useMemo)
-- [startTransition](#todo), [react.dev](https://react.dev/reference/react/startTransition) TODO
-- [use](#todo), [react.dev](https://react.dev/reference/react/use)
+- [lazy](https://react.dev/reference/react/lazy)
+- [memo](#api-perf-memo), [react.dev](https://react.dev/reference/react/memo)
+- [startTransition](https://react.dev/reference/react/startTransition)
+- [use](https://react.dev/reference/react/use)
 - [createPortal](#api-createportal), [react.dev](https://react.dev/reference/react-dom/createPortal)
-- [flushSync](#todo), [react.dev](https://react.dev/reference/react-dom/flushSync) TODO
-- [createRoot](#todo), [react.dev](https://react.dev/reference/react-dom/createRoot) TODO
-
-## TODO
-
-- useEffectEvent
-- useOptimistic
-- `<Profiler />`
-- `<Activity />` TODO
-- `<ViewTransition />` TODO
-- act
-- addTransitionType
-- captureOwnerStack
-- lazy
-- startTransition
-- use
-- flushSync
-- createRoot
+- [flushSync](https://react.dev/reference/react-dom/flushSync)
+- [createRoot](https://react.dev/reference/react-dom/client/createRoot)
 
 ## Legacy API
 
@@ -206,7 +190,7 @@ requestIdleCallback: 当前帧的空闲时间, 执行传递的 callback, callbac
 - deadline.didTimeout 返回是否因为超时而强制执行 callback
 - requestIdleCallback 有一个可选参数 options: 例 `{ timeout: 1000 }`, 指定超时时间, 如果 1000ms 内没有空闲时间, 则强制执行 callback
 
-```js
+```ts
 // requestIdleCallback 示例
 const largeList: (() => void)[] = [];
 const largeListLen = 1000;
@@ -723,7 +707,7 @@ export default function App() {
 </Tab>
 </Tabs>
 
-## hook(perf): useTransition
+## hook perf: useTransition
 
 useTransition 将某些更新标记为「过渡」更新, 即降低某些更新的优先级, React 先处理高优先级的更新, 例如用户输入; 延迟处理 "过渡" 更新, 例如网络请求, 密集计算, 渲染大量数据等
 
@@ -796,7 +780,6 @@ export default function App() {
 ```ts
 import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
-import url from "node:url";
 import crypto from "node:crypto";
 
 const vitePluginServer = (): Plugin => {
@@ -805,20 +788,14 @@ const vitePluginServer = (): Plugin => {
     configureServer(server) {
       server.middlewares.use("/list", (req, res) => {
         res.setHeader("Content-Type", "application/json");
-        const queryParams = url.parse(
-          req.originalUrl!,
-          true /** parseQueryString */,
-        ).query;
-        const { len } = queryParams;
+        const { searchParams } = new URL(req.originalUrl!, "http://localhost");
+        const len = Number.parseInt(searchParams.get("len") ?? "0", 10);
         const resData = {
-          list: Array.from(
-            { length: Number.parseInt(len as string) },
-            (_, idx) => ({
-              id: idx,
-              name: crypto.randomBytes(4).toString("hex"),
-              age: Math.floor(Math.random() * 100),
-            }),
-          ),
+          list: Array.from({ length: len }, (_, idx) => ({
+            id: idx,
+            name: crypto.randomBytes(4).toString("hex"),
+            age: Math.floor(Math.random() * 100),
+          })),
         };
         setTimeout(() => res.end(JSON.stringify(resData)), 3000);
       });
@@ -910,7 +887,7 @@ const Low = 4; // 低优先级
 const Idle = 5; // 空闲时执行, 例如 console.log()
 ```
 
-## hook(perf): useDeferredValue
+## hook perf: useDeferredValue
 
 ```js
 const deferredVal = useDeferredValue(val);
@@ -1340,7 +1317,7 @@ export default function App() {
 }
 ```
 
-## API(perf): memo
+## API perf: memo
 
 ### 触发组件更新的条件
 
@@ -1385,7 +1362,7 @@ export default function App() {
 }
 ```
 
-## hook(perf): useMemo
+## hook perf: useMemo
 
 ```js
 const computedVal = useMemo(
@@ -1445,7 +1422,7 @@ const App: React.FC = () => {
 export default App;
 ```
 
-## hook(perf): useCallback
+## hook perf: useCallback
 
 ```js
 const cachedCallback = useCallback(
@@ -1683,7 +1660,7 @@ export default function App() {
 <Tabs>
 <Tab label="public/data.json" value="public/data.json">
 
-```ts
+```json
 {
   "data": {
     "name": "yukino",
@@ -1697,13 +1674,13 @@ export default function App() {
 </Tab>
 <Tab label="ChildAsync.tsx" value="ChildAsync.tsx">
 
-```ts
+```tsx
 import { use } from "react";
 
 const fetchData = async () => {
   await new Promise((resolve) => setTimeout(resolve, 3000));
   return await fetch("http://localhost:5174/data.json").then((res) =>
-    res.json()
+    res.json(),
   );
 };
 const dataPromise = fetchData();

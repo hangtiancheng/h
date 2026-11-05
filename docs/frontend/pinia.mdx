@@ -49,13 +49,13 @@ userStore.$subscribe(
   {
     detached: false, // 默认 false, 组件卸载时移除 callback
 
-    // deep: true, // 默认 false, 深层侦听
+    // deep: true, // 默认 true, 深层侦听
     immediate: false,
     // 是否立即执行 callback
     // 默认 false, 即默认懒执行 callback
     flush: "pre", // "pre" | "post" | "sync", 默认 pre
-    // pre: state 更新前调用
-    // post: state 更新后调用 callback
+    // pre: 组件更新前调用
+    // post: 组件更新后调用 callback
     // sync: 同步调用 callback
     once: false, // 一次性侦听, callback 只调用一次
   }, // options
@@ -164,7 +164,7 @@ const subCnt = () => cnt.value.v--;
   <div>cntStore.cnt: {{ cntStore.cnt }}</div>
   <div>cnt: {{ cnt }}</div>
   <div>cntStore.cntInfo: {{ cntStore.cntInfo }}</div>
-  <div>cntStore.cnt: {{ cntInfo }}</div>
+  <div>cntInfo: {{ cntInfo }}</div>
 
   <div class="flex flex-col gap-5">
     <button @click="addCnt">addCnt</button>

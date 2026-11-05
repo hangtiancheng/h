@@ -2,7 +2,7 @@
 title: "vite"
 ---
 
-import { Tabs, Tab } from "@rspress/core/theme-original";
+import { Tabs, Tab, Callout } from "@rspress/core/theme-original";
 
 ## Webpack
 
@@ -110,7 +110,7 @@ console.log(Object.keys(lodash));
 
 ### Monorepo
 
-一个 monorepo 项目中, 一个子包可能是另一个子包的依赖项, vite 自动检测没有从 node_modules 中解析到的依赖项 (例如 `@my-app/common`), 将 `@my-app/common` 视为源码, 分析 `@my-app/core` 的依赖列表, 不会打包 `@my-app/common`
+一个 monorepo 项目中, 一个子包可能是另一个子包的依赖项, vite 自动检测没有从 node_modules 中解析到的依赖项 (例如 `@my-app/common`), 将 `@my-app/common` 视为源码, 分析 `@my-app/common` 的依赖列表, 不会打包 `@my-app/common`
 
 ## 预构建缓存
 
@@ -227,7 +227,7 @@ export default defineConfig(({ command, mode }) => {
 ## dev-server 开发服务器
 
 ```ts
-// App.vue
+// main.ts
 import { createApp } from "vue";
 import App from "./App.vue";
 import "./index.css";
@@ -381,7 +381,11 @@ export default defineConfig({
    - `Access-Control-Allow-Headers: "Content-Type,Authorization"` 用于响应预检请求, 指定实际请求允许使用的请求头字段
    - `Access-Control-Allow-Credentials: true` 服务器是否允许跨域请求携带凭据
    - `Access-Control-Allow-Methods: "GET,POST,PUT,DELETE,OPTIONS"` 用于响应预检请求, 指定实际请求允许使用的请求方法
-   - 不能同时使用 `Access-Control-Allow-Origin: "*"` 和 `Access-Control-Allow-Credentials: true`
+
+<Callout type="warning">
+  不能同时使用 `Access-Control-Allow-Origin: "*"` 和
+  `Access-Control-Allow-Credentials: true`
+</Callout>
 
 ## hmr 模块热替换
 
@@ -437,21 +441,21 @@ if (import.meta.hot) {
 - gzip 压缩: 设置 http 响应头 `Content-Encoding: gzip`
 - CDN 内容分发网络
 
-```js
+```ts
 // 例: 将 node_modules 的第三方依赖打包到 vendor.[hash:base64:8].js 单个文件
 export default defineConfig({
   build: {
     rollupOptions: {
       output: {
         manualChunks: (id: string) => {
-          if (id.includes('node_modules')) {
-            return 'vendor'
+          if (id.includes("node_modules")) {
+            return "vendor";
           }
         },
       },
     },
   },
-})
+});
 ```
 
 ## 分析打包产物

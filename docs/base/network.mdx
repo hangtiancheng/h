@@ -13,7 +13,7 @@ import { Tabs, Tab, Callout } from "@rspress/core/theme-original";
 - 总阻塞时间 TBT, Total Blocking Time: 从首次内容绘制 (FCP) 到首次可交互 (TTI) 期间, 主线程超过 50ms 的阻塞时间总和
 - 累积布局偏移 CLS, Cumulative Layout Shift: 页面生命周期内所有可见布局偏移分数的累积值, 数值越小越好
 - 交互到下一次绘制 INP, Interaction to Next Paint: 页面对用户交互的响应速度
-- TTFB 首字节时间
+- TTFB (Time to First Byte) 首字节时间: 从发送请求到收到响应第一个字节的时间, 包含 DNS 解析、TCP 建立连接、TLS 握手与服务器处理时间
 
 排查
 

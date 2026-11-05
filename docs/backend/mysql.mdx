@@ -4,9 +4,9 @@ title: "mysql"
 
 import { Tabs, Tab, Callout } from "@rspress/core/theme-original";
 
-## todo
+## 连接管理
 
-### 日志, Buffer Pool, 架构
+### 连接与命令
 
 ```shell
 alter user 'root'@'localhost' identified with mysql_native_password BY 'pass';
@@ -18,7 +18,7 @@ mysql [-h <host>] [-P <port>] -u <username> -p<password> [-D <database_name>]
 # 查看连接列表
 show processlist;
 # 手动断开连接
-kill connection +<id>
+kill connection <id>
 # 查看空闲连接的最大空闲时间
 show variables like 'wait_timeout';
 # 查看最大连接数, 如果超过最大连接数, 则 mysql 会拒绝后续的连接请求
@@ -29,7 +29,7 @@ show variables like 'max_connections';
 
 mysql 的架构分为两层: server 层和存储引擎层
 
-- server 层负责建立连接、解析和执行 sql: 包括连接器、查询缓存、sql 解析器、sql 优化器、sql 执行器
+- server 层负责建立连接、解析和执行 sql: 包括连接器、查询缓存 (mysql@8.0 已移除)、sql 解析器、sql 优化器、sql 执行器
 - 存储引擎层负责数据的存储和检索: 支持 InnoDB 等存储引擎
 
 ### 1. 连接器
@@ -43,7 +43,7 @@ mysql 的架构分为两层: server 层和存储引擎层
 
 ### 2. 查询缓存
 
-查询缓存命中率很低, mysql@8.0 移除 server 层的查询缓存 (不是 InnoDB 的 buffer pool)
+查询缓存命中率很低, **mysql@8.0 移除 server 层的查询缓存** (不是 InnoDB 的 buffer pool)
 
 ### 3. 解析 sql
 
@@ -641,8 +641,9 @@ select ... for update;
 - 主键声明 auto_increment; 插入数据时可以不指定主键值, 数据库会加表级别的 auto-inc 锁, 生成自增主键
 - auto-inc 锁不是在事务提交后才释放, 而是插入数据完成后立刻释放
 - mysql@5.1.22 开始, InnoDB 提供 lightweight memory mutex, 用于生成自增主键
-  - innodb_autoinc_lock_mode = 0: 使用 auto-inc 锁
-  - innodb_autoinc_lock_mode = 2: 使用 lightweight memory mutex
+  - innodb_autoinc_lock_mode = 0: traditional, 使用 auto-inc 锁
+  - innodb_autoinc_lock_mode = 1: consecutive, 简单插入使用 lightweight memory mutex, 批量插入使用 auto-inc 锁
+  - innodb_autoinc_lock_mode = 2: interleaved, 使用 lightweight memory mutex, mysql@8 默认
 
 ### 行级锁: 记录锁, 间隙锁, 临键锁, 插入意向锁
 
@@ -1228,7 +1229,7 @@ drop user '<username>'@'<hostname>';
 show grants for '<username>'@'<hostname>';
 
 -- 授予权限
-grant <privilegeName1>, <privilegeName2>, ... on <database_name>.<table_name> to '<username>'@'hostname';
+grant <privilegeName1>, <privilegeName2>, ... on <database_name>.<table_name> to '<username>'@'<hostname>';
 
 -- 撤销权限
 revoke <privilegeName1>, <privilegeName2>, ... on <database_name>.<table_name> from '<username>'@'<hostname>';
@@ -1310,8 +1311,8 @@ create table <table_name> (
 ```sql
 -- 创建子表时, 添加从子表某列指向父表某列的外键
 create table <table_name> (
-  [constraint] [<foreignKeyName>] foreign key (<column_name>) references <foreignTableName> (<foreignColumnName>);
-)
+  [constraint] [<foreignKeyName>] foreign key (<column_name>) references <foreignTableName> (<foreignColumnName>)
+);
 
 -- 修改子表时, 添加从子表某列指向父表某列的外键
 alter table <table_name> add constraint <foreignKeyName> foreign key (<column_name>) references <foreignTableName> (<foreignColumnName>);
@@ -1732,8 +1733,6 @@ select name from users where id = 2 lock in share mode; -- transaction A; jane_d
 select name from users where id = 2 for update; -- transaction A; jane_doe
 ```
 
-### SQL 注入
-
 ## sql 注入
 
 <Tabs>
@@ -1800,7 +1799,7 @@ const sql = `SELECT username, id, email FROM member WHERE username LIKE '%${name
 
 ## 使用 sql 实现可重入锁
 
-可以使用一张锁表, 记录「锁名、持有者、重入次数」, 再通过事务和 `SELECT ... FROM UPDATE` 保证加锁、解锁不会被并发请求打乱
+可以使用一张锁表, 记录「锁名、持有者、重入次数」, 再通过事务和 `SELECT ... FOR UPDATE` 保证加锁、解锁不会被并发请求打乱
 
 ```sql
 create table lock_table (

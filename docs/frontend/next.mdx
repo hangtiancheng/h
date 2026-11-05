@@ -2,7 +2,7 @@
 title: "next.js"
 ---
 
-import { Tabs, Tab } from "@rspress/core/theme-original";
+import { Tabs, Tab, Callout } from "@rspress/core/theme-original";
 
 - AI, 提供 AI SDK
 - SSR, Server-Side Rendering 服务器端渲染
@@ -99,7 +99,7 @@ function ExpensiveComponent({ data, onClick }) {
 ### Pages Router
 
 ```shell
-app/pages
+pages
 ├── index.tsx     # -> /
 ├── about
 │   ├── index.tsx # -> /about
@@ -1166,12 +1166,13 @@ export default async function HomeV3() {
 ### 事件
 
 - onLoad 脚本加载完成时触发
-- onReady 脚本加载加载完成时, 每次组件挂载时触发
+- onReady 脚本加载完成时, 每次组件挂载时触发
 - onError 脚本加载失败时触发
+- onLoad, onReady, onError 事件处理器仅在 "use client" 的客户端组件中生效
 
 ## 导出静态站点
 
-```js
+```ts
 // next.config.ts
 
 import type { NextConfig } from "next";
@@ -1375,6 +1376,7 @@ export default function Login() {
 
 - state 当前状态
 - formAction 可以作为 form 属性传递给表单组件, 或作为 formAction 属性传递给表单中的按钮组件
+- isPending 是否存在等待处理的表单提交
 
 ```ts
 const [state, formAction, isPending] = useActionState<IState, FormData>(
@@ -1501,7 +1503,7 @@ export default function Login() {
 - territory 地区: US, CN, JP, ...
 
 ```shell
-pnpm add negotiator @formatjs/intl-locale
+pnpm add negotiator @formatjs/intl-localematcher
 pnpm add @types/negotiator -D
 ```
 
@@ -1573,7 +1575,7 @@ export async function getResource(locale: string): Promise<IResource> {
 import { NextRequest, NextResponse, ProxyConfig } from "next/server";
 import { defaultLocale, locales } from "./i18n";
 import Negotiator from "negotiator";
-import { match } from "@formatjs/intl-locale";
+import { match } from "@formatjs/intl-localematcher";
 
 export async function proxy(req: NextRequest, res: NextResponse) {
   if (req.nextUrl.pathname === "/") {

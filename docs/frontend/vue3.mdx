@@ -6,7 +6,7 @@ import { Tabs, Tab, Callout } from "@rspress/core/theme-original";
 
 ## MVVM 架构
 
-MVVM, Model-View-ViewModel
+**MVVM**, Model-View-ViewModel
 
 1. View 视图层, Vanilla DOM
 2. ViewModel 视图模型层: Vue
@@ -14,7 +14,7 @@ MVVM, Model-View-ViewModel
 
 ## 使用 vscode 调试
 
-```json
+```jsonc
 // launch.json
 {
   "version": "0.2.0",
@@ -24,9 +24,9 @@ MVVM, Model-View-ViewModel
       "request": "launch",
       "name": "Vue: chrome",
       "url": "http://localhost:5173",
-      "webRoot": "${workspaceFolder}/src"
-    }
-  ]
+      "webRoot": "${workspaceFolder}/src",
+    },
+  ],
 }
 ```
 
@@ -35,7 +35,7 @@ MVVM, Model-View-ViewModel
 ### 重写双向数据绑定
 
 - Vue2 的双向数据绑定基于 `Object.defineProperty()`; 创建一个 Vue 实例时, for...in 遍历 data 字段中的所有属性, 使用 `Object.defineProperty()` 将属性转换为 getter 和 setter
-- Vue3 的双向数据绑定基于 Proxy 代理对象
+- Vue3 的双向数据绑定基于 **Proxy** 代理对象
 
 优点
 
@@ -92,7 +92,7 @@ pnpm dlx create-vite@latest
 
 ## SFC
 
-SFC, Single File Component 单文件组件
+**SFC**, Single File Component 单文件组件
 
 对于 .vue 文件
 
@@ -143,7 +143,7 @@ const addCnt = () => {
 
 - v-text 渲染文本字符串, 会忽略子节点
 - v-html 渲染 HTML 字符串, 会忽略子节点, 不支持渲染 Vue 组件
-- v-if, v-else-if, v-else 节点的条件渲染, 不渲染则将节点卸载, 表现为注释节点 ``, 操作 DOM
+- v-if, v-else-if, v-else 节点的条件渲染, 不渲染则将节点卸载, 表现为注释节点 `<!--v-if-->`, 操作 DOM
 - v-show 节点的显示/隐藏: 改变内联 CSS 样式 `display: none`, 操作 CSS
 - v-on 为元素绑定事件
 - v-bind 为元素绑定属性, 模型到视图的单向绑定; v-bind 也可以绑定 style
@@ -270,7 +270,7 @@ const addCnt2 = () => {
 
 ## 虚拟 DOM 和 diff 算法
 
-vnode: Virtual DOM Node
+**vnode**: Virtual DOM Node
 
 真实 DOM 的属性过多, 操作真实 DOM 浪费性能, 虚拟 DOM 是一个 JS 对象
 
@@ -281,11 +281,15 @@ vnode: Virtual DOM Node
 3. 如果旧节点全部 patch, 有多余的新节点, 则新增 (挂载)
 4. 如果新节点全部 patch, 有多余的旧节点, 则删除 (卸载)
 5. 特殊情况: 乱序 (基于[最长递增子序列 LIS](https://leetcode.cn/problems/longest-increasing-subsequence/description/))
-   - 例: 原序列 2,3,4,0,6,1 的最长递增子序列为 2,3,4
+   - 例: 原序列 2,3,4,0,6,1 的最长递增子序列为 2,3,4,6
    - 将原 vnode 序列的最长递增子序列作为参照序列, 复用, 新增或删除不在参照序列中的节点
+
+<Callout type="warning" title="v-for 的 key">
 
 - 错误实践: 使用索引 index (拼接其他值) 作为 key
 - 正确实践: 使用唯一 id 作为 key
+
+</Callout>
 
 ```vue
 <script lang="ts" setup>
@@ -345,7 +349,7 @@ const setUser4 = () => {
 // user2.value.age++
 const setUser5 = () => {
   user2.value.age++;
-  triggerRef(user2); // 手动依赖收集
+  triggerRef(user2); // 手动触发更新
 };
 </script>
 
@@ -435,7 +439,7 @@ onMounted(() => {
 
 ## reactive, readonly
 
-家族成员: reactive, shallowReactive
+家族成员: reactive, shallowReactive, readonly, shallowReadonly
 
 - reactive 深层响应式, 底层会调用 triggerRef 依赖收集, 触发深层响应式
 - shallowReactive 浅层响应式, 只响应 `.[keyName]` 的改变
@@ -673,6 +677,17 @@ setup 语法糖中, 将 beforeCreate, created 合并为 setup
 
 组件的生命周期: setup -> onBeforeMount -> onMounted -> onBeforeUpdate -> onUpdated -> onBeforeUnmount -> onUnmounted
 
+```mermaid
+%%{init: {'themeVariables': {'fontFamily': 'Yukino'}}}%%
+flowchart LR
+  A["setup 创建阶段"] --> B["onBeforeMount 组件挂载前"]
+  B --> C["onMounted 组件挂载后"]
+  C --> D["onBeforeUpdate 组件更新前"]
+  D --> E["onUpdated 组件更新后"]
+  E --> F["onBeforeUnmount 组件卸载前"]
+  F --> G["onUnmounted 组件卸载后"]
+```
+
 1. setup 创建阶段
 2. onBeforeMount 挂载前, 获取不到 DOM
 3. onMounted 挂载后, 可以获取到 DOM
@@ -705,7 +720,7 @@ import { ref, reactive } from "vue";
 import ChildDemo from "./ChildDemo.vue";
 
 // 父子组件传参
-const str_ = "str_parent";
+let str_ = "str_parent";
 const refStr_ = ref("refStr_parent");
 const reactiveArr_ = reactive([6, 6, 6]);
 </script>
@@ -766,7 +781,7 @@ const props = defineProps({
     default: "refStr_default",
   },
   reactiveArr: {
-    type: Array<number>, // Array
+    type: Array<number>, // 数组类型
     default: () => [5, 2, 8], // 引用类型必须转换为箭头函数
   },
 });
@@ -1659,9 +1674,9 @@ const popupVisible = ref(false);
 <template>
   <button @click="popupVisible = true">显示弹窗</button>
 
-  <!-- .popup 是 #app 的直接子元素 -->
+  <!-- Teleport 的子节点是 #app 的直接子元素 -->
   <Teleport to="#app" :disabled="false">
-    <!-- disable 是否禁用 <Teleport /> -->
+    <!-- disabled 是否禁用 <Teleport /> -->
     <div class="h-20 w-20 bg-lime-200" v-show="popupVisible">
       我是 #app 的直接子元素
       <button @click="popupVisible = false">隐藏弹窗</button>
@@ -1679,16 +1694,18 @@ const popupVisible = ref(false);
 
 `xhr.readyState`
 
-- xhr.readyState === 0 [unsent] 未调用 open 方法
-- xhr.readyState === 1 [opened] 已调用 open 方法, 未调用 send 方法
-- xhr.readyState === 2 [headers_received] 已调用 send 方法, 已收到响应头
-- xhr.readyState === 3 [loading] 正在接收响应体
-- xhr.readyState === 4 [done] 请求结束, 数据传输成功或失败
+| 值  | 状态常量             | 含义                               |
+| --- | -------------------- | ---------------------------------- |
+| 0   | `[unsent]`           | 未调用 open 方法                   |
+| 1   | `[opened]`           | 已调用 open 方法, 未调用 send 方法 |
+| 2   | `[headers_received]` | 已调用 send 方法, 已收到响应头     |
+| 3   | `[loading]`          | 正在接收响应体                     |
+| 4   | `[done]`             | 请求结束, 数据传输成功或失败       |
 
 <Tabs>
 <Tab label="public/data.json" value="public/data.json">
 
-```ts
+```json
 {
   "data": {
     "name": "yukino",
@@ -1894,7 +1911,7 @@ const flag = ref<boolean>(true);
   <button @click="flag = !flag">mount/unMount</button>
   <!-- 默认 name="v" -->
   <Transition name="my-prefix">
-    <div v-if="flag" className="w-50 h-50 bg-lime-200">TransitionDemo</div>
+    <div v-if="flag" class="w-50 h-50 bg-lime-200">TransitionDemo</div>
   </Transition>
 </template>
 
@@ -1943,7 +1960,7 @@ const flag = ref<boolean>(true);
     leaveActiveClass="animate__animated animate__fadeOut"
     enterActiveClass="animate__animated animate__fadeIn"
   >
-    <div v-if="flag" className="w-50 h-50 bg-lime-200">TransitionDemo</div>
+    <div v-if="flag" class="w-50 h-50 bg-lime-200">TransitionDemo</div>
   </Transition>
 </template>
 ```
@@ -2077,7 +2094,7 @@ const handleLeave = (el: Element, done: () => void) =>
     @enter="handleEnter"
     @leave="handleLeave"
   >
-    <div v-if="isAlive" class="h-50 w-50 bg-lime-200">Transition by GASP</div>
+    <div v-if="isAlive" class="h-50 w-50 bg-lime-200">Transition by GSAP</div>
   </Transition>
 </template>
 ```
@@ -2102,7 +2119,7 @@ const flag = ref<boolean>(true);
     appearToClass="my-appear-to"
   >
     <!-- 只在首次渲染时应用 1 次过渡动画 -->
-    <div v-if="flag" className="w-50 h-50 bg-lime-200">TransitionDemo</div>
+    <div v-if="flag" class="w-50 h-50 bg-lime-200">TransitionDemo</div>
   </Transition>
 </template>
 
@@ -2195,7 +2212,7 @@ const shuffleList = () => (arr.value = shuffle(arr.value));
 </style>
 ```
 
-## 状态过渡 + [GASP](https://gsap.com/)
+## 状态过渡 + [GSAP](https://gsap.com/)
 
 示例
 
@@ -2289,7 +2306,7 @@ function vitePluginVueTsx(): Plugin {
       };
     },
     async transform(code, id) {
-      if (/.tsx$/.test(id)) {
+      if (/\.tsx$/.test(id)) {
         const ts = await import("@babel/plugin-transform-typescript").then(
           (res) => res.default,
         );
@@ -2613,7 +2630,7 @@ useBase64str(imgRef).then((res) => {
 
 ### 自定义指令 + 自定义 hook 综合示例
 
-- InterSectionObserver 监听目标元素与祖先元素或视口 viewport 的相交情况
+- IntersectionObserver 监听目标元素与祖先元素或视口 viewport 的相交情况
 - MutationObserver 监听整个 DOM 树的改变
 - ResizeObserver 监听元素宽高的改变
 
@@ -3273,8 +3290,10 @@ const Btn = (props: IProps, ctx: any /** { attrs, emit, slots } */) => {
 
 - defineProps
 - defineEmits
+- defineExpose
 - defineOptions
 - defineSlots
+- defineModel
 
 ### defineSlots
 
@@ -3420,7 +3439,7 @@ import vue from "@vitejs/plugin-vue";
 export default ({ mode }: { mode: string }) => {
   // mode: development
   console.log("mode:", mode);
-  // loadEnv: { VITE_CUSTOM_ENV: '[custom_env] development' }
+  // loadEnv: { VITE_CUSTOM_ENV: '[VITE_CUSTOM_ENV] development' }
   console.log("loadEnv:", loadEnv(mode, process.cwd()));
   return defineConfig({ plugins: [vue()] });
 };

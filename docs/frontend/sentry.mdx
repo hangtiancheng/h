@@ -2,13 +2,13 @@
 title: "yukino-sentry"
 ---
 
-import { Tabs, Tab } from "@rspress/core/theme-original";
+import { Tabs, Tab, Callout } from "@rspress/core/theme-original";
 
-框架无关的浏览器监控、埋点 SDK
+**框架无关**的浏览器监控、埋点 SDK
 
 ## 分层架构
 
-```
+```text
 ┌───────────────────────────────────────────────------──────┐
 │                     Public API Layer                      │
 │  init / destroy / isInitialized / enablePlugin            │
@@ -80,15 +80,15 @@ export function init(options: InitOptions): void {
   sentry.setOptions(parsedOptions);
 
   if (sentry.options.disabled) return; // 用户主动禁用
-  if (dsn === "") return; // DSN 为空时, 拒绝初始化
+  if (sentry.options.dsn === "") return; // DSN 为空时, 拒绝初始化
 
   // 设置面包屑容量, 启动发布订阅和猴子补丁
   breadcrumb.capacity = sentry.options.maxBreadcrumbs;
   cleanupSetup = setup();
 
   // 异步初始化身份识别
-  // 如果 `enableFingerpinrt === false`, 则跳过初始化身份识别
-  // 先检查 localStorgae 中是否有 anonymousId, 有则使用该 anonymousId: `sentry.setOptions({ anonymousId })`
+  // 如果 `enableFingerprint === false`, 则跳过初始化身份识别
+  // 先检查 localStorage 中是否有 anonymousId, 有则使用该 anonymousId: `sentry.setOptions({ anonymousId })`
   // 没有则 dynamic import: `import("@fingerprintjs/fingerprintjs")`
   // 使用 `agent.get()` 得到浏览器指纹 `visitorId`, 写入 localStorage 并使用该 visitorId 作为 anonymousId: `sentry.setOptions({ anonymousId })`
   void initIdentity();
@@ -101,7 +101,7 @@ export function init(options: InitOptions): void {
 
 ### 为什么使用发布订阅
 
-- 数据采集和数据处理解耦: Monkey Pactch Producer 只负责发布事件, 不 care 后续 breadcrumb 记录、数据上报等等
+- 数据采集和数据处理解耦: Monkey Patch Producer 只负责发布事件, 不 care 后续 breadcrumb 记录、数据上报等等
 - 一对多分发: 一个 HTTP 事件可以同时触发 breadcrumb 记录、数据上报等多个消费者
 - 动态订阅: 插件 (PerformancePlugin / ScreenRecordPlugin / ExposurePlugin) 可以在运行时订阅/取消订阅, 无需修改核心代码
 - 异常隔离: publish 对每个 handler 单独 try/catch, 一个消费者抛出错误不会影响生产者和其他消费者
@@ -113,7 +113,7 @@ export function init(options: InitOptions): void {
 response 的 body 只能被消费一次, sentry SDK 包装了 fetch, 并且将原始 response 传递给调用方, 调用方可能立刻 `res.json() / res.text()`, 如果 SDK 直接 `res.text()` 解析这个 response
 
 - SDK 的 `res.text()` 会锁定 body stream, 即 `res.bodyUsed = true`
-- 调用方读取 body 时, 会导致 streamm 竞争报错, 抛出 `TypeError: Body is unusable` 等错误
+- 调用方读取 body 时, 会导致 stream 竞争报错, 抛出 `TypeError: Body is unusable` 等错误
 - 只在错误的 HTTP 状态码时 (>= 400 或 ==0) 克隆 body
 
 `res.clone()` 是对 body 做 tee 分流, 克隆的 body 拥有一份独立的 stream 副本, SDK 读取克隆的 body, 原始 response 的 stream 不受影响
@@ -153,7 +153,7 @@ response 的 body 只能被消费一次, sentry SDK 包装了 fetch, 并且将�
 - 错误键是原始字符串 (没有被 hash) 拼接得到
 - 每个错误键只上报一次
 
-- `window.addEventListener("error", listener, true)`: 错误键为 `${ErrorType.Error}-${message}-${filename}-${line}-$`
+- `window.addEventListener("error", listener, true)`: 错误键为 `${ErrorType.Error}-${message}-${filename}-${line}-${column}`
 - Error 实例、unknown 未知错误: 错误键为 `${ErrorType.Error}-${payload.name}-${payload.message}`
 - 资源加载错误: 错误键为 `${ErrorType.Resource}-${localName}-${src || href}`
 - 没有 filename, 或者 unknown 未知错误, 视为来源不明, 跳过错误去重, 直接进入批量统计
@@ -422,12 +422,12 @@ app.use(vuePlugin, { dsn: "/sentry" });
 
 ## 数据采样和数据过滤
 
-```
-Error 事件 -> excludeAPIs / ignoreErrors (采集层过滤)
-           -> LRU 去重 (去重层过滤)
-           -> tracesSampleRate (采样层过滤) 随机采样:tracesSampleRate=0.5, 50% 的事件被随机丢弃
-           -> beforeSend (前置钩子, 可以过滤)
-           -> beforeSendBatch (前置钩子, 可以批量过滤)
+```txt
+Error 事件 -> excludeAPIs / ignoreErrors  (采集层过滤)
+           -> LRU 去重                    (去重层过滤)
+           -> sampleRate                  (采样层过滤) 例如 0.5, 50% 的错误事件被随机丢弃
+           -> beforeSend                  (前置钩子, 可以过滤)
+           -> beforeSendBatch             (前置钩子, 可以批量过滤)
            -> 上报
 ```
 

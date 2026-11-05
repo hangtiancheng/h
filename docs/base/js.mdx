@@ -62,7 +62,7 @@ npm config set script-shell "C:/Program Files/Git/bin/bash.exe"
 - `Promise.withResolvers()` 返回一个 Promise 对象, 一个用于解决该 Promise 对象的 resolve 函数, 一个用于拒绝该 Promise 对象的 reject 函数
 
 ```js
-const promise = Promise.try(func, arg1, arg2);
+const result = Promise.try(func, arg1, arg2);
 const { promise, resolve, reject } = Promise.withResolvers();
 ```
 
@@ -70,7 +70,7 @@ const { promise, resolve, reject } = Promise.withResolvers();
 
 <Callout type="details" title="Promise">
 
-```js
+```ts
 /**
  * 1.1 "promise" 有 then 方法的对象或函数, 行为符合本规范
  * 1.2 "thenable" 有 then 方法的对象或函数
@@ -89,13 +89,9 @@ enum PromiseState {
 type Resolve<T> = (value: T | PromiseLike<T>) => void;
 type Reject = (reason?: any) => void;
 type OnFulfilled<T, TResult> =
-  | ((value: T) => TResult | PromiseLike<TResult>)
-  | undefined
-  | null;
+  ((value: T) => TResult | PromiseLike<TResult>) | undefined | null;
 type OnRejected<TResult> =
-  | ((reason: any) => TResult | PromiseLike<TResult>)
-  | undefined
-  | null;
+  ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null;
 
 class MyPromise<T = any> {
   // 2.1.1 pending 时
@@ -548,7 +544,7 @@ console.log(parsedStr); // color: #62748e
 3. 从宏任务队列中取出并执行 1 个宏任务, 将该宏任务的所有微任务加入微任务队列
 4. 重复 2,3
 
-如果将同步任务即 `<script>` 整体代码也视为一个宏任务, 则执行顺序简化为: 每一个事件循环, 先执行 1 个宏任务, 再执行该宏任务的所有微任务, 再进入下一个事件循环
+如果将同步任务即 `<script>` 整体代码也视为一个宏任务, 则执行顺序简化为: **每一个事件循环, 先执行 1 个宏任务, 再执行该宏任务的所有微任务, 再进入下一个事件循环**
 
 ## 浏览器在 1 帧中做了什么
 
@@ -566,7 +562,7 @@ hint (v8 引擎提供)
 
 - number 数学运算触发, valueOf 优先
 - string 字符串上下文触发, toString 优先, 例如 String(val); `${obj}`
-- default 同 number
+- default 同 number (`Date` 等内置对象除外, 按 string 处理)
 
 ```ts
 const isPrimitive = (val: unknown) =>
@@ -726,7 +722,7 @@ const obj2 = { name: "yukino", age: 2, gender: "male" };
 
 ## v8 垃圾回收
 
-v8 将堆内存分为新生代和老年代, 新生代中的对象存活时间较短, 老生代中的对象存活时间较长, 甚至常驻内存
+v8 将堆内存分为新生代和老年代, 新生代中的对象存活时间较短, 老年代中的对象存活时间较长, 甚至常驻内存
 
 代际假说认为, 大多数对象存活时间较短
 
@@ -912,7 +908,7 @@ self.addEventListener("message", function (e) {
 // 主线程
 const arr = new Uint8Array(new ArrayBuffer(8));
 worker.postMessage(arr); // 深拷贝
-worker.postMessage(arr, [arr]); // 转移所有权
+worker.postMessage(arr, [arr.buffer]); // 转移所有权
 
 // worker 线程
 self.onmessage = function (ev) {
