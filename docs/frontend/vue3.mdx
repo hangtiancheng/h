@@ -96,7 +96,7 @@ pnpm dlx create-vite@latest
 
 对于 .vue 文件
 
-- script 标签: setup 只能有一个, 非 setup 可以有多个
+- script 标签: setup 只能有一个, 非 setup 也只能有一个
 - template 标签: 只能有一个
 - style 标签: 可以有多个
 
@@ -261,7 +261,7 @@ const addCnt2 = () => {
 </script>
 
 <template>
-  <!-- addCnt2 时, 不会触发组件更新 -->
+  <!-- addCnt2 时, 组件仍然会重新渲染, 但是 v-memo 依赖没有改变, 跳过该元素的更新 -->
   <div v-memo="[cnt]">cnt: {{ cnt }}; cnt2: {{ cnt2 }}</div>
   <button @click="() => addCnt()">addCnt</button>
   <button @click="() => addCnt2()">addCnt2</button>
@@ -323,9 +323,6 @@ const arr = ref<string[]>(["a", "b", "c", "d"]);
 - isRef 判断是否为使用 ref, shallowRef 创建的响应式对象
   - `isRef(refObj) === true`, `isRef(shallowRefObj) === true`
   - `isRef(reactiveObj) === false`, `isRef(shallowReactiveObj) === false`
-- triggerRef 调用 triggerRef 强制收集依赖, 触发深层响应式, `shallowRef + triggerRef` 等价于 `ref`
-
-同时使用 ref 和 shallowRef 时, shallowRef 的浅层响应式会失效, 表现为深层响应式 (参考 setUser4)
 
 ```vue
 <script lang="ts" setup>
@@ -445,7 +442,7 @@ onMounted(() => {
 - shallowReactive 浅层响应式, 只响应 `.[keyName]` 的改变
 - readonly 返回一个只读的响应式对象
 
-相同的, 同时使用 reactive 和 shallowReactive 时, shallowReactive 的浅层响应式会失效, 表现为深层响应式
+相同的, 同时使用 reactive 和 shallowReactive 时, shallowReactive 的浅层响应式不会失效
 
 ### reactive 对比 React 的 useState
 
@@ -668,8 +665,6 @@ const watchHandle = watchEffect(
   },
 );
 ```
-
-总结: 未指定 deep 时, 地址改变则可以侦听到, 地址未改变则侦听不到
 
 ## 组件的生命周期
 

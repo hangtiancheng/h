@@ -497,7 +497,7 @@ export default function About() {
 
 懒加载: 延迟加载路由组件, 代码分包
 
-- useNavigate: 获取路由器对象
+- useNavigate: 获取导航函数 navigate
 - useLocation: 获取路由对象
 - useNavigation: 获取导航状态
   - `navigation.state`: idle 空闲, loading 加载, submitting 提交
@@ -848,10 +848,10 @@ export default function Fallback() {
 - state 参考路由传参, state 传递参数
 - relative
   - 例如 3 条路径 /layout, /layout/home, /layout/about
-  - `relative="route"` 默认, 必须使用绝对路径
+  - `relative="route"` 默认, 相对路径基于路由层级解析
     - 例如当前路径 `/layout/home`
     - 目的路径 `/layout`, `/layout/about`
-  - `relative="path"` 可以使用相对路径
+  - `relative="path"` 相对路径基于 url 路径解析
     - 例如当前路径 `/layout/home`
     - 目标路径 `../`, `../about`
 - reloadDocument 页面跳转时, 是否重新加载页面
@@ -919,7 +919,7 @@ navigate(
   {
     replace: false, // 默认, 不替换当前路径, 保留历史记录
     state: { love: "you" }, // 参考路由传参, state 传递参数
-    relative: "route", // 默认, 必须使用绝对路径
+    relative: "route", // 默认, 相对路径基于路由层级解析
     preventScrollReset: false, // 不阻止滚动位置重置
     viewTransition: true, // 页面跳转时, 开启 opacity 过渡
   } /** options */,

@@ -608,7 +608,7 @@ func leak() {
 ### 关闭 channel 可能 panic
 
 1. 重复关闭一个 channel 会 panic
-2. 关闭一个仅接收 channel 会 panic
+2. 关闭一个仅接收 channel 会编译错误
 3. 关闭一个 nil 的 channel 会 panic
 4. 向「已关闭」的 channel 中发送数据会 panic
 
@@ -1141,7 +1141,7 @@ Go 使用抢占式调度
 
 - Go 运行时有一个专用的 OS 监控线程 sysmon, 不是 goroutine, 不受调度器管理
 - sysmon 监控线程运行在 Machine 上, 并且不需要绑定 Processor; sysmon 每隔一段时间检查所有的 Processor, 发现某个 goroutine 在 Machine 上运行超过 10ms 时, 判定需要抢占
-- sysmon 向运行该 goroutine 的 Machine 发送 SIGURG 信号; 信号处理代码在 Machine 的 gsignal 栈上运行, 修改被中断的上下文, 该 goroutine 被放回 Processor 的本地队列尾部, Machine 重新执行 schedule() 调度循环
+- sysmon 向运行该 goroutine 的 Machine 发送 SIGURG 信号; 信号处理代码在 Machine 的 gsignal 栈上运行, 修改被中断的上下文, 该 goroutine 被放回全局 goroutine 队列尾部, Machine 重新执行 schedule() 调度循环
 
 ### 调度的时机
 
@@ -1231,7 +1231,7 @@ m0 即主线程, 是编译器确定的全局变量 `runtime.m0`, 是 Go 运行�
 
 m0/g0 (系统 goroutine) 负责调度器的初始化、内存分配器初始化、垃圾回收器设置, 通过 `runtime.newproc` 创建第一个用户 goroutine `runtime.main()`, 再执行 `mstart()` 调度循环; `runtime.main` 被调度执行后, 先调用所有包的 `init()` 函数, 最后调用 `main.main`
 
-Go 程序运行期间, m0 也参与 goroutine 调度, 和其他 Machine 没有区别; 程序退出时 m0 负责清理工作, 例如等待其他 goroutine 结束, 执行 defer 函数等
+Go 程序运行期间, m0 也参与 goroutine 调度, 和其他 Machine 没有区别; main.main 返回后程序直接退出, 不会等待其他 goroutine 结束, 他们的 defer 函数也不会执行
 
 ### g0 是什么?
 

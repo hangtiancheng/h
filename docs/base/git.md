@@ -191,7 +191,7 @@ git tag v1.0.0 <commitHash>
 
 git describe <ref>
 # <ref> 可以是 HEAD, branchName, commitHash, tagName 等
-# 输出 <tag>_<numCommits>_g<hash>
+# 输出 <tag>-<numCommits>-g<hash>
 # tag: 距离 ref 最近的标签名
 # numCommits: ref 比 tag 多 numCommits 个提交
 # hash: ref 所在的 commitHash 的前缀

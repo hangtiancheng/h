@@ -14,6 +14,7 @@ title: "Lit"
     "emitDecoratorMetadata": false,
     "useDefineForClassFields": false
   }
+}
 ```
 
 ```ts
@@ -62,4 +63,4 @@ declare global {
 ### 事件
 
 - 点击按钮时, 按钮会派发 click 事件
-- 输入框中输入时, 输入框会派发 change 事件
+- 输入框中输入时, 输入框会派发 input 事件

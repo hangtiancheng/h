@@ -1054,7 +1054,7 @@ const refVal /* 普通 JS 对象 */ = useRef(initialVal);
 1. React 的 useRef 返回的 refVal 是普通 JS 对象, 改变 refVal.current 的值时, 不会触发组件更新
 2. Vue 的 ref 返回的 refObj 是 Proxy 代理对象, 改变 refObj.value 的值时, 会触发组件更新
 3. 每次组件更新时, 都会重新执行组件函数, 重新创建所有的局部变量
-4. useRef 只在组件挂载时调用 1 次, 组件更新时, 不会重新调用 useRef, 即不会重新创建 refVal
+4. useRef 每次渲染都会执行, 但始终返回挂载时创建的同一个 refVal 对象, 不会重新创建
 5. 组件挂载后, refVal 的内存地址就不会改变
 6. 不要将 useRef 返回的 refVal 作为 useEffect 等其他 hooks 的 deps 中的依赖项
 
@@ -1066,7 +1066,7 @@ import React, { useRef, useState } from "react";
 const App: React.FC = () => {
   // 每次组件更新时, 都会重新初始化 num 为 0
   let num = 0;
-  // useRef 只会在组件挂载时执行 1 次, 组件更新时, 不会重新创建 refNum
+  // useRef 每次渲染都会执行, 但组件更新时不会重新创建 refNum
   const refNum = useRef(0);
   const [cnt, setCnt] = useState(0);
   const handleClick = () => {

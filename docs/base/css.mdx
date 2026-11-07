@@ -6,7 +6,8 @@ import { Tabs, Tab } from "@rspress/core/theme-original";
 
 ## 速记
 
-- 子元素 mx-auto, my-auto 只在父元素 flex, 父元素 grid 或父元素 relative 子元素 `absolute top-[value] bottom-[value]` 下有效
+- 子元素 my-auto 在父元素 flex, 父元素 grid 或父元素 relative 子元素 `absolute top-[value] bottom-[value]` 时可以实现垂直居中
+- 子元素 mx-auto 在普通块级文档流中 (子元素指定宽度) 可以实现水平居中
 
 ## 面试题
 
@@ -219,7 +220,7 @@ block\_\_element--modifier
 - text-decoration-style 文本装饰线的样式: solid, double, dotted, dashed, wavy
 - text-decoration-color 文本装饰线的颜色
 - text-decoration 复合属性: 默认 `text-decoration: none`
-- text-indent 文本首字母缩进: 属性值是长度单位
+- text-indent 文本首行缩进: 属性值是长度单位
 - text-align 文本水平对齐: left 左对齐 (默认), center 居中对齐, right 右对齐
 - line-height 行高
 - vertical-align 文本垂直对齐: baseline 基线对齐 (默认), top 顶部对齐, middle 中间对齐, bottom 底部对齐
@@ -384,7 +385,7 @@ text-overflow 生效的前提是: 块级元素显式设置 overflow 为 hidden, 
 ```css
 padding: 10px; /* 上下左右 10px */
 padding: 10px 20px; /* 上下 10px, 左右 20px */
-padding: 10px 20px 30px; /* 上 10px, 左右 20px, 下 10px */
+padding: 10px 20px 30px; /* 上 10px, 左右 20px, 下 30px */
 padding: 10px 20px 30px 40px; /* 上 10px, 右 20px, 下 30px, 左 40px */
 ```
 
@@ -403,7 +404,7 @@ padding: 10px 20px 30px 40px; /* 上 10px, 右 20px, 下 30px, 左 40px */
 - border-style 边框样式: none, solid, dashed, dotted, double
 - border-width 边框宽度
 - border-color 边框颜色
-- border-radius 边框圆角: 一个值是圆的半径, 两个值是椭圆的 x 半径, y 半径
+- border-radius 边框圆角: 1~4 个空格分隔的值分别对应各个 r 角; 使用斜杠分隔的水平/垂直半径 (如 `10px / 20px`) 是椭圆
 - border-[left, right, top, bottom]-[style, width, color]
 - border-[top-left, top-right, bottom-left, bottom-right]-radius
 - border 复合属性

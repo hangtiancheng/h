@@ -610,7 +610,7 @@ hash 模式
 ## source-map 堆栈反解
 
 - source-map 堆栈反解: VLQ (Variable-Length Quantity) 编码
-- 代码错误 `window.addEventListener("event", fn)`: 浏览器派发 ErrorEvent, ErrorEvent 对象携带 filename/lineno/colno
+- 代码错误 `window.addEventListener("error", fn)`: 浏览器派发 ErrorEvent, ErrorEvent 对象携带 filename/lineno/colno
 - 运行时抛出的 Error 对象 (try-catch 捕获, Promise 拒绝的 reason 等) ECMAScript 标准只有 name 和 message, 没有 lineno/colno; 但是 stack 调用栈包含调用帧信息 两种都要覆盖
 
 ```ts

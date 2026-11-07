@@ -215,12 +215,12 @@ zrange <key> <start> <stop> rev [withscores] # 逆序返回
 ## redis 线程模型
 
 - redis6.0 前, 使用单线程处理网络 I/O
-- redis6.0 后, 使用多线程处理网络 I/O, 以提升网络 I/O 性能
+- redis6.0 后, 支持多线程处理网络 I/O (io-threads 默认为 1, 即默认关闭), 以提升网络 I/O 性能
 - redis 执行命令是「单线程」, 称为主线程
 - redis 启动时, 同时启动后台线程, 负责处理耗时任务, 不会导致 redis 主线程阻塞
 - redis 线程模型
   - 主线程 redis-server
-  - 3 个 I/O 线程: io_thd_1、io_thd_2、io_thd_3
+  - io-threads - 1 个 I/O 线程: io_thd_1、io_thd_2、...
   - 3 个后台线程: bio_close_file、bio_aof_fsync、bio_lazy_free
 
 生产者 (主线程) 将耗时任务加入队列, 消费者 (后台线程) 轮询队列, 处理耗时任务; 后台线程包括
@@ -410,7 +410,7 @@ function keyHashSlot(key: string) {
 
 redis 集群使用 Gossip 流言协议保持集群健康
 
-redis 集群的所有节点可以相互通信; 如果法定数量 (quorum) 的副本节点都判定主节点 M1 主观下线时, 则判定 M1 客观下线, 执行故障转移; 选举 M1 的一个副本节点 R1, 提升为主节点以保持集群健康
+redis 集群的所有节点可以相互通信; 如果法定数量 (quorum) 的主节点都判定主节点 M1 主观下线时, 则判定 M1 客观下线, 执行故障转移; 选举 M1 的一个副本节点 R1, 提升为主节点以保持集群健康
 
 ### 集群脑裂
 

@@ -673,11 +673,11 @@ for (let key in obj) {
 // │   ├── element2
 // │   └── ...
 // ├── properties
-// │   ├── property10 常规属性, 慢属性
+// │   ├── property10 常规属性, 快属性 (属性数组)
 // │   ├── property11
 // │   ├── property12
 // │   └── ...
-// ├── property0 常规属性, 容量 10 个
+// ├── property0 常规属性, 对象内属性 (in-object)
 // ├── property1
 // ├── property2
 // ├── ...
@@ -687,8 +687,8 @@ for (let key in obj) {
 ### 快属性, 慢属性
 
 - v8 为了加快查找常规属性的速度, 将部分常规属性直接挂到对象自身, 称为对象内属性 (in-object properties)
-- 查找快属性只需要 1 次查找
-- 快属性的容量 10 个, 超过 10 个的常规属性称为慢属性
+- 查找对象内属性只需要 1 次查找, 查找属性数组中的属性需要 2 次查找
+- 对象内属性的容量有限, 超出的常规属性存放到属性数组 (properties store), 仍属于快属性; 慢属性指字典 (dictionary) 模式, 由频繁增删属性触发
 
 ### 隐藏类
 

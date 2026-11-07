@@ -102,8 +102,8 @@ app.mount("#app");
 
 hash 模式和 hashchange 事件
 
-- Vue 路由的 hash 模式通过改变 `location.hash` 的值, 会触发 hashchange 事件
-- vue-router 监听 hashchange 事件, 实现无刷新的路由导航
+- Vue 路由的 hash 模式基于 history API (pushState/replaceState), 只是 url 带有 # 前缀
+- vue-router 监听 popstate 事件, 实现无刷新的路由导航
 
 ```js
 addEventListener("hashchange", (ev) => console.log(ev));
@@ -714,7 +714,7 @@ import { RouterView } from "vue-router";
 
 ## 滚动行为
 
-仅点击浏览器的前进/后退按钮 (触发 popstate 事件) 时可用
+scrollBehavior 在每次路由导航后都会调用; 其中 savedPosition 仅在点击浏览器的前进/后退按钮 (触发 popstate 事件) 时存在
 
 ```ts
 const router = createRouter({

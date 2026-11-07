@@ -821,8 +821,8 @@ export const config: ProxyConfig = {
 - SSG, Static Site Generation 静态站点生成: 例如 Vitepress, Astro, 首屏加载最快, SEO 最优
 - Hydration 客户端水合
 - RSC, React Server Components 服务器组件
-  - 使用 "use server" 指令
-  - 服务器组件必须是 async 异步函数
+  - 服务器组件是 App Router 的默认组件类型, 无需指令 ("use server" 是标记 Server Actions 服务器函数的指令)
+  - 服务器组件可以是同步函数, 也可以是 async 异步函数
   - 服务器组件在服务器渲染, 客户端局部水合, 避免全量水合导致的性能损耗
   - 服务器组件不会被打包, 减小打包产物体积
   - 服务器组件可以访问 Node.js API, 数据库
@@ -1721,7 +1721,7 @@ const nextConfig: NextConfig = {
       },
     ];
   },
-  assetsPrefix: "https://github.com/hangtiancheng", // 静态资源前缀
+  assetPrefix: "https://github.com/hangtiancheng", // 静态资源前缀
   compress: true, // 是否开启压缩
   // devIndicators: true, // 是否开启开发调试器
   devIndicators: {
