@@ -12,7 +12,7 @@ plugins=(git zsh-autosuggestions zsh-syntax-highlighting)
 source "$ZSH/oh-my-zsh.sh"
 export EDITOR="vim"
 
-export PATH="$HOME/.local/bin:$PATH"
+export PATH="$PATH:$HOME/.local/bin"
 
 # C, C++
 export CC="clang" # "clang-cl"
@@ -20,6 +20,7 @@ export CXX="clang++" # "clang-cl"
 export CMAKE_GENERATOR="Ninja"
 
 # Go
+export PATH="$PATH:/usr/local/go/bin"
 export CGO_ENABLED=1
 export GOPATH="$HOME/go"
 export GOBIN="$GOPATH/bin"
@@ -74,6 +75,9 @@ brew cleanup && brew autoremove
 # zsh
 git clone https://github.com/zsh-users/zsh-autosuggestions.git $ZSH_CUSTOM/plugins/zsh-autosuggestions && \
 git clone https://github.com/zsh-users/zsh-syntax-highlighting.git $ZSH_CUSTOM/plugins/zsh-syntax-highlighting
+
+# Go
+curl -fsSL https://go.dev/dl/go.tar.gz | tar -C /usr/local -xz
 ```
 
 ## ssh
